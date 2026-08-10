@@ -1,9 +1,5 @@
 const CardTitle = ({ children }) => {
-    return (
-        <h2 className="text-lg font-semibold text-slate-700">
-            {children}
-        </h2>
-    )
-}
+  return <h2 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">{children}</h2>;
+};
 
-export default CardTitle
+export default CardTitle;

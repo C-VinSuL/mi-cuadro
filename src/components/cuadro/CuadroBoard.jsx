@@ -1,46 +1,60 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState
+} from "react";
+
 import { supabase } from "../../services/supabase";
 import ParticipantCard from "./ParticipantCard";
 
-const CuadroBoard = () => {
-
+const CuadroBoard = ({ grupo }) => {
   const [participants, setParticipants] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [errorMessage, setErrorMessage] =
+    useState("");
 
   useEffect(() => {
-    obtenerParticipantes();
-  }, []);
+    if (grupo?.id) {
+      obtenerParticipantes();
+    }
+  }, [grupo]);
 
   const obtenerParticipantes = async () => {
-
     setLoading(true);
+    setErrorMessage("");
 
-    const { data, error } = await supabase
-      .from("participantes")
-      .select("*")
-      .order("posicion", { ascending: true });
+    const { data, error } =
+      await supabase
+        .from("participantes")
+        .select("*")
+        .eq("grupo_id", grupo.id)
+        .order(
+          "posicion",
+          {
+            ascending: true
+          }
+        );
 
     if (error) {
-  console.error("ERROR SUPABASE COMPLETO:", {
-    message: error.message,
-    details: error.details,
-    hint: error.hint,
-    code: error.code,
-     });
+      console.error(
+        "Error cargando participantes:",
+        error
+      );
 
-    setErrorMessage("No se pudieron cargar los participantes.");
-  }  else {
-      setParticipants(data);
+      setErrorMessage(
+        "No se pudieron cargar los participantes."
+      );
+    } else {
+      setParticipants(data || []);
     }
 
     setLoading(false);
   };
 
   const obtenerTextoEstado = (estado) => {
-
     switch (estado) {
-
       case "recibido":
         return "Ya recibió";
 
@@ -57,7 +71,16 @@ const CuadroBoard = () => {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-3xl p-8">
+      <div
+        className="
+          bg-white
+          rounded-3xl
+          border
+          border-slate-200
+          p-8
+          text-slate-500
+        "
+      >
         Cargando participantes...
       </div>
     );
@@ -65,7 +88,16 @@ const CuadroBoard = () => {
 
   if (errorMessage) {
     return (
-      <div className="bg-red-50 text-red-700 rounded-2xl p-5">
+      <div
+        className="
+          bg-red-50
+          border
+          border-red-200
+          text-red-700
+          rounded-2xl
+          p-5
+        "
+      >
         {errorMessage}
       </div>
     );
@@ -74,56 +106,123 @@ const CuadroBoard = () => {
   return (
     <section
       className="
+        min-w-0
         bg-white
         rounded-3xl
         border
-        border-slate-100
+        border-slate-200
         shadow-sm
-        p-6
+        p-5
+        md:p-6
+        overflow-hidden
       "
     >
 
-      <div className="mb-7">
+      {/* ENCABEZADO */}
 
-        <p className="text-emerald-700 font-medium text-sm">
-          Los Amigos del Barrio
-        </p>
+      <div
+        className="
+          flex
+          flex-col
+          lg:flex-row
+          lg:items-center
+          lg:justify-between
+          gap-4
+          mb-6
+        "
+      >
+        <div className="min-w-0">
 
-        <h2 className="text-2xl font-bold text-slate-900">
-          Tablero del Cuadro
-        </h2>
+          <p
+            className="
+              text-sm
+              font-medium
+              text-emerald-700
+            "
+          >
+            {grupo?.nombre}
+          </p>
 
-        <p className="text-slate-500 mt-1">
-          Revisa las posiciones y el estado de los integrantes.
-        </p>
+          <h2
+            className="
+              text-2xl
+              font-bold
+              text-slate-900
+            "
+          >
+            Tablero del Cuadro
+          </h2>
+
+          <p
+            className="
+              text-sm
+              text-slate-500
+              mt-1
+            "
+          >
+            Revisa las posiciones y el estado de los integrantes.
+          </p>
+
+        </div>
+
+        <div
+          className="
+            shrink-0
+            bg-orange-50
+            border
+            border-orange-200
+            rounded-2xl
+            px-4
+            py-3
+          "
+        >
+          <p className="text-xs text-orange-700">
+            Semana actual
+          </p>
+
+          <p className="font-bold text-orange-900">
+            {grupo?.semana_actual}
+          </p>
+        </div>
 
       </div>
+
+
+      {/* PARTICIPANTES */}
 
       <div
         className="
           grid
-          grid-cols-2
-          md:grid-cols-3
-          xl:grid-cols-5
+          grid-cols-1
+          sm:grid-cols-2
+          lg:grid-cols-3
+          2xl:grid-cols-5
           gap-4
+          min-w-0
         "
       >
+        {participants.map(
+          (participant) => (
+            <ParticipantCard
+              key={participant.id}
+              participant={{
+                posicion:
+                  participant.posicion,
 
-        {participants.map((participant) => (
+                nombre:
+                  participant.nombre,
 
-          <ParticipantCard
-            key={participant.id}
-            participant={{
-              posicion: participant.posicion,
-              nombre: participant.nombre,
-              estado: participant.estado,
-              textoEstado: obtenerTextoEstado(
-                participant.estado
-              )
-            }}
-          />
+                estado:
+                  participant.estado,
 
-        ))}
+                textoEstado:
+                  obtenerTextoEstado(
+                    participant.estado
+                  )
+              }}
+            />
+          )
+        )}
 
       </div>
 

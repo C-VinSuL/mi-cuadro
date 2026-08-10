@@ -1,9 +1,5 @@
 const CardValue = ({ children }) => {
-    return (
-        <h1 className="text-4xl font-bold text-slate-900">
-            {children}
-        </h1>
-    )
-}
+  return <h1 className="mt-3 text-[28px] font-semibold text-slate-900 sm:text-3xl">{children}</h1>;
+};
 
-export default CardValue
+export default CardValue;

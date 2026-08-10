@@ -1,20 +1,85 @@
+import { useState } from "react";
+
 import Sidebar from "./Sidebar/Sidebar";
 import Navbar from "./Navbar/Navbar";
 
 const MainLayout = ({ children }) => {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-[#F4F7F5]">
 
-      <Sidebar />
+      {/* SIDEBAR DESKTOP */}
+      <div className="hidden xl:block">
+        <Sidebar />
+      </div>
 
-      <div className="flex-1 min-w-0">
+      {/* SIDEBAR MOBILE / TABLET */}
+      {menuOpen && (
+        <>
+          <div
+            className="
+              fixed
+              inset-0
+              z-40
+              bg-black/40
+              xl:hidden
+            "
+            onClick={() => setMenuOpen(false)}
+          />
 
-        <Navbar />
+          <div
+            className="
+              fixed
+              inset-y-0
+              left-0
+              z-50
+              w-[290px]
+              max-w-[85vw]
+              xl:hidden
+            "
+          >
+            <Sidebar
+              mobile
+              onClose={() => setMenuOpen(false)}
+            />
+          </div>
+        </>
+      )}
 
-        <main className="p-6 md:p-8 lg:p-10">
-          {children}
+      {/* CONTENIDO */}
+      <div
+        className="
+          min-h-screen
+          w-full
+          xl:pl-[290px]
+        "
+      >
+        <Navbar
+          onMenuClick={() => setMenuOpen(true)}
+        />
+
+        <main
+          className="
+            w-full
+            px-4
+            py-6
+            sm:px-6
+            md:px-8
+            xl:px-10
+            2xl:px-12
+          "
+        >
+          <div
+            className="
+              mx-auto
+              w-full
+              max-w-[1440px]
+            "
+          >
+            {children}
+          </div>
         </main>
-
       </div>
 
     </div>

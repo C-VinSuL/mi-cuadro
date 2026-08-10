@@ -1,6 +1,10 @@
 import { Routes, Route } from "react-router-dom";
 
+import Login from "../pages/auth/Login";
+import Register from "../pages/auth/Register";
+
 import MainLayout from "../components/layout/MainLayout";
+import ProtectedRoute from "./ProtectedRoute";
 
 import Dashboard from "../pages/dashboard/Dashboard";
 import Grupos from "../pages/grupos/Grupos";
@@ -14,66 +18,83 @@ const AppRoutes = () => {
   return (
     <Routes>
 
+      <Route path="/login" element={<Login />} />
+      <Route path="/registro" element={<Register />} />
+
       <Route
         path="/"
         element={
-          <MainLayout>
-            <Dashboard />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <Dashboard />
+            </MainLayout>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/grupo"
         element={
-          <MainLayout>
-            <Grupos />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <Grupos />
+            </MainLayout>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/aportes"
         element={
-          <MainLayout>
-            <Aportes />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <Aportes />
+            </MainLayout>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/cuadro"
         element={
-          <MainLayout>
-            <MiCuadro />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <MiCuadro />
+            </MainLayout>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/prestamos"
         element={
-          <MainLayout>
-            <Prestamos />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <Prestamos />
+            </MainLayout>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/historial"
         element={
-          <MainLayout>
-            <Historial />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <Historial />
+            </MainLayout>
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/configuracion"
         element={
-          <MainLayout>
-            <Configuracion />
-          </MainLayout>
+          <ProtectedRoute>
+            <MainLayout>
+              <Configuracion />
+            </MainLayout>
+          </ProtectedRoute>
         }
       />
 

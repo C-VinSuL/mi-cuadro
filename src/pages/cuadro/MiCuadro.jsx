@@ -3,38 +3,31 @@ import { supabase } from "../../services/supabase";
 
 import CuadroSummary from "../../components/cuadro/CuadroSummary";
 import CuadroBoard from "../../components/cuadro/CuadroBoard";
+import { useAuth } from "../../context/AuthContext";
 
 const MiCuadro = () => {
-  const [grupo, setGrupo] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    obtenerGrupo();
-  }, []);
-
-  const obtenerGrupo = async () => {
-    const { data, error } = await supabase
-      .from("grupos")
-      .select("*")
-      .eq("estado", "activo")
-      .limit(1)
-      .single();
-
-    if (error) {
-      console.error("Error al cargar grupo:", error);
-    } else {
-      setGrupo(data);
-    }
-
-    setLoading(false);
-  };
+  const {
+    grupo,
+    participant,
+    loading
+  } = useAuth();
 
   if (loading) {
-    return <p>Cargando grupo...</p>;
+    return <p>Cargando información...</p>;
   }
 
   if (!grupo) {
-    return <p>No se encontró un grupo activo.</p>;
+    return (
+      <div className="bg-white rounded-2xl p-6">
+        <h2 className="text-xl font-bold">
+          No perteneces a ningún cuadro
+        </h2>
+
+        <p className="text-slate-500 mt-2">
+          Cuando seas agregado a un grupo, podrás verlo aquí.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -54,9 +47,14 @@ const MiCuadro = () => {
         </p>
       </div>
 
-      <CuadroSummary grupo={grupo} />
+      <CuadroSummary
+        grupo={grupo}
+        participant={participant}
+      />
 
-      <CuadroBoard grupo={grupo} />
+      <CuadroBoard
+        grupo={grupo}
+      />
 
     </div>
   );

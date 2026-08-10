@@ -1,12 +1,43 @@
 @import "tailwindcss";
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
 }
 
-body{
-    font-family:Inter, sans-serif;
-    background:#F8FAFC;
+body {
+  min-height: 100vh;
+  background: #f4f7f5;
+  color: #0f172a;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
+#root {
+  min-height: 100vh;
 }

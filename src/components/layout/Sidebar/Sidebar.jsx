@@ -1,15 +1,19 @@
-
 import {
-    Home,
-    Users,
-    Wallet,
-    Landmark,
-    HandCoins,
-    History,
-    Settings
+  Home,
+  Users,
+  Wallet,
+  Landmark,
+  HandCoins,
+  History,
+  Settings,
+  PiggyBank,
+  CalendarDays,
+  X
 } from "lucide-react";
 
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../../../context/AuthContext";
+
 
 const menu = [
   {
@@ -49,132 +53,468 @@ const menu = [
   }
 ];
 
-const Sidebar = () => {
 
-    return (
+const Sidebar = ({
+  mobile = false,
+  onClose
+}) => {
 
-        <aside className="w-72 min-h-screen bg-teal-800 text-white flex flex-col">
+  const {
+    grupo,
+    participant
+  } = useAuth();
 
-            {/* Logo */}
 
-            <div className="p-8 border-b border-teal-700">
+  const semanaActual =
+    grupo?.semana_actual || 0;
 
-                <h1 className="text-3xl font-bold">
+  const totalSemanas =
+    grupo?.numero_integrantes || 0;
 
-                    🏡 Mi Cuadro
 
-                </h1>
+  const porcentaje =
+    totalSemanas > 0
+      ? Math.min(
+          (semanaActual / totalSemanas) * 100,
+          100
+        )
+      : 0;
 
-                <p className="text-teal-200 mt-2">
 
-                    Caja Comunal
+  return (
+  <aside
+    className={`
+      h-screen
+      bg-[#064E3B]
+      text-white
+      flex
+      flex-col
+      overflow-y-auto
 
-                </p>
+      ${
+        mobile
+          ? "w-full"
+          : "fixed inset-y-0 left-0 w-[290px]"
+      }
+    `}
+  >
 
-            </div>
+      {/* LOGO */}
 
-            {/* Información del grupo */}
+      <div
+        className="
+          px-5
+          py-5
 
-            <div className="p-6">
-
-                <h2 className="font-semibold">
-
-                    Grupo
-
-                </h2>
-
-                <p className="text-xl mt-2">
-
-                    Los Amigos
-
-                </p>
-
-                <div className="mt-5">
-
-                    <div className="flex justify-between text-sm">
-
-                        <span>Semana</span>
-
-                        <span>4 / 10</span>
-
-                    </div>
-
-                    <div className="bg-teal-700 rounded-full h-3 mt-2">
-
-                        <div className="bg-emerald-400 h-3 rounded-full w-2/5"></div>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            {/* Menú */}
-
-            <nav className="flex-1 px-4 space-y-1">
-
-  {menu.map((item) => {
-
-    const Icon = item.icon;
-
-    return (
-      <NavLink
-        key={item.title}
-        to={item.path}
-        className={({ isActive }) =>
-          `
-          flex
-          items-center
-          gap-3
-          px-4
-          py-3
-          rounded-xl
-          transition-all
-          duration-200
-
-          ${
-            isActive
-              ? "bg-emerald-500 text-white shadow-sm"
-              : "text-teal-50 hover:bg-teal-700"
-          }
-          `
-        }
+          border-b
+          border-white/10
+        "
       >
 
-        <Icon size={20} />
+        <div
+          className="
+            flex
+            items-center
+            justify-between
+          "
+        >
 
-        <span className="font-medium">
-          {item.title}
-        </span>
+          <div className="flex items-center gap-3">
 
-      </NavLink>
-    );
-  })}
+            <div
+              className="
+                w-11
+                h-11
 
-</nav>
+                bg-emerald-400/15
 
-            {/* Footer */}
+                rounded-xl
 
-            <div className="p-6 border-t border-teal-700">
+                flex
+                items-center
+                justify-center
 
-                <div className="text-sm text-teal-200">
+                text-xl
+              "
+            >
+              🏡
+            </div>
 
-                    Fondo comunitario
 
-                </div>
+            <div>
 
-                <div className="text-3xl font-bold mt-2">
+              <p
+                className="
+                  text-xl
+                  font-bold
+                  text-white
+                "
+              >
+                Mi Cuadro
+              </p>
 
-                    $350
-
-                </div>
+              <p
+                className="
+                  text-xs
+                  text-emerald-200
+                "
+              >
+                Caja Comunal
+              </p>
 
             </div>
 
-        </aside>
+          </div>
 
-    );
 
+          {/* CERRAR MOBILE */}
+
+          {mobile && (
+
+            <button
+              onClick={onClose}
+              className="
+                w-10
+                h-10
+
+                flex
+                items-center
+                justify-center
+
+                rounded-xl
+
+                hover:bg-white/10
+              "
+            >
+              <X size={21} />
+            </button>
+
+          )}
+
+        </div>
+
+      </div>
+
+
+      {/* GRUPO */}
+
+      <div className="px-4 pt-5">
+
+        <div
+          className="
+            bg-white/10
+
+            border
+            border-white/10
+
+            rounded-2xl
+
+            p-4
+          "
+        >
+
+          <p
+            className="
+              text-[10px]
+              uppercase
+              tracking-widest
+              text-emerald-300
+            "
+          >
+            Grupo actual
+          </p>
+
+
+          <p
+            className="
+              mt-2
+              text-base
+              font-semibold
+              text-white
+            "
+          >
+            {grupo?.nombre || "Sin grupo"}
+          </p>
+
+
+          {participant && (
+
+            <p
+              className="
+                mt-1
+                text-xs
+                text-emerald-200
+              "
+            >
+              Tu puesto #{participant.posicion}
+            </p>
+
+          )}
+
+
+          {/* PROGRESO */}
+
+          <div className="mt-5">
+
+            <div
+              className="
+                flex
+                items-center
+                justify-between
+
+                text-xs
+              "
+            >
+
+              <div
+                className="
+                  flex
+                  gap-2
+                  items-center
+                  text-emerald-200
+                "
+              >
+
+                <CalendarDays size={14} />
+
+                <span>
+                  Progreso
+                </span>
+
+              </div>
+
+
+              <span className="font-semibold">
+                {semanaActual} / {totalSemanas}
+              </span>
+
+            </div>
+
+
+            <div
+              className="
+                mt-3
+                h-2
+
+                bg-white/10
+
+                rounded-full
+                overflow-hidden
+              "
+            >
+
+              <div
+                className="
+                  h-full
+
+                  bg-gradient-to-r
+                  from-lime-300
+                  to-emerald-300
+
+                  rounded-full
+
+                  transition-all
+                  duration-500
+                "
+                style={{
+                  width: `${porcentaje}%`
+                }}
+              />
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      {/* MENÚ */}
+
+      <nav
+        className="
+          flex-1
+
+          px-4
+          pt-6
+
+          space-y-1
+
+          overflow-y-auto
+        "
+      >
+
+        <p
+          className="
+            px-3
+            mb-3
+
+            text-[10px]
+
+            uppercase
+            tracking-widest
+
+            text-emerald-300
+          "
+        >
+          Menú
+        </p>
+
+
+        {menu.map((item) => {
+
+          const Icon = item.icon;
+
+          return (
+
+            <NavLink
+              key={item.title}
+              to={item.path}
+
+              onClick={() => {
+                if (mobile && onClose) {
+                  onClose();
+                }
+              }}
+
+              className={({ isActive }) =>
+                `
+                  flex
+                  items-center
+                  gap-3
+
+                  px-4
+                  py-3
+
+                  rounded-xl
+
+                  text-sm
+                  font-medium
+
+                  transition-all
+
+                  ${
+                    isActive
+                      ? `
+                        bg-emerald-400
+                        text-emerald-950
+                        shadow-sm
+                      `
+                      : `
+                        text-emerald-50
+                        hover:bg-white/10
+                      `
+                  }
+                `
+              }
+            >
+
+              <Icon size={19} />
+
+              <span>
+                {item.title}
+              </span>
+
+            </NavLink>
+
+          );
+
+        })}
+
+      </nav>
+
+
+      {/* FONDO */}
+
+      <div className="p-4">
+
+        <div
+          className="
+            bg-[#0B6651]
+
+            border
+            border-white/10
+
+            rounded-2xl
+
+            p-4
+          "
+        >
+
+          <div
+            className="
+              flex
+              items-center
+              gap-3
+            "
+          >
+
+            <div
+              className="
+                w-10
+                h-10
+
+                rounded-xl
+
+                bg-amber-300/15
+                text-amber-300
+
+                flex
+                items-center
+                justify-center
+              "
+            >
+
+              <PiggyBank size={21} />
+
+            </div>
+
+
+            <div>
+
+              <p
+                className="
+                  text-[11px]
+                  text-emerald-200
+                "
+              >
+                Fondo comunitario
+              </p>
+
+              <p
+                className="
+                  text-2xl
+                  font-bold
+                  text-white
+                "
+              >
+                $350
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <p
+            className="
+              text-[11px]
+              text-emerald-200
+
+              mt-3
+            "
+          >
+            Disponible para préstamos del grupo.
+          </p>
+
+        </div>
+
+      </div>
+
+    </aside>
+  );
 };
+
 
 export default Sidebar;
