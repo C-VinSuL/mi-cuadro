@@ -6,6 +6,7 @@ import {
 } from "react";
 
 import { supabase } from "../services/supabase";
+import { obtenerSaldoFondo} from "../services/fondoService";
 
 const AuthContext = createContext();
 
@@ -17,6 +18,8 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null);
   const [participant, setParticipant] = useState(null);
   const [grupo, setGrupo] = useState(null);
+  const [fondoComunitario, setFondoComunitario] = useState(0);
+  
 
   const [loading, setLoading] = useState(true);
 
@@ -80,6 +83,7 @@ export const AuthProvider = ({ children }) => {
     console.log("Grupo cargado:", data);
 
     setGrupo(data);
+    await cargarFondoComunitario(data.id);
   };
 
 
@@ -167,6 +171,53 @@ export const AuthProvider = ({ children }) => {
     );
   };
 
+  // =========================
+  // CARGAR FONDO COMUNITARIO
+  // =========================
+
+
+const cargarFondoComunitario =
+  async (grupoId) => {
+
+    if (!grupoId) {
+
+      setFondoComunitario(0);
+
+      return 0;
+
+    }
+
+
+    try {
+
+      const saldo =
+        await obtenerSaldoFondo(
+          grupoId
+        );
+
+
+      setFondoComunitario(
+        saldo
+      );
+
+
+      return saldo;
+
+    } catch (error) {
+
+      console.error(
+        "Error cargando fondo comunitario:",
+        error
+      );
+
+      setFondoComunitario(0);
+
+      return 0;
+
+    }
+
+  };
+
 
   // =========================
   // SESIÓN
@@ -227,12 +278,13 @@ export const AuthProvider = ({ children }) => {
     profile,
     participant,
     grupo,
-
+    fondoComunitario,
     loading,
 
     cargarPerfil,
     cargarParticipante,
-    cargarGrupo
+    cargarGrupo,
+    cargarFondoComunitario
   };
 
 

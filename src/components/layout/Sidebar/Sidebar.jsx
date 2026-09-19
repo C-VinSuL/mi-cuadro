@@ -13,43 +13,51 @@ import {
 
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
+import { usePermissions } from "../../../hooks/usePermissions";
 
 
 const menu = [
   {
     title: "Inicio",
     icon: Home,
-    path: "/"
+    path: "/",
+    permission: "verDashboard"
   },
   {
     title: "Mi Grupo",
     icon: Users,
-    path: "/grupo"
+    path: "/grupo",
+    permission: "verGrupo"
   },
   {
     title: "Aportes",
     icon: Wallet,
-    path: "/aportes"
+    path: "/aportes",
+    permission: "verAportes"
   },
   {
     title: "Mi Cuadro",
     icon: Landmark,
-    path: "/cuadro"
+    path: "/cuadro",
+    permission: "verCuadro"
   },
   {
     title: "Préstamos",
     icon: HandCoins,
-    path: "/prestamos"
+    path: "/prestamos",
+    permission: "verPrestamos"
   },
   {
     title: "Historial",
     icon: History,
-    path: "/historial"
+    path: "/historial",
+    permission: "verDashboard"
   },
   {
     title: "Configuración",
     icon: Settings,
-    path: "/configuracion"
+    path: "/configuracion",
+    permission: "verConfiguracion"
   }
 ];
 
@@ -59,10 +67,15 @@ const Sidebar = ({
   onClose
 }) => {
 
+  const { can, rol } =  usePermissions();
+
   const {
     grupo,
-    participant
+    participant,
+    fondoComunitario
   } = useAuth();
+
+  
 
 
   const semanaActual =
@@ -79,6 +92,13 @@ const Sidebar = ({
           100
         )
       : 0;
+
+
+  const menuVisible =
+  menu.filter(
+    (item) =>
+      can(item.permission)
+  );    
 
 
   return (
@@ -234,6 +254,10 @@ const Sidebar = ({
             "
           >
             {grupo?.nombre || "Sin grupo"}
+          </p>
+
+          <p className="text-xs text-emerald-200 capitalize mt-1">
+            {rol}
           </p>
 
 
@@ -489,7 +513,7 @@ const Sidebar = ({
                   text-white
                 "
               >
-                $350
+                  ${Number(fondoComunitario).toFixed(2)}
               </p>
 
             </div>
