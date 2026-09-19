@@ -37,7 +37,6 @@ const AppRoutes = () => {
         element={<Register />}
       />
 
-
       {/* =========================
           DASHBOARD
       ========================== */}
