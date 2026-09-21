@@ -1,6 +1,5 @@
 import { supabase } from "./supabase";
 
-
 // ==========================================
 // OBTENER SALDO REAL DEL FONDO
 // ==========================================
