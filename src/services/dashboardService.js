@@ -1,5 +1,4 @@
 import { supabase } from "./supabase";
-
 export const getDashboardAdminData = async (grupo) => {
   if (!grupo?.id) {
     return {
