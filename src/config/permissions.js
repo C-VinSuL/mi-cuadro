@@ -17,7 +17,7 @@ export const PERMISSIONS = {
     verPrestamos: true,
     solicitarPrestamo: true,
     aprobarPrestamos: true,
-
+    
     verHistorialCompleto: true,
     verConfiguracion: true
   },
