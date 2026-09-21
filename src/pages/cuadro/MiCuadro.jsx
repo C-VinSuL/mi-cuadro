@@ -1,3 +1,4 @@
+
 import CuadroSummary from "../../components/cuadro/CuadroSummary";
 import CuadroBoard from "../../components/cuadro/CuadroBoard";
 import RondaAdmin from "../../components/cuadro/RondaAdmin";
