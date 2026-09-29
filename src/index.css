@@ -41,3 +41,62 @@ svg {
 #root {
   min-height: 100vh;
 }
+
+.auth-shell {
+  background:
+    radial-gradient(ellipse at 8% 12%, rgb(16 185 129 / 10%), transparent 36%),
+    radial-gradient(ellipse at 92% 88%, rgb(14 116 91 / 8%), transparent 34%),
+    #f1f5f1;
+}
+
+@keyframes loading-sweep {
+  from {
+    transform: translateX(-110%);
+  }
+
+  to {
+    transform: translateX(260%);
+  }
+}
+
+.loading-progress {
+  animation: loading-sweep 1.35s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-progress {
+    animation: none;
+    width: 100%;
+    opacity: 0.65;
+  }
+}
+
+@keyframes toast-progress-shrink {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+@keyframes toast-notification-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.toast-progress {
+  animation: toast-progress-shrink 5s linear forwards;
+}
+
+.toast-notification-enter {
+  animation: toast-notification-in 180ms ease-out both;
+}
+
+.toast-notification-exit {
+  opacity: 0;
+  transform: translateY(-5px);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-progress { animation: none; width: 0; }
+  .toast-notification-enter { animation: none; }
+  .toast-notification-exit { transition: none; }
+}

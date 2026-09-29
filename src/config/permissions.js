@@ -17,6 +17,9 @@ export const PERMISSIONS = {
     verPrestamos: true,
     solicitarPrestamo: true,
     aprobarPrestamos: true,
+    verFondoComunitario: true,
+    verSimulacion: true,
+    verVistaSocio: true,
   
     
     verHistorialCompleto: true,
@@ -41,6 +44,9 @@ export const PERMISSIONS = {
     verPrestamos: true,
     solicitarPrestamo: true,
     aprobarPrestamos: true,
+    verFondoComunitario: true,
+    verSimulacion: false,
+    verVistaSocio: false,
 
     verHistorialCompleto: true,
     verConfiguracion: false
@@ -64,6 +70,9 @@ export const PERMISSIONS = {
     verPrestamos: true,
     solicitarPrestamo: true,
     aprobarPrestamos: false,
+    verFondoComunitario: false,
+    verSimulacion: false,
+    verVistaSocio: false,
 
     verHistorialCompleto: false,
     verConfiguracion: false

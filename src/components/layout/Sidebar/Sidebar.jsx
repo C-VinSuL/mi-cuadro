@@ -8,7 +8,9 @@ import {
   Settings,
   PiggyBank,
   CalendarDays,
-  X
+  X,
+  FlaskConical,
+  Eye
 } from "lucide-react";
 
 import { NavLink } from "react-router-dom";
@@ -52,6 +54,18 @@ const menu = [
     icon: History,
     path: "/historial",
     permission: "verDashboard"
+  },
+  {
+    title: "Simulación",
+    icon: FlaskConical,
+    path: "/simulacion",
+    permission: "verSimulacion"
+  },
+  {
+    title: "Vista de socio",
+    icon: Eye,
+    path: "/vista-socio",
+    permission: "verVistaSocio"
   },
   {
     title: "Configuración",
@@ -386,7 +400,7 @@ const Sidebar = ({
         </p>
 
 
-        {menu.map((item) => {
+          {menuVisible.map((item) => {
 
           const Icon = item.icon;
 
@@ -451,6 +465,7 @@ const Sidebar = ({
 
       {/* FONDO */}
 
+      {can("verFondoComunitario") && (
       <div className="p-4">
 
         <div
@@ -535,6 +550,7 @@ const Sidebar = ({
         </div>
 
       </div>
+      )}
 
     </aside>
   );

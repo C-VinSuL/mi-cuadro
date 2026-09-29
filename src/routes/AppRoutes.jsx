@@ -5,6 +5,8 @@ import {
 
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
+import ForgotPassword from "../pages/auth/ForgotPassword";
+import UpdatePassword from "../pages/auth/UpdatePassword";
 
 import MainLayout from "../components/layout/MainLayout";
 
@@ -18,6 +20,8 @@ import MiCuadro from "../pages/cuadro/MiCuadro";
 import Prestamos from "../pages/prestamos/Prestamos";
 import Historial from "../pages/reportes/Historial";
 import Configuracion from "../pages/Configuracion";
+import Simulacion from "../pages/admin/Simulacion";
+import VistaSocio from "../pages/admin/VistaSocio";
 
 const AppRoutes = () => {
   return (
@@ -37,6 +41,16 @@ const AppRoutes = () => {
       <Route
         path="/registro"
         element={<Register />}
+      />
+
+      <Route
+        path="/recuperar-contrasena"
+        element={<ForgotPassword />}
+      />
+
+      <Route
+        path="/actualizar-contrasena"
+        element={<UpdatePassword />}
       />
 
       {/* =========================
@@ -147,10 +161,12 @@ const AppRoutes = () => {
         path="/historial"
         element={
           <ProtectedRoute>
+            <RoleRoute permission="verFondoComunitario">
 
             <MainLayout>
               <Historial />
             </MainLayout>
+            </RoleRoute>
 
           </ProtectedRoute>
         }
@@ -172,6 +188,32 @@ const AppRoutes = () => {
                 <Configuracion />
               </MainLayout>
 
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/simulacion"
+        element={
+          <ProtectedRoute>
+            <RoleRoute permission="verSimulacion">
+              <MainLayout>
+                <Simulacion />
+              </MainLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/vista-socio"
+        element={
+          <ProtectedRoute>
+            <RoleRoute permission="verVistaSocio">
+              <MainLayout>
+                <VistaSocio />
+              </MainLayout>
             </RoleRoute>
           </ProtectedRoute>
         }

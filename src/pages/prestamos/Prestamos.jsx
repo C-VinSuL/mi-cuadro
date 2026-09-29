@@ -26,6 +26,7 @@ import {
 import {
   usePermissions
 } from "../../hooks/usePermissions";
+import { useNotifications } from "../../hooks/useNotifications";
 
 import {
   obtenerPrestamosGrupo,
@@ -52,6 +53,8 @@ const Prestamos = () => {
     can,
     rol
   } = usePermissions();
+  const { notify } = useNotifications();
+  const puedeVerFondo = can("verFondoComunitario");
 
 
   // =====================================================
@@ -424,6 +427,11 @@ const Prestamos = () => {
         setTipoMensaje(
           "success"
         );
+        notify({
+          title: "Solicitud enviada",
+          message: "Tu solicitud de préstamo quedó pendiente de revisión.",
+          type: "success"
+        });
 
 
         setForm({
@@ -538,6 +546,11 @@ const Prestamos = () => {
         setTipoMensaje(
           "success"
         );
+        notify({
+          title: "Préstamo aprobado",
+          message: "La solicitud fue aprobada correctamente.",
+          type: "success"
+        });
 
 
         await cargarPrestamos();
@@ -644,6 +657,11 @@ const Prestamos = () => {
         setTipoMensaje(
           "success"
         );
+        notify({
+          title: "Solicitud rechazada",
+          message: "La decisión quedó registrada.",
+          type: "info"
+        });
 
 
         await cargarPrestamos();
@@ -817,6 +835,11 @@ const Prestamos = () => {
         setTipoMensaje(
           "success"
         );
+        notify({
+          title: "Cuota pagada",
+          message: resultado?.mensaje || "El pago quedó registrado correctamente.",
+          type: "success"
+        });
 
       } catch (error) {
 
@@ -1170,7 +1193,7 @@ const Prestamos = () => {
           grid
           grid-cols-1
           gap-6
-          xl:grid-cols-[1fr_1.25fr_auto]
+          xl:grid-cols-[1fr_auto]
           xl:items-center
         "
       >
@@ -1184,7 +1207,7 @@ const Prestamos = () => {
               text-emerald-700
             "
           >
-            Fondo comunitario
+            {puedeVerFondo ? "Fondo comunitario" : "Mis préstamos"}
           </p>
 
           <h1
@@ -1216,7 +1239,7 @@ const Prestamos = () => {
 
         {/* FONDO */}
 
-        <div
+        {puedeVerFondo && <div
           className="
             rounded-3xl
             bg-gradient-to-br
@@ -1294,7 +1317,7 @@ const Prestamos = () => {
 
           </div>
 
-        </div>
+        </div>}
 
 
         {/* SOLICITAR */}

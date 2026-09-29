@@ -19,6 +19,7 @@ import {
 import {
   useAuth
 } from "../../context/AuthContext";
+import { useNotifications } from "../../hooks/useNotifications";
 
 
 const Aportes = () => {
@@ -28,6 +29,7 @@ const Aportes = () => {
     participant,
     cargarFondoComunitario
   } = useAuth();
+  const { notify } = useNotifications();
 
 
   const [aportes, setAportes] =
@@ -201,6 +203,11 @@ const Aportes = () => {
       setMensaje(
         "Aporte registrado correctamente."
       );
+      notify({
+        title: "Aporte registrado",
+        message: `Tu aporte de la semana ${semanaActual} quedó registrado.`,
+        type: "success"
+      });
 
       // Recargar historial de aportes
       await cargarAportes();

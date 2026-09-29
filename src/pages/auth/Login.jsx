@@ -1,14 +1,18 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 
 import { supabase } from "../../services/supabase";
+import { useNotifications } from "../../hooks/useNotifications";
 
 const Login = () => {
 
   const navigate = useNavigate();
+  const { notify } = useNotifications();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] =
@@ -18,37 +22,54 @@ const Login = () => {
 
     e.preventDefault();
 
-    setLoading(true);
-    setErrorMessage("");
-
-    const {
-      data,
-      error
-    } = await supabase.auth.signInWithPassword({
-
-      email,
-      password
-
-    });
-
-    if (error) {
-
-      setErrorMessage(
-        "Correo o contraseña incorrectos."
-      );
-
-      setLoading(false);
+    if (loading) {
       return;
     }
 
-    console.log(
-      "Usuario autenticado:",
-      data.user
-    );
+    setLoading(true);
+    setErrorMessage("");
 
-    setLoading(false);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
 
-    navigate("/");
+        email: email.trim(),
+        password
+
+      });
+
+      if (error) {
+
+        setErrorMessage(
+          "Correo o contraseña incorrectos."
+        );
+        notify({
+          title: "No se pudo iniciar sesión",
+          message: "Revisa tu correo y contraseña.",
+          type: "error"
+        });
+
+        return;
+      }
+
+      notify({
+        title: "Sesión iniciada",
+        message: "Bienvenido nuevamente a Mi Cuadro.",
+        type: "success"
+      });
+      navigate("/", { replace: true });
+    } catch (error) {
+      console.error("Error iniciando sesión:", error);
+      setErrorMessage(
+        "No se pudo iniciar sesión. Revisa tu conexión e inténtalo nuevamente."
+      );
+      notify({
+        title: "Error de conexión",
+        message: "No fue posible contactar el servicio de acceso.",
+        type: "error"
+      });
+    } finally {
+      setLoading(false);
+    }
 
   };
 
@@ -113,6 +134,7 @@ const Login = () => {
 
             <input
               type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) =>
                 setEmail(e.target.value)
@@ -140,23 +162,54 @@ const Login = () => {
               Contraseña
             </label>
 
-            <input
-              type="password"
-              value={password}
-              onChange={(e) =>
-                setPassword(e.target.value)
-              }
-              required
-              className="
-                w-full
-                border
-                border-slate-300
-                rounded-xl
-                px-4
-                py-3
-              "
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) =>
+                  setPassword(e.target.value)
+                }
+                required
+                autoComplete="current-password"
+                className="
+                  w-full
+                  border
+                  border-slate-300
+                  rounded-xl
+                  px-4
+                  py-3
+                  pr-12
+                "
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((visible) => !visible)}
+                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                aria-pressed={showPassword}
+                className="
+                  absolute
+                  right-3
+                  top-1/2
+                  -translate-y-1/2
+                  rounded-md
+                  p-1.5
+                  text-slate-500
+                  hover:text-slate-800
+                  focus-visible:outline-none
+                  focus-visible:ring-2
+                  focus-visible:ring-emerald-600
+                "
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
 
+          </div>
+
+          <div className="-mt-2 flex justify-end">
+            <Link to="/recuperar-contrasena" className="text-sm font-semibold text-emerald-700 hover:text-emerald-900 hover:underline">
+              ¿Olvidaste tu contraseña?
+            </Link>
           </div>
 
           {errorMessage && (
@@ -202,18 +255,12 @@ const Login = () => {
 
           ¿Aún no tienes cuenta?
 
-          <button
-            onClick={() =>
-              navigate("/registro")
-            }
-            className="
-              text-emerald-700
-              font-semibold
-              ml-1
-            "
+          <Link
+            to="/registro"
+            className="ml-1 font-semibold text-emerald-700 hover:text-emerald-900 hover:underline"
           >
             Registrarse
-          </button>
+          </Link>
 
         </p>
 

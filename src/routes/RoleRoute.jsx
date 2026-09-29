@@ -2,6 +2,7 @@ import { Navigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import { usePermissions } from "../hooks/usePermissions";
+import LoadingScreen from "../components/ui/Loader/LoadingScreen";
 
 const RoleRoute = ({
   permission,
@@ -12,13 +13,7 @@ const RoleRoute = ({
 
   // Esperar a que Supabase cargue sesión y perfil
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <p className="text-slate-500">
-          Cargando permisos...
-        </p>
-      </div>
-    );
+    return <LoadingScreen message="Cargando tu espacio..." />;
   }
 
   // Si no existe perfil, volver al login

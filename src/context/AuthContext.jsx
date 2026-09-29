@@ -2,11 +2,13 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState
 } from "react";
 
 import { supabase } from "../services/supabase";
 import { obtenerSaldoFondo} from "../services/fondoService";
+import { PERMISSIONS } from "../config/permissions";
 
 const AuthContext = createContext();
 
@@ -22,6 +24,7 @@ export const AuthProvider = ({ children }) => {
   
 
   const [loading, setLoading] = useState(true);
+  const authRequest = useRef(0);
 
 
   // =========================
@@ -32,7 +35,7 @@ export const AuthProvider = ({ children }) => {
 
     if (!userId) {
       setProfile(null);
-      return;
+      return null;
     }
 
     const { data, error } = await supabase
@@ -50,10 +53,11 @@ export const AuthProvider = ({ children }) => {
     if (error) {
       console.error("Error cargando perfil:", error);
       setProfile(null);
-      return;
+      return null;
     }
 
     setProfile(data);
+    return data;
   };
 
 
@@ -61,7 +65,10 @@ export const AuthProvider = ({ children }) => {
   // CARGAR GRUPO
   // =========================
 
-  const cargarGrupo = async (grupoId) => {
+  const cargarGrupo = async (
+    grupoId,
+    puedeVerFondo = PERMISSIONS[profile?.rol?.toLowerCase()]?.verFondoComunitario === true
+  ) => {
 
     if (!grupoId) {
       setGrupo(null);
@@ -77,13 +84,16 @@ export const AuthProvider = ({ children }) => {
     if (error) {
       console.error("Error cargando grupo:", error);
       setGrupo(null);
+      setFondoComunitario(0);
       return;
     }
 
-    console.log("Grupo cargado:", data);
-
     setGrupo(data);
-    await cargarFondoComunitario(data.id);
+    if (puedeVerFondo) {
+      await cargarFondoComunitario(data.id, puedeVerFondo);
+    } else {
+      setFondoComunitario(0);
+    }
   };
 
 
@@ -91,11 +101,15 @@ export const AuthProvider = ({ children }) => {
   // CARGAR PARTICIPANTE
   // =========================
 
-  const cargarParticipante = async (userId) => {
+  const cargarParticipante = async (
+    userId,
+    rol = profile?.rol
+  ) => {
 
     if (!userId) {
       setParticipant(null);
       setGrupo(null);
+      setFondoComunitario(0);
       return;
     }
 
@@ -120,22 +134,21 @@ export const AuthProvider = ({ children }) => {
 
       setParticipant(null);
       setGrupo(null);
+      setFondoComunitario(0);
 
       return;
     }
 
     setParticipant(data);
 
-    console.log(
-      "Participante cargado:",
-      data
-    );
-
     // Cargar grupo del participante
     if (data?.grupo_id) {
-      await cargarGrupo(data.grupo_id);
+      const puedeVerFondo =
+        PERMISSIONS[rol?.toLowerCase()]?.verFondoComunitario === true;
+      await cargarGrupo(data.grupo_id, puedeVerFondo);
     } else {
       setGrupo(null);
+      setFondoComunitario(0);
     }
   };
 
@@ -158,16 +171,18 @@ export const AuthProvider = ({ children }) => {
       setProfile(null);
       setParticipant(null);
       setGrupo(null);
+      setFondoComunitario(0);
 
       return;
     }
 
-    await cargarPerfil(
+    const currentProfile = await cargarPerfil(
       currentUser.id
     );
 
     await cargarParticipante(
-      currentUser.id
+      currentUser.id,
+      currentProfile?.rol
     );
   };
 
@@ -177,9 +192,12 @@ export const AuthProvider = ({ children }) => {
 
 
 const cargarFondoComunitario =
-  async (grupoId) => {
+  async (
+    grupoId,
+    puedeVerFondo = PERMISSIONS[profile?.rol?.toLowerCase()]?.verFondoComunitario === true
+  ) => {
 
-    if (!grupoId) {
+    if (!grupoId || !puedeVerFondo) {
 
       setFondoComunitario(0);
 
@@ -224,43 +242,37 @@ const cargarFondoComunitario =
   // =========================
 
   useEffect(() => {
-
-    const iniciar = async () => {
-
-      setLoading(true);
-
-      const {
-        data: { session }
-      } =
-        await supabase.auth.getSession();
-
-      await cargarDatosUsuario(
-        session
-      );
-
-      setLoading(false);
-    };
-
-    iniciar();
-
-
-    // Escuchar Login / Logout
-
     const {
       data: { subscription }
     } =
       supabase.auth.onAuthStateChange(
-        (_event, session) => {
+        (event, nextSession) => {
+          const requestId = ++authRequest.current;
 
-          cargarDatosUsuario(
-            session
-          );
+          setSession(nextSession);
+          setUser(nextSession?.user ?? null);
 
+          if (event === "TOKEN_REFRESHED") {
+            return;
+          }
+
+          setLoading(true);
+
+          // Supabase recomienda salir del callback antes de hacer otras consultas.
+          setTimeout(async () => {
+            try {
+              await cargarDatosUsuario(nextSession);
+            } finally {
+              if (requestId === authRequest.current) {
+                setLoading(false);
+              }
+            }
+          }, 0);
         }
       );
 
-
     return () => {
+      authRequest.current += 1;
       subscription.unsubscribe();
     };
 
@@ -300,7 +312,6 @@ const cargarFondoComunitario =
 
   );
 };
-
 
 // =========================
 // HOOK
