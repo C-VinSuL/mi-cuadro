@@ -300,6 +300,18 @@ const Navbar = ({ onMenuClick }) => {
                       <div className="min-w-0 flex-1">
                         <h3 className="text-sm font-semibold text-slate-900">{item.title}</h3>
                         <p className="mt-0.5 text-sm text-slate-600">{item.message}</p>
+                        {item.actionPath && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigate(item.actionPath);
+                              setNotificationsOpen(false);
+                            }}
+                            className="mt-2 text-xs font-semibold text-emerald-800 hover:text-emerald-950"
+                          >
+                            {item.actionLabel || "Abrir"}
+                          </button>
+                        )}
                         <time className="mt-1 block text-[11px] text-slate-400" dateTime={item.createdAt}>
                           {new Date(item.createdAt).toLocaleString("es", { dateStyle: "short", timeStyle: "short" })}
                         </time>

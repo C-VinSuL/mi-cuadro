@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
-import { Check, Copy, RefreshCw, Trash2, UserRoundPlus, Users, X } from "lucide-react";
+import { useState } from "react";
+import { Check, Copy, LoaderCircle, RefreshCw, Trash2, UserRoundPlus, Users, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useNotifications } from "../../hooks/useNotifications";
 import {
   crearGrupo,
-  obtenerSolicitudesGrupo,
   resolverSolicitudGrupo,
   solicitarUnionGrupo,
   eliminarGrupo
@@ -13,47 +12,32 @@ import {
 
 const GroupAccessPanel = () => {
   const { user, profile, grupo, grupos, cargarParticipante } = useAuth();
-  const { can, rol } = usePermissions();
-  const { notify } = useNotifications();
+  const { can } = usePermissions();
+  const { notify, groupRequests, groupRequestsError, refreshGroupRequests } = useNotifications();
   const [codigo, setCodigo] = useState("");
   const [formGrupo, setFormGrupo] = useState({ nombre: "", numeroIntegrantes: "", aporteSemanal: "" });
-  const [solicitudes, setSolicitudes] = useState([]);
   const [enviando, setEnviando] = useState(false);
   const [grupoAEliminar, setGrupoAEliminar] = useState(null);
   const [eliminando, setEliminando] = useState(false);
+  const [actualizandoSolicitudes, setActualizandoSolicitudes] = useState(false);
+  const [estadoActualizacion, setEstadoActualizacion] = useState("");
   const [error, setError] = useState("");
 
-  const cargarSolicitudes = async () => {
-    if (!grupo?.id || !can("iniciarCuadro")) {
-      setSolicitudes([]);
-      return;
+  const actualizarSolicitudes = async () => {
+    setActualizandoSolicitudes(true);
+    setEstadoActualizacion("");
+    const requests = await refreshGroupRequests();
+    if (requests === null) {
+      setEstadoActualizacion("No se pudieron actualizar las solicitudes. Revisa el error de conexión o los permisos de Supabase.");
+    } else {
+      setEstadoActualizacion(
+        requests.length > 0
+          ? `Actualizado: ${requests.length} solicitud${requests.length === 1 ? "" : "es"} pendiente${requests.length === 1 ? "" : "s"}.`
+          : `Actualizado: se revisaron ${grupos.length} grupo${grupos.length === 1 ? "" : "s"} y no hay solicitudes pendientes.`
+      );
     }
-
-    try {
-      setSolicitudes(await obtenerSolicitudesGrupo(grupo.id));
-    } catch (loadError) {
-      console.error("Error cargando solicitudes:", loadError);
-      setError("No se pudieron cargar las solicitudes del grupo.");
-    }
+    setActualizandoSolicitudes(false);
   };
-
-  useEffect(() => {
-    if (!grupo?.id || !["administrador", "tesorero"].includes(rol)) return undefined;
-
-    let active = true;
-    obtenerSolicitudesGrupo(grupo.id)
-      .then((rows) => {
-        if (active) setSolicitudes(rows);
-      })
-      .catch((loadError) => {
-        console.error("Error cargando solicitudes:", loadError);
-        if (active) setError("No se pudieron cargar las solicitudes del grupo.");
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [grupo?.id, rol]);
 
   const enviarSolicitud = async (event) => {
     event.preventDefault();
@@ -102,7 +86,7 @@ const GroupAccessPanel = () => {
 
     try {
       await resolverSolicitudGrupo(solicitudId, aprobar);
-      await Promise.all([cargarSolicitudes(), cargarParticipante(user.id, profile.rol)]);
+      await Promise.all([refreshGroupRequests(), cargarParticipante(user.id, profile.rol)]);
       notify({
         title: aprobar ? "Socio agregado" : "Solicitud rechazada",
         message: aprobar ? "El socio ya pertenece a este grupo." : "Se actualizó la solicitud.",
@@ -231,15 +215,23 @@ const GroupAccessPanel = () => {
         <div>
           <div className="mb-2 flex items-center justify-between gap-3">
             <h2 className="font-semibold text-slate-900">Solicitudes pendientes</h2>
-            <span className="text-sm text-slate-500">{solicitudes.length}</span>
+              <button type="button" onClick={actualizarSolicitudes} disabled={actualizandoSolicitudes} className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 hover:text-emerald-950 disabled:cursor-wait disabled:opacity-60">
+                {actualizandoSolicitudes ? <LoaderCircle size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                {actualizandoSolicitudes ? "Actualizando..." : "Actualizar"}
+              </button>
           </div>
-          {solicitudes.length === 0 ? (
-            <p className="border-y border-slate-200 py-4 text-sm text-slate-500">No hay solicitudes pendientes para este grupo.</p>
+            {estadoActualizacion && <p className="mb-2 text-sm text-slate-600" role="status">{estadoActualizacion}</p>}
+            {groupRequestsError && <p className="mb-2 border-l-4 border-red-600 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">No se pudieron consultar las solicitudes: {groupRequestsError}</p>}
+          {groupRequests.length === 0 ? (
+            <p className="border-y border-slate-200 py-4 text-sm text-slate-500">No hay solicitudes pendientes en tus grupos.</p>
           ) : (
             <div className="divide-y divide-slate-200 border-y border-slate-200">
-              {solicitudes.map((solicitud) => (
+              {groupRequests.map((solicitud) => (
                 <div key={solicitud.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                  <p className="font-medium text-slate-800">{[solicitud.nombre, solicitud.apellido].filter(Boolean).join(" ")}</p>
+                  <div>
+                    <p className="font-medium text-slate-800">{[solicitud.nombre, solicitud.apellido].filter(Boolean).join(" ") || "Socio"}</p>
+                    <p className="text-sm text-slate-500">Solicita acceso a {solicitud.grupo_nombre}</p>
+                  </div>
                   <div className="flex gap-2">
                     <button type="button" disabled={enviando} onClick={() => revisarSolicitud(solicitud.id, true)} aria-label="Aprobar solicitud" title="Aprobar" className="inline-flex size-9 items-center justify-center rounded-lg bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-60"><Check size={17} /></button>
                     <button type="button" disabled={enviando} onClick={() => revisarSolicitud(solicitud.id, false)} aria-label="Rechazar solicitud" title="Rechazar" className="inline-flex size-9 items-center justify-center rounded-lg border border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-60"><X size={17} /></button>
