@@ -1,1770 +1,216 @@
-
 import { useEffect, useState } from "react";
 
 import {
-  Plus,
-  Users,
-  UserPlus,
-  Play,
-  LockKeyhole,
   AlertTriangle,
-  Wrench
+  LockKeyhole,
+  Play,
+  Users
 } from "lucide-react";
 
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../hooks/usePermissions";
+import GroupAccessPanel from "../../components/cuadro/GroupAccessPanel";
+import { iniciarCuadro } from "../../services/grupoService";
 
 const Grupos = () => {
-  const {
-    grupo,
-    cargarGrupo
-  } = useAuth();
-
+  const { grupo, cargarGrupo } = useAuth();
   const { can } = usePermissions();
-
   const [participantes, setParticipantes] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  const [mostrarModal, setMostrarModal] = useState(false);
-
-  const [
-    mostrarConfirmacion,
-    setMostrarConfirmacion
-  ] = useState(false);
-
-  const [
-    mostrarCorreccion,
-    setMostrarCorreccion
-  ] = useState(false);
-
-  const [
-    iniciandoCuadro,
-    setIniciandoCuadro
-  ] = useState(false);
-
-  const [
-    corrigiendoGrupo,
-    setCorrigiendoGrupo
-  ] = useState(false);
-
-  const [nuevoIntegrante, setNuevoIntegrante] = useState({
-    nombre: "",
-    posicion: "",
-    estado: "pendiente"
-  });
-
+  const [loading, setLoading] = useState(false);
   const [mensaje, setMensaje] = useState("");
-
-  // ========================================
-  // CARGAR PARTICIPANTES
-  // ========================================
+  const [confirmandoInicio, setConfirmandoInicio] = useState(false);
+  const [iniciando, setIniciando] = useState(false);
 
   useEffect(() => {
-    if (grupo?.id) {
-      cargarParticipantes();
-    } else {
-      setLoading(false);
-    }
-  }, [grupo]);
+    if (!grupo?.id) return undefined;
 
-  const cargarParticipantes = async () => {
-    if (!grupo?.id) return;
+    let active = true;
+    Promise.resolve().then(async () => {
+      if (!active) return;
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("participantes")
+        .select("id, nombre, posicion, estado, perfil_id")
+        .eq("grupo_id", grupo.id)
+        .order("posicion", { ascending: true });
 
-    setLoading(true);
-
-    const { data, error } = await supabase
-      .from("participantes")
-      .select("*")
-      .eq("grupo_id", grupo.id)
-      .order("posicion", {
-        ascending: true
-      });
-
-    if (error) {
-      console.error(
-        "Error cargando participantes:",
-        error
-      );
-    } else {
-      setParticipantes(data || []);
-    }
-
-    setLoading(false);
-  };
-
-  // ========================================
-  // FORMULARIO
-  // ========================================
-
-  const handleChange = (e) => {
-    setNuevoIntegrante({
-      ...nuevoIntegrante,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  // ========================================
-  // AGREGAR INTEGRANTE
-  // ========================================
-
-  const agregarIntegrante = async (e) => {
-    e.preventDefault();
-
-    setMensaje("");
-
-    const capacidad = Number(
-      grupo.numero_integrantes
-    );
-
-    const posicionNumero = Number(
-      nuevoIntegrante.posicion
-    );
-
-    if (!can("agregarIntegrantes")) {
-      setMensaje(
-        "No tienes permisos para agregar integrantes."
-      );
-      return;
-    }
-
-    if (!nuevoIntegrante.nombre.trim()) {
-      setMensaje(
-        "El nombre del integrante es obligatorio."
-      );
-      return;
-    }
-
-    if (grupo.estado !== "borrador") {
-      setMensaje(
-        "No puedes agregar integrantes porque el cuadro ya inició."
-      );
-      return;
-    }
-
-    if (
-      participantes.length >=
-      capacidad
-    ) {
-      setMensaje(
-        "El grupo ya alcanzó el número máximo de integrantes."
-      );
-      return;
-    }
-
-    if (
-      !posicionNumero ||
-      posicionNumero < 1 ||
-      posicionNumero > capacidad
-    ) {
-      setMensaje(
-        `La posición debe estar entre 1 y ${capacidad}.`
-      );
-      return;
-    }
-
-    const posicionOcupada =
-      participantes.some(
-        (participante) =>
-          Number(participante.posicion) ===
-          posicionNumero
-      );
-
-    if (posicionOcupada) {
-      setMensaje(
-        "Esa posición ya está ocupada."
-      );
-      return;
-    }
-
-    const { error } = await supabase
-      .from("participantes")
-      .insert({
-        grupo_id: grupo.id,
-        nombre: nuevoIntegrante.nombre.trim(),
-        posicion: posicionNumero,
-        estado: nuevoIntegrante.estado
-      });
-
-    if (error) {
-      console.error(
-        "Error agregando integrante:",
-        error
-      );
-
-      setMensaje(
-        error.message ||
-        "No se pudo agregar el integrante."
-      );
-
-      return;
-    }
-
-    setNuevoIntegrante({
-      nombre: "",
-      posicion: "",
-      estado: "pendiente"
+      if (active) {
+        if (!active) return;
+        if (error) {
+          console.error("Error cargando participantes:", error);
+          setMensaje("No se pudo cargar la lista de socios.");
+          setParticipantes([]);
+        } else {
+          setMensaje("");
+          setParticipantes(data || []);
+        }
+        setLoading(false);
+      }
     });
 
-    setMostrarModal(false);
-    setMensaje("");
-
-    await cargarParticipantes();
-  };
-
-  // ========================================
-  // SIN GRUPO
-  // ========================================
+    return () => {
+      active = false;
+    };
+  }, [grupo?.id]);
 
   if (!grupo) {
     return (
-      <div
-        className="
-          bg-white
-          rounded-2xl
-          border
-          border-slate-200
-          p-6
-        "
-      >
-        <h2 className="text-xl font-bold text-slate-900">
-          No perteneces a ningún grupo
-        </h2>
-
-        <p className="text-slate-500 mt-2">
-          Cuando seas agregado a un cuadro,
-          podrás consultar sus integrantes aquí.
-        </p>
+      <div className="space-y-5">
+        <header className="border-b border-slate-200 pb-4">
+          <h1 className="text-2xl font-bold text-slate-900">Grupos y cuadros</h1>
+          <p className="mt-1 text-sm text-slate-600">Solicita ingresar con un código o crea un grupo nuevo.</p>
+        </header>
+        <GroupAccessPanel />
       </div>
     );
   }
 
-  // ========================================
-  // CÁLCULOS
-  // ========================================
+  const capacidad = Number(grupo.numero_integrantes || 0);
+  const cuposDisponibles = Math.max(capacidad - participantes.length, 0);
+  const grupoCompleto = capacidad > 0 && participantes.length === capacidad;
+  const grupoExcedido = participantes.length > capacidad;
+  const esBorrador = grupo.estado === "borrador";
+  const esActivo = grupo.estado === "activo";
+  const puedeIniciar = can("iniciarCuadro") && esBorrador && grupoCompleto && !grupoExcedido;
+  const pozo = capacidad * Number(grupo.aporte_semanal || 0);
 
-  const capacidadGrupo =
-    Number(grupo.numero_integrantes) || 0;
+  const confirmarSorteo = async () => {
+    if (!puedeIniciar || iniciando) return;
 
-  const totalParticipantes =
-    participantes.length;
-
-  const cuposDisponibles =
-    Math.max(
-      capacidadGrupo - totalParticipantes,
-      0
-    );
-
-  const grupoExcedido =
-    totalParticipantes >
-    capacidadGrupo;
-
-  const grupoCompleto =
-    totalParticipantes ===
-    capacidadGrupo;
-
-  const cuadroEsBorrador =
-    grupo.estado === "borrador";
-
-  const cuadroActivo =
-    grupo.estado === "activo";
-
-  const cuadroFinalizado =
-    grupo.estado === "finalizado";
-
-  const puedeAgregar =
-    can("agregarIntegrantes") &&
-    cuadroEsBorrador &&
-    cuposDisponibles > 0;
-
-  const puedeCorregir =
-    can("corregirCapacidad") &&
-    cuadroEsBorrador;
-
-  const puedeIniciar =
-    can("iniciarCuadro") &&
-    cuadroEsBorrador &&
-    grupoCompleto &&
-    !grupoExcedido;
-
-  const pozoActual =
-    capacidadGrupo *
-    Number(grupo.aporte_semanal || 0);
-
-  const pozoCorregido =
-    totalParticipantes *
-    Number(grupo.aporte_semanal || 0);
-
-  // ========================================
-  // CORREGIR CAPACIDAD
-  // ========================================
-
-  const corregirCapacidadGrupo =
-    async () => {
-
-      if (!can("corregirCapacidad")) {
-        setMensaje(
-          "No tienes permisos para corregir la capacidad."
-        );
-        return;
-      }
-
-      if (!cuadroEsBorrador) {
-        setMensaje(
-          "La capacidad solo puede corregirse mientras el cuadro esté en borrador."
-        );
-        return;
-      }
-
-      setCorrigiendoGrupo(true);
-      setMensaje("");
-
-      const nuevaCapacidad =
-        totalParticipantes;
-
-      const { data, error } =
-        await supabase
-          .from("grupos")
-          .update({
-            numero_integrantes:
-              nuevaCapacidad
-          })
-          .eq(
-            "id",
-            grupo.id
-          )
-          .select()
-          .single();
-
-      if (error) {
-        console.error(
-          "Error corrigiendo capacidad:",
-          error
-        );
-
-        setMensaje(
-          error.message ||
-          "No se pudo corregir la capacidad."
-        );
-
-        setCorrigiendoGrupo(false);
-
-        return;
-      }
-
-      if (
-        cargarGrupo &&
-        data?.id
-      ) {
-        await cargarGrupo(data.id);
-      }
-
-      setMostrarCorreccion(false);
-      setCorrigiendoGrupo(false);
-    };
-
-  // ========================================
-  // INICIAR CUADRO
-  // ========================================
-
-  const iniciarCuadro = async () => {
-    if (!puedeIniciar) {
-      return;
-    }
-
-    setIniciandoCuadro(true);
+    setIniciando(true);
     setMensaje("");
-
-    const { data, error } =
-      await supabase
-        .from("grupos")
-        .update({
-          estado: "activo",
-          fecha_inicio:
-            new Date().toISOString(),
-          semana_actual: 1
-        })
-        .eq(
-          "id",
-          grupo.id
-        )
-        .select()
-        .single();
-
-    if (error) {
-      console.error(
-        "Error iniciando cuadro:",
-        error
-      );
-
-      setMensaje(
-        error.message ||
-        "No se pudo iniciar el cuadro."
-      );
-
-      setIniciandoCuadro(false);
-
-      return;
+    try {
+      await iniciarCuadro(grupo.id);
+      await cargarGrupo(grupo.id);
+      setConfirmandoInicio(false);
+    } catch (error) {
+      console.error("Error aprobando el inicio del cuadro:", error);
+      setMensaje(error.message || "No se pudo sortear e iniciar el cuadro.");
+    } finally {
+      setIniciando(false);
     }
-
-    if (
-      cargarGrupo &&
-      data?.id
-    ) {
-      await cargarGrupo(data.id);
-    }
-
-    setMostrarConfirmacion(false);
-    setIniciandoCuadro(false);
   };
 
-  // ========================================
-  // UI
-  // ========================================
-
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
+      <GroupAccessPanel />
 
-      {/* CABECERA */}
-
-      <div
-        className="
-          flex
-          flex-col
-          lg:flex-row
-          lg:items-start
-          lg:justify-between
-          gap-6
-        "
-      >
-
+      <header className="flex flex-col gap-5 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-
-          <p
-            className="
-              text-sm
-              font-semibold
-              text-emerald-700
-            "
-          >
-            Caja Comunal
-          </p>
-
-          <h1
-            className="
-              text-3xl
-              md:text-4xl
-              font-bold
-              text-slate-900
-              mt-1
-            "
-          >
-            {grupo.nombre}
-          </h1>
-
-          <p
-            className="
-              text-slate-500
-              mt-2
-            "
-          >
-            Consulta los integrantes y
-            posiciones del cuadro.
-          </p>
-
-          {/* ESTADO */}
-
-          <div className="mt-4">
-
-            <span
-              className={`
-                inline-flex
-                items-center
-                rounded-full
-                px-3
-                py-1
-                text-xs
-                font-semibold
-
-                ${
-                  cuadroActivo
-                    ? `
-                      bg-emerald-100
-                      text-emerald-700
-                    `
-                    : cuadroFinalizado
-                    ? `
-                      bg-slate-200
-                      text-slate-700
-                    `
-                    : `
-                      bg-amber-100
-                      text-amber-700
-                    `
-                }
-              `}
-            >
-              {cuadroActivo
-                ? "● Cuadro activo"
-                : cuadroFinalizado
-                ? "Cuadro finalizado"
-                : "● Borrador"
-              }
-            </span>
-
-          </div>
-
+          <p className="text-sm font-semibold text-emerald-700">Grupo activo</p>
+          <h1 className="mt-1 text-3xl font-bold text-slate-900">{grupo.nombre}</h1>
+          <p className="mt-2 text-sm text-slate-600">{esActivo ? "Cuadro activo" : grupo.estado === "finalizado" ? "Cuadro finalizado" : "En preparación"}</p>
         </div>
-
-
-        {/* ACCIONES */}
-
-        <div
-          className="
-            flex
-            flex-wrap
-            gap-3
-          "
-        >
-
-          {/* AGREGAR */}
-
-          {can("agregarIntegrantes") &&
-            cuadroEsBorrador && (
-
-            <button
-              onClick={() => {
-                if (puedeAgregar) {
-                  setMostrarModal(true);
-                  setMensaje("");
-                }
-              }}
-
-              disabled={!puedeAgregar}
-
-              className={`
-                flex
-                items-center
-                justify-center
-                gap-2
-                px-5
-                py-3
-                rounded-xl
-                font-semibold
-                transition
-
-                ${
-                  puedeAgregar
-                    ? `
-                      bg-emerald-600
-                      hover:bg-emerald-700
-                      text-white
-                    `
-                    : `
-                      bg-slate-200
-                      text-slate-500
-                      cursor-not-allowed
-                    `
-                }
-              `}
-            >
-              <UserPlus size={20} />
-
-              {cuposDisponibles === 0
-                ? "Grupo completo"
-                : "Agregar integrante"
-              }
-            </button>
-
-          )}
-
-
-          {/* INICIAR */}
-
-          {can("iniciarCuadro") &&
-            cuadroEsBorrador && (
-
-            <button
-              onClick={() =>
-                setMostrarConfirmacion(true)
-              }
-              disabled={!puedeIniciar}
-              className={`
-                flex
-                items-center
-                gap-2
-                px-5
-                py-3
-                rounded-xl
-                font-semibold
-                transition
-
-                ${
-                  puedeIniciar
-                    ? `
-                      bg-slate-900
-                      text-white
-                      hover:bg-slate-800
-                    `
-                    : `
-                      bg-slate-200
-                      text-slate-500
-                      cursor-not-allowed
-                    `
-                }
-              `}
-            >
-              <Play size={18} />
-              Iniciar Cuadro
-            </button>
-
-          )}
-
-
-          {/* BLOQUEADO */}
-
-          {cuadroActivo && (
-
-            <div
-              className="
-                flex
-                items-center
-                gap-2
-                rounded-xl
-                bg-emerald-50
-                text-emerald-700
-                px-4
-                py-3
-                text-sm
-                font-semibold
-              "
-            >
-              <LockKeyhole size={18} />
-              Estructura bloqueada
-            </div>
-
-          )}
-
-        </div>
-
-      </div>
-
-
-      {/* RESUMEN */}
-
-      <div
-        className="
-          grid
-          grid-cols-1
-          md:grid-cols-3
-          gap-6
-        "
-      >
-
-        <div
-          className="
-            bg-white
-            rounded-2xl
-            border
-            border-slate-200
-            p-6
-            shadow-sm
-          "
-        >
-          <div
-            className="
-              w-11
-              h-11
-              bg-emerald-50
-              text-emerald-700
-              rounded-xl
-              flex
-              items-center
-              justify-center
-            "
+        {can("iniciarCuadro") && esBorrador && (
+          <button
+            type="button"
+            onClick={() => setConfirmandoInicio(true)}
+            disabled={!puedeIniciar}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-800 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            <Users size={22} />
-          </div>
-
-          <p className="text-sm text-slate-500 mt-5">
-            Integrantes actuales
-          </p>
-
-          <p className="text-3xl font-bold text-slate-900 mt-1">
-            {totalParticipantes}
-          </p>
-        </div>
-
-
-        <div
-          className="
-            bg-white
-            rounded-2xl
-            border
-            border-slate-200
-            p-6
-            shadow-sm
-          "
-        >
-          <div
-            className="
-              w-11
-              h-11
-              bg-orange-50
-              text-orange-600
-              rounded-xl
-              flex
-              items-center
-              justify-center
-            "
-          >
-            <Plus size={22} />
-          </div>
-
-          <p className="text-sm text-slate-500 mt-5">
-            Cupos disponibles
-          </p>
-
-          <p className="text-3xl font-bold text-slate-900 mt-1">
-            {cuposDisponibles}
-          </p>
-        </div>
-
-
-        <div
-          className="
-            bg-white
-            rounded-2xl
-            border
-            border-slate-200
-            p-6
-            shadow-sm
-          "
-        >
-          <div
-            className="
-              w-11
-              h-11
-              bg-blue-50
-              text-blue-600
-              rounded-xl
-              flex
-              items-center
-              justify-center
-              font-bold
-            "
-          >
-            $
-          </div>
-
-          <p className="text-sm text-slate-500 mt-5">
-            Aporte semanal
-          </p>
-
-          <p className="text-3xl font-bold text-slate-900 mt-1">
-            $
-            {Number(
-              grupo.aporte_semanal
-            ).toFixed(2)}
-          </p>
-        </div>
-
-      </div>
-
-
-      {/* ALERTA EXCEDIDO */}
-
-      {grupoExcedido && (
-
-        <div
-          className="
-            rounded-2xl
-            border
-            border-amber-200
-            bg-amber-50
-            px-5
-            py-4
-            text-amber-800
-          "
-        >
-          <div
-            className="
-              flex
-              items-start
-              gap-3
-            "
-          >
-
-            <AlertTriangle
-              size={21}
-              className="shrink-0 mt-0.5"
-            />
-
-            <div className="flex-1">
-
-              <p className="font-semibold">
-                El grupo supera la cantidad
-                configurada de integrantes.
-              </p>
-
-              <p className="text-sm mt-1">
-                Actualmente existen{" "}
-                <strong>
-                  {totalParticipantes}
-                </strong>{" "}
-                integrantes, pero el grupo
-                está configurado para{" "}
-                <strong>
-                  {capacidadGrupo}
-                </strong>.
-              </p>
-
-              <p className="text-sm mt-2">
-                Debes corregir esta
-                inconsistencia antes de
-                iniciar las rondas.
-              </p>
-
-              {puedeCorregir && (
-
-                <button
-                  onClick={() =>
-                    setMostrarCorreccion(true)
-                  }
-                  className="
-                    mt-4
-                    inline-flex
-                    items-center
-                    gap-2
-                    px-4
-                    py-2.5
-                    rounded-xl
-                    bg-amber-600
-                    hover:bg-amber-700
-                    text-white
-                    text-sm
-                    font-semibold
-                    transition
-                  "
-                >
-                  <Wrench size={17} />
-                  Resolver inconsistencia
-                </button>
-
-              )}
-
-            </div>
-          </div>
-        </div>
-
-      )}
-
-
-      {/* BORRADOR INCOMPLETO */}
-
-      {cuadroEsBorrador &&
-        !grupoCompleto &&
-        !grupoExcedido && (
-
-        <div
-          className="
-            rounded-2xl
-            border
-            border-blue-200
-            bg-blue-50
-            px-5
-            py-4
-            text-blue-800
-          "
-        >
-          <p className="font-semibold">
-            El cuadro todavía no está
-            listo para iniciar.
-          </p>
-
-          <p className="text-sm mt-1">
-            Faltan{" "}
-            <strong>
-              {Math.max(
-                capacidadGrupo -
-                totalParticipantes,
-                0
-              )}
-            </strong>{" "}
-            integrantes para completar los{" "}
-            <strong>
-              {capacidadGrupo}
-            </strong>{" "}
-            puestos.
-          </p>
-        </div>
-
-      )}
-
-
-      {/* MENSAJE */}
-
-      {mensaje && (
-
-        <div
-          className="
-            rounded-xl
-            border
-            border-red-200
-            bg-red-50
-            text-red-700
-            px-5
-            py-4
-            text-sm
-          "
-        >
-          {mensaje}
-        </div>
-
-      )}
-
-
-      {/* TABLA */}
-
-      <section
-        className="
-          bg-white
-          rounded-3xl
-          border
-          border-slate-200
-          shadow-sm
-          overflow-hidden
-        "
-      >
-
-        <div
-          className="
-            p-6
-            border-b
-            border-slate-200
-          "
-        >
-          <h2
-            className="
-              text-xl
-              font-bold
-              text-slate-900
-            "
-          >
-            Integrantes del grupo
-          </h2>
-
-          <p
-            className="
-              text-sm
-              text-slate-500
-              mt-1
-            "
-          >
-            Cada integrante ocupa una
-            posición dentro del cuadro.
-          </p>
-        </div>
-
-
-        {loading ? (
-
-          <div className="p-8 text-slate-500">
-            Cargando integrantes...
-          </div>
-
-        ) : participantes.length === 0 ? (
-
-          <div
-            className="
-              p-10
-              text-center
-              text-slate-500
-            "
-          >
-            Todavía no existen integrantes
-            registrados.
-          </div>
-
-        ) : (
-
-          <div className="overflow-x-auto">
-
-            <table className="w-full">
-
-              <thead className="bg-slate-50">
-
-                <tr>
-
-                  <th className="text-left text-sm font-semibold text-slate-600 p-4">
-                    Puesto
-                  </th>
-
-                  <th className="text-left text-sm font-semibold text-slate-600 p-4">
-                    Integrante
-                  </th>
-
-                  <th className="text-left text-sm font-semibold text-slate-600 p-4">
-                    Estado
-                  </th>
-
-                </tr>
-
-              </thead>
-
-
-              <tbody>
-
-                {participantes.map(
-                  (participante) => (
-
-                    <tr
-                      key={participante.id}
-                      className="
-                        border-t
-                        border-slate-100
-                        hover:bg-slate-50
-                        transition
-                      "
-                    >
-
-                      <td className="p-4">
-
-                        <span
-                          className="
-                            w-9
-                            h-9
-                            inline-flex
-                            items-center
-                            justify-center
-                            rounded-full
-                            bg-emerald-50
-                            text-emerald-700
-                            font-bold
-                          "
-                        >
-                          {participante.posicion}
-                        </span>
-
-                      </td>
-
-
-                      <td
-                        className="
-                          p-4
-                          font-medium
-                          text-slate-900
-                        "
-                      >
-                        {participante.nombre}
-                      </td>
-
-
-                      <td className="p-4">
-
-                        <span
-                          className={`
-                            px-3
-                            py-1
-                            rounded-full
-                            text-xs
-                            font-semibold
-
-                            ${
-                              participante.estado === "pagado"
-                                ? `
-                                  bg-emerald-100
-                                  text-emerald-700
-                                `
-                                : participante.estado === "recibido"
-                                ? `
-                                  bg-amber-100
-                                  text-amber-700
-                                `
-                                : participante.estado === "actual"
-                                ? `
-                                  bg-orange-100
-                                  text-orange-700
-                                `
-                                : `
-                                  bg-slate-100
-                                  text-slate-600
-                                `
-                            }
-                          `}
-                        >
-                          {participante.estado}
-                        </span>
-
-                      </td>
-
-                    </tr>
-
-                  )
-                )}
-
-              </tbody>
-
-            </table>
-
-          </div>
-
+            <Play size={17} /> Aprobar e iniciar sorteo
+          </button>
         )}
+        {esActivo && (
+          <p className="inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+            <LockKeyhole size={17} /> Posiciones bloqueadas
+          </p>
+        )}
+      </header>
 
+      {mensaje && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{mensaje}</p>}
+
+      <section className="grid gap-4 sm:grid-cols-3" aria-label="Resumen del grupo">
+        <Metric icon={<Users size={19} />} label="Socios aprobados" value={`${participantes.length} / ${capacidad}`} />
+        <Metric icon={<Users size={19} />} label="Cupos disponibles" value={cuposDisponibles} />
+        <Metric label="Aporte semanal" value={`$${Number(grupo.aporte_semanal || 0).toFixed(2)}`} />
       </section>
 
-
-      {/* MODAL AGREGAR */}
-
-      {mostrarModal && (
-
-        <div
-          className="
-            fixed
-            inset-0
-            z-50
-            bg-black/40
-            flex
-            items-center
-            justify-center
-            p-4
-          "
-        >
-
-          <div
-            className="
-              bg-white
-              w-full
-              max-w-md
-              rounded-3xl
-              shadow-xl
-              p-7
-            "
-          >
-
-            <h2
-              className="
-                text-2xl
-                font-bold
-                text-slate-900
-              "
-            >
-              Agregar integrante
-            </h2>
-
-            <p
-              className="
-                text-slate-500
-                mt-1
-                mb-6
-              "
-            >
-              Asigna un integrante a
-              un puesto disponible.
-            </p>
-
-            <form
-              onSubmit={agregarIntegrante}
-              className="space-y-5"
-            >
-
-              <div>
-
-                <label
-                  className="
-                    block
-                    text-sm
-                    font-medium
-                    mb-2
-                  "
-                >
-                  Nombre
-                </label>
-
-                <input
-                  name="nombre"
-                  value={
-                    nuevoIntegrante.nombre
-                  }
-                  onChange={handleChange}
-                  placeholder="Ej. Andrea López"
-                  className="
-                    w-full
-                    border
-                    border-slate-300
-                    rounded-xl
-                    px-4
-                    py-3
-                    outline-none
-                    focus:ring-2
-                    focus:ring-emerald-500
-                  "
-                />
-
-              </div>
-
-
-              <div>
-
-                <label
-                  className="
-                    block
-                    text-sm
-                    font-medium
-                    mb-2
-                  "
-                >
-                  Posición
-                </label>
-
-                <input
-                  name="posicion"
-                  type="number"
-                  min="1"
-                  max={capacidadGrupo}
-                  value={
-                    nuevoIntegrante.posicion
-                  }
-                  onChange={handleChange}
-                  placeholder="Ej. 8"
-                  className="
-                    w-full
-                    border
-                    border-slate-300
-                    rounded-xl
-                    px-4
-                    py-3
-                    outline-none
-                    focus:ring-2
-                    focus:ring-emerald-500
-                  "
-                />
-
-                <p
-                  className="
-                    text-xs
-                    text-slate-400
-                    mt-2
-                  "
-                >
-                  Cupos disponibles:{" "}
-                  {cuposDisponibles}
-                </p>
-
-              </div>
-
-
-              <div>
-
-                <label
-                  className="
-                    block
-                    text-sm
-                    font-medium
-                    mb-2
-                  "
-                >
-                  Estado inicial
-                </label>
-
-                <select
-                  name="estado"
-                  value={
-                    nuevoIntegrante.estado
-                  }
-                  onChange={handleChange}
-                  className="
-                    w-full
-                    border
-                    border-slate-300
-                    rounded-xl
-                    px-4
-                    py-3
-                    bg-white
-                  "
-                >
-
-                  <option value="pendiente">
-                    Pendiente
-                  </option>
-
-                  <option value="pagado">
-                    Pagado
-                  </option>
-
-                </select>
-
-              </div>
-
-
-              {mensaje && (
-
-                <div
-                  className="
-                    rounded-xl
-                    bg-red-50
-                    text-red-700
-                    p-3
-                    text-sm
-                  "
-                >
-                  {mensaje}
-                </div>
-
-              )}
-
-
-              <div
-                className="
-                  flex
-                  justify-end
-                  gap-3
-                  pt-3
-                "
-              >
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMostrarModal(false);
-                    setMensaje("");
-
-                    setNuevoIntegrante({
-                      nombre: "",
-                      posicion: "",
-                      estado: "pendiente"
-                    });
-                  }}
-                  className="
-                    px-4
-                    py-2
-                    rounded-xl
-                    border
-                    border-slate-300
-                    text-slate-700
-                    hover:bg-slate-50
-                  "
-                >
-                  Cancelar
-                </button>
-
-
-                <button
-                  type="submit"
-                  className="
-                    px-5
-                    py-2
-                    rounded-xl
-                    bg-emerald-600
-                    hover:bg-emerald-700
-                    text-white
-                    font-semibold
-                  "
-                >
-                  Agregar integrante
-                </button>
-
-              </div>
-
-            </form>
-
-          </div>
-
+      {grupoExcedido && (
+        <div className="flex items-start gap-3 border-l-4 border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-950" role="alert">
+          <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+          <p>Este grupo supera su capacidad configurada. No se puede iniciar hasta revisar los datos existentes.</p>
         </div>
-
       )}
 
-
-      {/* MODAL CORRECCIÓN */}
-
-      {mostrarCorreccion && (
-
-        <div
-          className="
-            fixed
-            inset-0
-            z-50
-            bg-black/40
-            flex
-            items-center
-            justify-center
-            p-4
-          "
-        >
-
-          <div
-            className="
-              bg-white
-              w-full
-              max-w-lg
-              rounded-3xl
-              shadow-xl
-              p-7
-            "
-          >
-
-            <p
-              className="
-                text-sm
-                font-semibold
-                text-amber-700
-              "
-            >
-              Corrección administrativa
-            </p>
-
-            <h2
-              className="
-                text-2xl
-                font-bold
-                text-slate-900
-                mt-1
-              "
-            >
-              Ajustar capacidad del cuadro
-            </h2>
-
-            <p className="text-slate-500 mt-3">
-              El grupo está configurado para{" "}
-              <strong>
-                {capacidadGrupo}
-              </strong>{" "}
-              integrantes, pero actualmente tiene{" "}
-              <strong>
-                {totalParticipantes}
-              </strong>.
-            </p>
-
-
-            <div
-              className="
-                mt-6
-                rounded-2xl
-                bg-slate-50
-                p-5
-                space-y-3
-              "
-            >
-
-              <div className="flex justify-between gap-4">
-                <span className="text-slate-500">
-                  Capacidad actual
-                </span>
-
-                <strong>
-                  {capacidadGrupo}
-                </strong>
-              </div>
-
-
-              <div className="flex justify-between gap-4">
-                <span className="text-slate-500">
-                  Integrantes registrados
-                </span>
-
-                <strong>
-                  {totalParticipantes}
-                </strong>
-              </div>
-
-
-              <div className="flex justify-between gap-4">
-                <span className="text-slate-500">
-                  Nueva capacidad
-                </span>
-
-                <strong className="text-emerald-700">
-                  {totalParticipantes}
-                </strong>
-              </div>
-
-
-              <div className="flex justify-between gap-4">
-                <span className="text-slate-500">
-                  Pozo actual
-                </span>
-
-                <strong>
-                  ${pozoActual.toFixed(2)}
-                </strong>
-              </div>
-
-
-              <div className="flex justify-between gap-4">
-                <span className="text-slate-500">
-                  Nuevo pozo
-                </span>
-
-                <strong className="text-emerald-700">
-                  ${pozoCorregido.toFixed(2)}
-                </strong>
-              </div>
-
-            </div>
-
-
-            <div
-              className="
-                mt-5
-                rounded-xl
-                border
-                border-amber-200
-                bg-amber-50
-                p-4
-                text-sm
-                text-amber-800
-              "
-            >
-              Esta corrección está permitida
-              porque el cuadro aún está en
-              borrador. Después de iniciarlo,
-              la capacidad quedará bloqueada.
-            </div>
-
-
-            <div
-              className="
-                flex
-                justify-end
-                gap-3
-                mt-7
-              "
-            >
-
-              <button
-                onClick={() =>
-                  setMostrarCorreccion(false)
-                }
-                disabled={corrigiendoGrupo}
-                className="
-                  px-4
-                  py-2.5
-                  rounded-xl
-                  border
-                  border-slate-300
-                  hover:bg-slate-50
-                "
-              >
-                Cancelar
-              </button>
-
-
-              <button
-                onClick={corregirCapacidadGrupo}
-                disabled={corrigiendoGrupo}
-                className="
-                  px-5
-                  py-2.5
-                  rounded-xl
-                  bg-amber-600
-                  hover:bg-amber-700
-                  text-white
-                  font-semibold
-                "
-              >
-                {corrigiendoGrupo
-                  ? "Corrigiendo..."
-                  : `Cambiar capacidad a ${totalParticipantes}`
-                }
-              </button>
-
-            </div>
-
-          </div>
-
-        </div>
-
+      {esBorrador && !grupoCompleto && !grupoExcedido && (
+        <p className="border-l-4 border-blue-600 bg-blue-50 px-4 py-3 text-sm text-blue-950">
+          Faltan {cuposDisponibles} socios aprobados para completar el grupo y habilitar el sorteo.
+        </p>
       )}
 
-
-      {/* MODAL INICIAR */}
-
-      {mostrarConfirmacion && (
-
-        <div
-          className="
-            fixed
-            inset-0
-            z-50
-            bg-black/40
-            flex
-            items-center
-            justify-center
-            p-4
-          "
-        >
-
-          <div
-            className="
-              bg-white
-              w-full
-              max-w-lg
-              rounded-3xl
-              shadow-xl
-              p-7
-            "
-          >
-
-            <p
-              className="
-                text-sm
-                font-semibold
-                text-emerald-700
-              "
-            >
-              Confirmar inicio
-            </p>
-
-            <h2
-              className="
-                text-2xl
-                font-bold
-                text-slate-900
-                mt-1
-              "
-            >
-              ¿Iniciar este cuadro?
-            </h2>
-
-            <p className="text-slate-500 mt-3">
-              Una vez iniciado, la estructura
-              principal quedará bloqueada.
-            </p>
-
-
-            <div
-              className="
-                bg-slate-50
-                rounded-2xl
-                p-5
-                mt-6
-                space-y-3
-              "
-            >
-
-              <div className="flex justify-between gap-4">
-                <span className="text-slate-500">
-                  Integrantes
-                </span>
-
-                <strong>
-                  {capacidadGrupo}
-                </strong>
-              </div>
-
-
-              <div className="flex justify-between gap-4">
-                <span className="text-slate-500">
-                  Aporte
-                </span>
-
-                <strong>
-                  $
-                  {Number(
-                    grupo.aporte_semanal
-                  ).toFixed(2)}
-                </strong>
-              </div>
-
-
-              <div className="flex justify-between gap-4">
-                <span className="text-slate-500">
-                  Pozo por ronda
-                </span>
-
-                <strong>
-                  ${pozoActual.toFixed(2)}
-                </strong>
-              </div>
-
-
-              <div className="flex justify-between gap-4">
-                <span className="text-slate-500">
-                  Rondas
-                </span>
-
-                <strong>
-                  {capacidadGrupo}
-                </strong>
-              </div>
-
-            </div>
-
-
-            <div
-              className="
-                rounded-xl
-                border
-                border-amber-200
-                bg-amber-50
-                p-4
-                mt-5
-                text-sm
-                text-amber-800
-              "
-            >
-              Después de iniciar el cuadro
-              no podrás cambiar libremente
-              la cantidad de integrantes.
-            </div>
-
-
-            <div
-              className="
-                flex
-                justify-end
-                gap-3
-                mt-7
-              "
-            >
-
-              <button
-                onClick={() =>
-                  setMostrarConfirmacion(false)
-                }
-                disabled={iniciandoCuadro}
-                className="
-                  px-4
-                  py-2.5
-                  rounded-xl
-                  border
-                  border-slate-300
-                  hover:bg-slate-50
-                "
-              >
-                Cancelar
-              </button>
-
-
-              <button
-                onClick={iniciarCuadro}
-                disabled={iniciandoCuadro}
-                className="
-                  px-5
-                  py-2.5
-                  rounded-xl
-                  bg-emerald-600
-                  hover:bg-emerald-700
-                  text-white
-                  font-semibold
-                "
-              >
-                {iniciandoCuadro
-                  ? "Iniciando..."
-                  : "Sí, iniciar cuadro"
-                }
-              </button>
-
-            </div>
-
-          </div>
-
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="border-b border-slate-200 px-5 py-4">
+          <h2 className="font-semibold text-slate-900">Socios del grupo</h2>
+          <p className="mt-1 text-sm text-slate-500">Las posiciones actuales son provisionales; al aprobar el inicio se sortearán al azar.</p>
         </div>
+        {loading ? (
+          <p className="px-5 py-8 text-sm text-slate-500" role="status">Cargando socios...</p>
+        ) : participantes.length === 0 ? (
+          <p className="px-5 py-8 text-sm text-slate-500">Aún no hay socios aprobados para este grupo.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="px-5 py-3 font-semibold">Posición provisional</th>
+                  <th className="px-5 py-3 font-semibold">Socio</th>
+                  <th className="px-5 py-3 font-semibold">Estado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {participantes.map((participante) => (
+                  <tr key={participante.id}>
+                    <td className="px-5 py-3">{participante.posicion ?? "Pendiente"}</td>
+                    <td className="px-5 py-3 font-medium text-slate-900">{participante.nombre}</td>
+                    <td className="px-5 py-3 capitalize text-slate-600">{participante.estado || "pendiente"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
+      {confirmandoInicio && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
+          <section className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="confirmar-sorteo-titulo">
+            <p className="text-sm font-semibold text-emerald-800">Aprobación de inicio</p>
+            <h2 id="confirmar-sorteo-titulo" className="mt-1 text-xl font-bold text-slate-900">¿Sortear posiciones e iniciar?</h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">La base de datos asignará una posición aleatoria a cada socio y activará la primera ronda. Esta acción no se puede deshacer.</p>
+            <dl className="mt-5 space-y-2 border-y border-slate-200 py-4 text-sm">
+              <Row label="Grupo" value={grupo.nombre} />
+              <Row label="Socios" value={capacidad} />
+              <Row label="Aporte semanal" value={`$${Number(grupo.aporte_semanal || 0).toFixed(2)}`} />
+              <Row label="Pozo estimado" value={`$${pozo.toFixed(2)}`} />
+            </dl>
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={() => setConfirmandoInicio(false)} disabled={iniciando} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60">Cancelar</button>
+              <button type="button" onClick={confirmarSorteo} disabled={iniciando || !puedeIniciar} className="rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-60">{iniciando ? "Procesando..." : "Confirmar sorteo"}</button>
+            </div>
+          </section>
+        </div>
       )}
-
     </div>
   );
 };
+
+const Metric = ({ icon, label, value }) => (
+  <div className="flex items-center gap-3 border-y border-slate-200 py-4">
+    {icon && <span className="text-emerald-800">{icon}</span>}
+    <div>
+      <p className="text-sm text-slate-500">{label}</p>
+      <p className="mt-1 text-xl font-bold text-slate-900">{value}</p>
+    </div>
+  </div>
+);
+
+const Row = ({ label, value }) => (
+  <div className="flex justify-between gap-4">
+    <dt className="text-slate-500">{label}</dt>
+    <dd className="font-semibold text-slate-900">{value}</dd>
+  </div>
+);
 
 export default Grupos;

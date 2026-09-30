@@ -3,9 +3,7 @@ export const PERMISSIONS = {
     verDashboard: true,
     verGrupo: true,
     gestionarGrupo: true,
-    agregarIntegrantes: true,
     iniciarCuadro: true,
-    corregirCapacidad: true,
 
     verAportes: true,
     registrarAporte: true,
@@ -18,7 +16,6 @@ export const PERMISSIONS = {
     solicitarPrestamo: true,
     aprobarPrestamos: true,
     verFondoComunitario: true,
-    verSimulacion: true,
     verVistaSocio: true,
   
     
@@ -30,9 +27,7 @@ export const PERMISSIONS = {
     verDashboard: true,
     verGrupo: true,
     gestionarGrupo: false,
-    agregarIntegrantes: false,
-    iniciarCuadro: false,
-    corregirCapacidad: false,
+    iniciarCuadro: true,
 
     verAportes: true,
     registrarAporte: true,
@@ -45,7 +40,6 @@ export const PERMISSIONS = {
     solicitarPrestamo: true,
     aprobarPrestamos: true,
     verFondoComunitario: true,
-    verSimulacion: false,
     verVistaSocio: false,
 
     verHistorialCompleto: true,
@@ -56,9 +50,7 @@ export const PERMISSIONS = {
     verDashboard: true,
     verGrupo: true,
     gestionarGrupo: false,
-    agregarIntegrantes: false,
     iniciarCuadro: false,
-    corregirCapacidad: false,
 
     verAportes: true,
     registrarAporte: true,
@@ -71,7 +63,6 @@ export const PERMISSIONS = {
     solicitarPrestamo: true,
     aprobarPrestamos: false,
     verFondoComunitario: false,
-    verSimulacion: false,
     verVistaSocio: false,
 
     verHistorialCompleto: false,

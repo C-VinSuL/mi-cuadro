@@ -1,16 +1,35 @@
-# React + Vite
+# Mi Cuadro
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación de gestión de grupos, socios, aportes, préstamos y cuadros rotativos.
 
-Currently, two official plugins are available:
+## Requisitos
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node.js compatible con Vite 8.
+- Un proyecto Supabase con las tablas `perfiles`, `grupos`, `participantes`, `aportes`, `entregas` y las funciones RPC que ya consume la aplicación.
+- Los perfiles se deben crear desde un proceso de servidor confiable. El rol no debe aceptarse desde los datos enviados por el formulario público de registro.
 
-## React Compiler
+## Desarrollo local
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Define `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en `.env`, instala dependencias e inicia Vite:
 
-## Expanding the ESLint configuration
+```sh
+npm install
+npm run dev
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Grupos y sorteo
+
+Antes de usar la gestión de grupos, aplica en orden las migraciones `supabase/migrations/202609300001_group_membership_and_draw.sql`, `supabase/migrations/202609300002_delete_draft_group.sql` y `supabase/migrations/202609300003_fix_create_group_rpc.sql` en el SQL Editor de Supabase. Si las anteriores ya se aplicaron, ejecuta la tercera. Estas migraciones agregan códigos de acceso y solicitudes, permiten membresías en varios grupos y crean funciones RPC con validación de roles. La tercera también refresca la caché del esquema de PostgREST, elimina membresías vacías del administrador en grupos borrador y desvincula su perfil de cualquier registro histórico sin borrar movimientos. Conserva una copia de seguridad y verifica que el esquema actual use las columnas consultadas por la aplicación antes de aplicarlas en producción.
+
+El administrador crea grupos y comparte el código. Un socio con cuenta confirmada solicita ingreso con ese código; administración o tesorería revisa la solicitud. Al iniciar, el cuadro debe estar completo y la función de base de datos asigna posiciones aleatorias y activa la primera ronda en una sola transacción. Cada usuario puede alternar entre sus grupos desde la barra lateral.
+
+El administrador puede eliminar grupos en borrador que no tengan aportes, entregas, préstamos ni movimientos de fondo. La eliminación quita membresías y solicitudes, pero conserva las cuentas de los socios. Los grupos iniciados o con actividad financiera no se borran desde la app.
+
+Los roles `administrador` y `tesorero` deben asignarse en Supabase por un proceso confiable. Las pantallas ya no contienen la simulación local de perfiles, pagos y préstamos.
+
+## Validación
+
+```sh
+npm run build
+npm run lint
+```

@@ -20,7 +20,6 @@ import MiCuadro from "../pages/cuadro/MiCuadro";
 import Prestamos from "../pages/prestamos/Prestamos";
 import Historial from "../pages/reportes/Historial";
 import Configuracion from "../pages/Configuracion";
-import Simulacion from "../pages/admin/Simulacion";
 import VistaSocio from "../pages/admin/VistaSocio";
 
 const AppRoutes = () => {
@@ -188,19 +187,6 @@ const AppRoutes = () => {
                 <Configuracion />
               </MainLayout>
 
-            </RoleRoute>
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/simulacion"
-        element={
-          <ProtectedRoute>
-            <RoleRoute permission="verSimulacion">
-              <MainLayout>
-                <Simulacion />
-              </MainLayout>
             </RoleRoute>
           </ProtectedRoute>
         }

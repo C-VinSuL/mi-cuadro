@@ -19,7 +19,9 @@ export const AuthProvider = ({ children }) => {
 
   const [profile, setProfile] = useState(null);
   const [participant, setParticipant] = useState(null);
+  const [participantes, setParticipantes] = useState([]);
   const [grupo, setGrupo] = useState(null);
+  const [grupos, setGrupos] = useState([]);
   const [fondoComunitario, setFondoComunitario] = useState(0);
   
 
@@ -88,6 +90,10 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
+    setGrupos((current) => [
+      ...current.filter((item) => item.id !== data.id),
+      data
+    ]);
     setGrupo(data);
     if (puedeVerFondo) {
       await cargarFondoComunitario(data.id, puedeVerFondo);
@@ -108,46 +114,107 @@ export const AuthProvider = ({ children }) => {
 
     if (!userId) {
       setParticipant(null);
+      setParticipantes([]);
       setGrupo(null);
+      setGrupos([]);
       setFondoComunitario(0);
       return;
     }
 
-    const { data, error } = await supabase
-      .from("participantes")
-      .select(`
-        id,
-        nombre,
-        posicion,
-        estado,
-        grupo_id,
-        perfil_id
-      `)
-      .eq("perfil_id", userId)
-      .maybeSingle();
+    let membresias = [];
+    if (rol?.toLowerCase() !== "administrador") {
+      const { data, error } = await supabase
+        .from("participantes")
+        .select(`
+          id,
+          nombre,
+          posicion,
+          estado,
+          grupo_id,
+          perfil_id
+        `)
+        .eq("perfil_id", userId)
+        .order("grupo_id", { ascending: true });
 
-    if (error) {
-      console.error(
-        "Error cargando participante:",
-        error
-      );
+      if (error) {
+        console.error(
+          "Error cargando participante:",
+          error
+        );
 
-      setParticipant(null);
-      setGrupo(null);
-      setFondoComunitario(0);
+        setParticipant(null);
+        setParticipantes([]);
+        setGrupo(null);
+        setGrupos([]);
+        setFondoComunitario(0);
 
-      return;
+        return;
+      }
+
+      membresias = data || [];
     }
 
-    setParticipant(data);
+    const groupIds = [...new Set(membresias.map((item) => item.grupo_id))];
+    const esGestor = ["administrador", "tesorero"].includes(rol?.toLowerCase());
 
-    // Cargar grupo del participante
-    if (data?.grupo_id) {
-      const puedeVerFondo =
-        PERMISSIONS[rol?.toLowerCase()]?.verFondoComunitario === true;
-      await cargarGrupo(data.grupo_id, puedeVerFondo);
+    let groupsQuery = supabase.from("grupos").select("*").order("nombre", { ascending: true });
+    if (!esGestor) {
+      if (groupIds.length === 0) {
+        setParticipantes([]);
+        setParticipant(null);
+        setGrupos([]);
+        setGrupo(null);
+        setFondoComunitario(0);
+        return;
+      }
+      groupsQuery = groupsQuery.in("id", groupIds);
+    }
+
+    const { data: groupsData, error: groupsError } = await groupsQuery;
+    if (groupsError) {
+      console.error("Error cargando grupos:", groupsError);
+    }
+
+    let availableGroups = groupsData || [];
+    if ((groupsError || !groupsData?.length) && groupIds.length > 0) {
+      const { data: membershipGroups } = await supabase
+        .from("grupos")
+        .select("*")
+        .in("id", groupIds)
+        .order("nombre", { ascending: true });
+      availableGroups = membershipGroups || [];
+    }
+    const savedGroupId = window.localStorage.getItem(`mi-cuadro-grupo-${userId}`);
+    const selectedGroup = availableGroups.find((item) => item.id === savedGroupId)
+      || availableGroups[0]
+      || null;
+
+    setParticipantes(membresias);
+    setGrupos(availableGroups);
+    setGrupo(selectedGroup);
+    setParticipant(membresias.find((item) => item.grupo_id === selectedGroup?.id) || null);
+
+    const puedeVerFondo = PERMISSIONS[rol?.toLowerCase()]?.verFondoComunitario === true;
+    if (selectedGroup && puedeVerFondo) {
+      await cargarFondoComunitario(selectedGroup.id, puedeVerFondo);
     } else {
-      setGrupo(null);
+      setFondoComunitario(0);
+    }
+  };
+
+  const seleccionarGrupo = async (grupoId) => {
+    const selectedGroup = grupos.find((item) => item.id === grupoId);
+    if (!selectedGroup) return;
+
+    const selectedParticipant = participantes.find((item) => item.grupo_id === grupoId) || null;
+    setGrupo(selectedGroup);
+    setParticipant(selectedParticipant);
+    window.localStorage.setItem(`mi-cuadro-grupo-${user?.id}`, grupoId);
+
+    const puedeVerFondo = PERMISSIONS[profile?.rol?.toLowerCase()]?.verFondoComunitario === true;
+    if (puedeVerFondo) {
+      await cargarFondoComunitario(grupoId, puedeVerFondo);
+    } else {
       setFondoComunitario(0);
     }
   };
@@ -170,7 +237,9 @@ export const AuthProvider = ({ children }) => {
 
       setProfile(null);
       setParticipant(null);
+      setParticipantes([]);
       setGrupo(null);
+      setGrupos([]);
       setFondoComunitario(0);
 
       return;
@@ -289,13 +358,16 @@ const cargarFondoComunitario =
 
     profile,
     participant,
+    participantes,
     grupo,
+    grupos,
     fondoComunitario,
     loading,
 
     cargarPerfil,
     cargarParticipante,
     cargarGrupo,
+    seleccionarGrupo,
     cargarFondoComunitario
   };
 

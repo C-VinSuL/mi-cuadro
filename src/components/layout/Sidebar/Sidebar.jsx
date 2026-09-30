@@ -9,7 +9,6 @@ import {
   PiggyBank,
   CalendarDays,
   X,
-  FlaskConical,
   Eye
 } from "lucide-react";
 
@@ -56,12 +55,6 @@ const menu = [
     permission: "verDashboard"
   },
   {
-    title: "Simulación",
-    icon: FlaskConical,
-    path: "/simulacion",
-    permission: "verSimulacion"
-  },
-  {
     title: "Vista de socio",
     icon: Eye,
     path: "/vista-socio",
@@ -85,8 +78,10 @@ const Sidebar = ({
 
   const {
     grupo,
+    grupos,
     participant,
-    fondoComunitario
+    fondoComunitario,
+    seleccionarGrupo
   } = useAuth();
 
   
@@ -269,6 +264,21 @@ const Sidebar = ({
           >
             {grupo?.nombre || "Sin grupo"}
           </p>
+
+          {grupos.length > 1 && (
+            <label className="mt-3 block text-xs text-emerald-100">
+              Cambiar de grupo
+              <select
+                value={grupo?.id || ""}
+                onChange={(event) => seleccionarGrupo(event.target.value)}
+                className="mt-1.5 w-full rounded-lg border border-white/20 bg-emerald-950 px-2.5 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-emerald-300"
+              >
+                {grupos.map((item) => (
+                  <option key={item.id} value={item.id}>{item.nombre}</option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <p className="text-xs text-emerald-200 capitalize mt-1">
             {rol}
