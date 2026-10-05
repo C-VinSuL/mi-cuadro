@@ -2,6 +2,7 @@
 import CuadroSummary from "../../components/cuadro/CuadroSummary";
 import CuadroBoard from "../../components/cuadro/CuadroBoard";
 import RondaAdmin from "../../components/cuadro/RondaAdmin";
+import AdminCuadrosOverview from "./AdminCuadrosOverview";
 
 import { useAuth } from "../../context/AuthContext";
 
@@ -27,6 +28,10 @@ const MiCuadro = () => {
         Cargando información...
       </div>
     );
+  }
+
+  if (profile?.rol?.toLowerCase() === "administrador") {
+    return <AdminCuadrosOverview />;
   }
 
 
@@ -112,7 +117,7 @@ const MiCuadro = () => {
               md:text-4xl
             "
           >
-            Mi Cuadro
+            {profile?.rol?.toLowerCase() === "administrador" ? "Revisión de cuadros" : "Mi Cuadro"}
           </h1>
 
           <p

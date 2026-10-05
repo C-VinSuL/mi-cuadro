@@ -14,10 +14,13 @@ const GroupAccessPanel = () => {
   const { user, profile, grupo, grupos, cargarParticipante } = useAuth();
   const { can } = usePermissions();
   const { notify, groupRequests, groupRequestsError, refreshGroupRequests } = useNotifications();
+  const esSocio = profile?.rol?.toLowerCase() === "socio";
+  const puedeGestionarGrupos = can("gestionarGrupo");
   const [codigo, setCodigo] = useState("");
   const [formGrupo, setFormGrupo] = useState({ nombre: "", numeroIntegrantes: "", aporteSemanal: "" });
   const [enviando, setEnviando] = useState(false);
   const [grupoAEliminar, setGrupoAEliminar] = useState(null);
+  const [confirmacionNombre, setConfirmacionNombre] = useState("");
   const [eliminando, setEliminando] = useState(false);
   const [actualizandoSolicitudes, setActualizandoSolicitudes] = useState(false);
   const [estadoActualizacion, setEstadoActualizacion] = useState("");
@@ -122,7 +125,7 @@ const GroupAccessPanel = () => {
   };
 
   const confirmarEliminacion = async () => {
-    if (!grupoAEliminar || !user?.id || !profile?.rol) return;
+    if (!grupoAEliminar || !user?.id || !profile?.rol || confirmacionNombre.trim() !== grupoAEliminar.nombre) return;
     setEliminando(true);
     setError("");
 
@@ -132,8 +135,12 @@ const GroupAccessPanel = () => {
         window.localStorage.removeItem(`mi-cuadro-grupo-${user.id}`);
       }
       setGrupoAEliminar(null);
-      await cargarParticipante(user.id, profile.rol);
-      notify({ title: "Grupo eliminado", message: "Se eliminaron el grupo y sus membresías. Las cuentas de los socios siguen intactas.", type: "success" });
+      setConfirmacionNombre("");
+      await Promise.all([
+        cargarParticipante(user.id, profile.rol),
+        refreshGroupRequests()
+      ]);
+      notify({ title: "Grupo eliminado", message: "Se borró todo el historial del grupo. Las cuentas de los socios siguen intactas.", type: "success" });
     } catch (deleteError) {
       setError(deleteError.message || "No se pudo eliminar el grupo.");
     } finally {
@@ -157,8 +164,9 @@ const GroupAccessPanel = () => {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <form onSubmit={enviarSolicitud} className="space-y-3">
+      <div className={`grid gap-6 ${esSocio && puedeGestionarGrupos ? "lg:grid-cols-2" : ""}`}>
+        {esSocio && (
+          <form onSubmit={enviarSolicitud} className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="flex items-center gap-2 font-semibold text-slate-900"><UserRoundPlus size={18} /> Solicitar ingreso a otro grupo</h2>
             <button type="button" onClick={actualizarMembresias} disabled={enviando} className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-800 hover:text-emerald-950 disabled:opacity-60">
@@ -169,9 +177,10 @@ const GroupAccessPanel = () => {
             <input value={codigo} onChange={(event) => setCodigo(event.target.value.toUpperCase())} required maxLength={10} autoComplete="off" aria-label="Código de acceso del grupo" placeholder="Código de acceso" className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2.5 uppercase outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20" />
             <button disabled={enviando} className="rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-60">{enviando ? "Enviando..." : "Solicitar"}</button>
           </div>
-        </form>
+          </form>
+        )}
 
-        {can("gestionarGrupo") && (
+        {puedeGestionarGrupos && (
           <form onSubmit={crearNuevoGrupo} className="space-y-3">
             <h2 className="flex items-center gap-2 font-semibold text-slate-900"><Users size={18} /> Crear grupo</h2>
             <input value={formGrupo.nombre} onChange={(event) => setFormGrupo({ ...formGrupo, nombre: event.target.value })} required maxLength={80} aria-label="Nombre del grupo" placeholder="Nombre del grupo" className="w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20" />
@@ -184,10 +193,10 @@ const GroupAccessPanel = () => {
         )}
       </div>
 
-      {can("gestionarGrupo") && grupos.length > 0 && (
+      {puedeGestionarGrupos && grupos.length > 0 && (
         <div>
           <h2 className="font-semibold text-slate-900">Administrar grupos</h2>
-          <p className="mt-1 text-sm text-slate-500">Solo se pueden eliminar grupos en borrador sin movimientos financieros. Las cuentas de sus socios no se eliminan.</p>
+          <p className="mt-1 text-sm text-slate-500">La eliminación borra todo el historial del grupo, incluidos los movimientos financieros. Las cuentas de los socios se conservan.</p>
           <div className="mt-3 divide-y divide-slate-200 border-y border-slate-200">
             {grupos.map((item) => (
               <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
@@ -197,10 +206,13 @@ const GroupAccessPanel = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setGrupoAEliminar(item)}
-                  disabled={enviando || eliminando || item.estado !== "borrador"}
+                  onClick={() => {
+                    setConfirmacionNombre("");
+                    setGrupoAEliminar(item);
+                  }}
+                  disabled={enviando || eliminando}
                   aria-label={`Eliminar grupo ${item.nombre}`}
-                  title={item.estado === "borrador" ? "Eliminar grupo" : "Solo se pueden eliminar grupos en borrador"}
+                  title="Eliminar grupo si no tiene movimientos financieros"
                   className="inline-flex size-10 items-center justify-center rounded-lg border border-red-200 text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Trash2 size={17} />
@@ -248,10 +260,24 @@ const GroupAccessPanel = () => {
           <section className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="eliminar-grupo-titulo">
             <p className="text-sm font-semibold text-red-700">Acción permanente</p>
             <h2 id="eliminar-grupo-titulo" className="mt-1 text-xl font-bold text-slate-900">¿Eliminar “{grupoAEliminar.nombre}”?</h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">Se quitarán el grupo, sus solicitudes y las membresías asociadas. Las cuentas de los socios no se borrarán. Si hay aportes, entregas, préstamos o movimientos, Supabase bloqueará la operación.</p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button type="button" onClick={() => setGrupoAEliminar(null)} disabled={eliminando} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60">Cancelar</button>
-              <button type="button" onClick={confirmarEliminacion} disabled={eliminando} className="rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-60">{eliminando ? "Eliminando..." : "Eliminar grupo"}</button>
+            <p className="mt-3 text-sm leading-6 text-slate-600">Se borrarán permanentemente el grupo, sus solicitudes, membresías, aportes, entregas, préstamos, cuotas y movimientos del fondo. Las cuentas de los socios no se borrarán.</p>
+            <div className="mt-6 space-y-4">
+              <label className="block min-w-0 text-sm text-slate-700">
+                Escribe <span className="font-semibold">{grupoAEliminar.nombre}</span> para confirmar
+                <input
+                  value={confirmacionNombre}
+                  onChange={(event) => setConfirmacionNombre(event.target.value)}
+                  disabled={eliminando}
+                  className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-red-700 focus:ring-2 focus:ring-red-700/20"
+                />
+              </label>
+              <div className="flex flex-wrap justify-end gap-3">
+                <button type="button" onClick={() => {
+                  setGrupoAEliminar(null);
+                  setConfirmacionNombre("");
+                }} disabled={eliminando} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60">Cancelar</button>
+                <button type="button" onClick={confirmarEliminacion} disabled={eliminando || confirmacionNombre.trim() !== grupoAEliminar.nombre} className="rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-60">{eliminando ? "Eliminando..." : "Eliminar grupo"}</button>
+              </div>
             </div>
           </section>
         </div>

@@ -8,12 +8,16 @@ import {
   Percent,
   CalendarRange,
   CircleDollarSign,
+  Users,
+  Wallet,
+  FileBarChart2,
   ShieldCheck,
   Save,
   LockKeyhole,
   CheckCircle2,
   AlertCircle
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import {
   useAuth
@@ -48,6 +52,10 @@ const Configuracion = () => {
     form,
     setForm
   ] = useState({
+
+    numeroIntegrantes: "",
+
+    aporteSemanal: "",
 
     interesPrestamo:
       "10",
@@ -93,7 +101,11 @@ const Configuracion = () => {
     }
 
 
-    setForm({
+    Promise.resolve().then(() => setForm({
+
+      numeroIntegrantes: String(grupo.numero_integrantes ?? 2),
+
+      aporteSemanal: String(grupo.aporte_semanal ?? 1),
 
       interesPrestamo:
         String(
@@ -123,7 +135,7 @@ const Configuracion = () => {
         grupo.prestamos_solo_activo ??
         true
 
-    });
+    }));
 
   }, [
     grupo
@@ -217,6 +229,30 @@ const Configuracion = () => {
           : Number(
               form.montoMaxPrestamo
             );
+
+      const numeroIntegrantes = Number(form.numeroIntegrantes);
+      const aporteSemanal = Number(form.aporteSemanal);
+
+      if (!Number.isInteger(numeroIntegrantes) || numeroIntegrantes < 2 || numeroIntegrantes > 500) {
+        setMensaje("La capacidad debe ser un número entero entre 2 y 500 socios.");
+        setTipoMensaje("error");
+        return;
+      }
+
+      if (Number.isNaN(aporteSemanal) || aporteSemanal <= 0) {
+        setMensaje("El aporte semanal debe ser mayor a cero.");
+        setTipoMensaje("error");
+        return;
+      }
+
+      if (grupo.estado !== "borrador" && (
+        numeroIntegrantes !== Number(grupo.numero_integrantes)
+        || aporteSemanal !== Number(grupo.aporte_semanal)
+      )) {
+        setMensaje("La capacidad y el aporte semanal solo pueden cambiarse antes de iniciar el cuadro.");
+        setTipoMensaje("error");
+        return;
+      }
 
 
       // =====================================
@@ -315,6 +351,10 @@ const Configuracion = () => {
             grupoId:
               grupo.id,
 
+            numeroIntegrantes,
+
+            aporteSemanal,
+
             interesPrestamo:
               interes,
 
@@ -411,7 +451,7 @@ const Configuracion = () => {
             text-slate-900
           "
         >
-          No tienes un grupo configurado
+          No hay un grupo de trabajo seleccionado
         </h2>
 
 
@@ -421,8 +461,7 @@ const Configuracion = () => {
             text-slate-500
           "
         >
-          Necesitas pertenecer a un grupo
-          para acceder a esta configuración.
+          Selecciona un grupo desde el centro administrativo para revisar sus reglas.
         </p>
 
       </div>
@@ -609,10 +648,7 @@ const Configuracion = () => {
               text-emerald-800
             "
           >
-            Estas reglas serán utilizadas
-            automáticamente por el sistema
-            al procesar nuevas solicitudes
-            de préstamo.
+            La capacidad y el aporte semanal definen el cuadro. La tasa y los límites financieros quedan configurados para cuando se habiliten los préstamos.
           </p>
 
         </div>
@@ -684,7 +720,7 @@ const Configuracion = () => {
                   text-slate-900
                 "
               >
-                Reglas de préstamos
+                Reglas del grupo y del cuadro
               </h2>
 
 
@@ -695,8 +731,7 @@ const Configuracion = () => {
                   text-slate-500
                 "
               >
-                Define las condiciones
-                generales del fondo comunitario.
+                Ajusta la capacidad, el aporte semanal y las reglas financieras de {grupo.nombre}.
               </p>
 
             </div>
@@ -718,6 +753,24 @@ const Configuracion = () => {
             md:p-7
           "
         >
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="numeroIntegrantes">Capacidad del cuadro</label>
+            <div className="relative">
+              <Users size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input id="numeroIntegrantes" name="numeroIntegrantes" type="number" min="2" max="500" step="1" required value={form.numeroIntegrantes} onChange={handleChange} disabled={grupo.estado !== "borrador" || guardando} className="w-full rounded-xl border border-slate-300 py-3 pl-11 pr-4 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 disabled:bg-slate-100 disabled:text-slate-500" />
+            </div>
+            <p className="mt-2 text-xs text-slate-500">De 2 a 500 socios. Solo editable antes de iniciar.</p>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="aporteSemanal">Aporte semanal por socio</label>
+            <div className="relative">
+              <Wallet size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input id="aporteSemanal" name="aporteSemanal" type="number" min="0.01" step="0.01" required value={form.aporteSemanal} onChange={handleChange} disabled={grupo.estado !== "borrador" || guardando} className="w-full rounded-xl border border-slate-300 py-3 pl-11 pr-4 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 disabled:bg-slate-100 disabled:text-slate-500" />
+            </div>
+            <p className="mt-2 text-xs text-slate-500">Monto de cada ronda. Solo editable antes de iniciar.</p>
+          </div>
 
           {/* =================================
               INTERÉS
@@ -795,9 +848,7 @@ const Configuracion = () => {
                 text-slate-500
               "
             >
-              Esta tasa se aplicará
-              automáticamente cuando se
-              apruebe un préstamo.
+              Tasa configurada para cuando se habilite la función de préstamos.
             </p>
 
           </div>
@@ -983,14 +1034,14 @@ const Configuracion = () => {
                 text-slate-700
               "
             >
-              Disponibilidad de préstamos
+              Estado del módulo de préstamos
             </label>
 
 
             <label
               className="
                 flex
-                cursor-pointer
+                cursor-not-allowed
                 items-center
                 justify-between
                 gap-4
@@ -1028,7 +1079,7 @@ const Configuracion = () => {
                       text-slate-900
                     "
                   >
-                    Solo con cuadro activo
+                    Inactivo temporalmente
                   </p>
 
 
@@ -1039,9 +1090,7 @@ const Configuracion = () => {
                       text-slate-500
                     "
                   >
-                    Impide nuevas solicitudes
-                    cuando el cuadro está en
-                    borrador o finalizado.
+                    No se pueden solicitar ni aprobar préstamos desde la aplicación.
                   </p>
 
                 </div>
@@ -1055,9 +1104,7 @@ const Configuracion = () => {
                 checked={
                   form.prestamosSoloActivo
                 }
-                onChange={
-                  handleChange
-                }
+                disabled
                 className="
                   h-5
                   w-5
@@ -1094,7 +1141,7 @@ const Configuracion = () => {
               text-slate-700
             "
           >
-            Resumen de las reglas
+            Resumen de configuración del cuadro
           </p>
 
 
@@ -1104,9 +1151,19 @@ const Configuracion = () => {
               grid
               grid-cols-2
               gap-5
-              md:grid-cols-4
+              md:grid-cols-3
             "
           >
+
+            <div>
+              <p className="text-xs text-slate-500">Capacidad</p>
+              <p className="mt-1 font-bold text-slate-900">{form.numeroIntegrantes} socios</p>
+            </div>
+
+            <div>
+              <p className="text-xs text-slate-500">Aporte semanal</p>
+              <p className="mt-1 font-bold text-slate-900">${Number(form.aporteSemanal || 0).toFixed(2)}</p>
+            </div>
 
             <div>
 
@@ -1354,6 +1411,16 @@ const Configuracion = () => {
         </div>
 
       </form>
+
+      <section className="flex flex-col gap-4 border-y border-slate-200 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="font-semibold text-slate-900">Reportes y auditoría</h2>
+          <p className="mt-1 text-sm text-slate-600">Consulta y exporta los movimientos consolidados de todos los grupos.</p>
+        </div>
+        <Link to="/historial" className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-800 hover:text-emerald-950">
+          <FileBarChart2 size={17} /> Abrir reportes
+        </Link>
+      </section>
 
     </div>
 

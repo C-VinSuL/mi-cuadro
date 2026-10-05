@@ -12,11 +12,11 @@ export const PERMISSIONS = {
     verCuadro: true,
     cerrarRonda: true,
 
-    verPrestamos: true,
-    solicitarPrestamo: true,
-    aprobarPrestamos: true,
+    verPrestamos: false,
+    solicitarPrestamo: false,
+    aprobarPrestamos: false,
     verFondoComunitario: true,
-    verVistaSocio: true,
+    verVistaSocio: false,
   
     
     verHistorialCompleto: true,
@@ -36,9 +36,9 @@ export const PERMISSIONS = {
     verCuadro: true,
     cerrarRonda: true,
 
-    verPrestamos: true,
-    solicitarPrestamo: true,
-    aprobarPrestamos: true,
+    verPrestamos: false,
+    solicitarPrestamo: false,
+    aprobarPrestamos: false,
     verFondoComunitario: true,
     verVistaSocio: false,
 
@@ -59,8 +59,8 @@ export const PERMISSIONS = {
     verCuadro: true,
     cerrarRonda: false,
 
-    verPrestamos: true,
-    solicitarPrestamo: true,
+    verPrestamos: false,
+    solicitarPrestamo: false,
     aprobarPrestamos: false,
     verFondoComunitario: false,
     verVistaSocio: false,

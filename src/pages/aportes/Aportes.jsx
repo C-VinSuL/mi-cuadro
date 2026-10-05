@@ -20,9 +20,21 @@ import {
   useAuth
 } from "../../context/AuthContext";
 import { useNotifications } from "../../hooks/useNotifications";
+import AportesAdmin from "./AportesAdmin";
+
+const obtenerAportesSocio = async (participantId) => {
+  const { data, error } = await supabase
+    .from("aportes")
+    .select("*")
+    .eq("participante_id", participantId)
+    .order("semana", { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+};
 
 
-const Aportes = () => {
+const AportesSocio = () => {
 
   const {
     grupo,
@@ -76,47 +88,44 @@ const Aportes = () => {
 
     setLoading(true);
 
-    const {
-      data,
-      error
-    } = await supabase
-      .from("aportes")
-      .select("*")
-      .eq(
-        "participante_id",
-        participant.id
-      )
-      .order(
-        "semana",
-        {
-          ascending: false
-        }
-      );
-
-    if (error) {
-
+    try {
+      setAportes(await obtenerAportesSocio(participant.id));
+    } catch (error) {
       console.error(
         "Error cargando aportes:",
         error
       );
-
-    } else {
-
-      setAportes(
-        data || []
-      );
-
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
 
   useEffect(() => {
+    let active = true;
+    const participantId = participant?.id;
 
-    cargarAportes();
+    Promise.resolve().then(async () => {
+      if (!participantId) {
+        if (active) setLoading(false);
+        return;
+      }
 
-  }, [participant]);
+      setLoading(true);
+      try {
+        const data = await obtenerAportesSocio(participantId);
+        if (active) setAportes(data);
+      } catch (error) {
+        console.error("Error cargando aportes:", error);
+      } finally {
+        if (active) setLoading(false);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [participant?.id]);
 
 
   // =========================
@@ -938,5 +947,12 @@ const Aportes = () => {
   );
 };
 
+
+const Aportes = () => {
+  const { profile } = useAuth();
+  return profile?.rol?.toLowerCase() === "administrador"
+    ? <AportesAdmin />
+    : <AportesSocio />;
+};
 
 export default Aportes;

@@ -9,6 +9,8 @@ import {
 export const actualizarConfiguracionGrupo =
   async ({
     grupoId,
+    numeroIntegrantes,
+    aporteSemanal,
     interesPrestamo,
     maxCuotasPrestamo,
     montoMaxPrestamo,
@@ -19,10 +21,16 @@ export const actualizarConfiguracionGrupo =
       data,
       error
     } = await supabase.rpc(
-      "actualizar_configuracion_grupo",
+      "actualizar_configuracion_administrador",
       {
         p_grupo_id:
           grupoId,
+
+        p_numero_integrantes:
+          Number(numeroIntegrantes),
+
+        p_aporte_semanal:
+          Number(aporteSemanal),
 
         p_interes_prestamo:
           Number(

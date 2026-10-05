@@ -22,8 +22,9 @@ import {
   obtenerMovimientosFondo,
   obtenerSaldoFondo
 } from "../../services/fondoService";
+import ReportesAdmin from "./ReportesAdmin";
 
-const Historial = () => {
+const HistorialSocio = () => {
   const {
     grupo
   } = useAuth();
@@ -882,6 +883,13 @@ const Historial = () => {
 
     </div>
   );
+};
+
+const Historial = () => {
+  const { profile } = useAuth();
+  return profile?.rol?.toLowerCase() === "administrador"
+    ? <ReportesAdmin />
+    : <HistorialSocio />;
 };
 
 export default Historial;

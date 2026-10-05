@@ -26,10 +26,12 @@ import {
 import {
   getDashboardAdminData
 } from "../../../services/dashboardService";
+import DashboardAdminOverview from "./DashboardAdminOverview";
 
 const DashboardAdmin = () => {
   const {
     grupo,
+    grupos,
     profile,
     fondoComunitario
   } = useAuth();
@@ -91,10 +93,7 @@ const DashboardAdmin = () => {
 
     cargarDashboard();
 
-  }, [
-    grupo?.id,
-    grupo?.semana_actual
-  ]);
+  }, [grupo]);
 
   // ========================================
   // SIN GRUPO
@@ -102,23 +101,13 @@ const DashboardAdmin = () => {
 
   if (!grupo) {
     return (
-      <div
-        className="
-          rounded-2xl
-          border
-          border-slate-200
-          bg-white
-          p-6
-        "
-      >
-        <h2 className="text-xl font-bold text-slate-900">
-          No tienes un grupo asignado
-        </h2>
-
-        <p className="mt-2 text-slate-500">
-          Cuando tengas un grupo podrás
-          administrar el cuadro desde aquí.
-        </p>
+      <div className="space-y-6">
+        <DashboardAdminOverview grupos={grupos} />
+        <section className="border-y border-slate-200 py-5">
+          <h2 className="font-semibold text-slate-900">No hay un grupo seleccionado</h2>
+          <p className="mt-1 text-sm text-slate-600">Desde Grupos puedes crear y administrar los cuadros sin pertenecer a ellos.</p>
+          <Link to="/grupo" className="mt-3 inline-flex text-sm font-semibold text-emerald-800 hover:text-emerald-950">Ir a Grupos</Link>
+        </section>
       </div>
     );
   }
@@ -146,16 +135,7 @@ const DashboardAdmin = () => {
 
   if (error) {
     return (
-      <div
-        className="
-          rounded-2xl
-          border
-          border-red-200
-          bg-red-50
-          p-5
-          text-red-700
-        "
-      >
+      <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">
         {error}
       </div>
     );
@@ -197,6 +177,7 @@ const DashboardAdmin = () => {
 
   return (
     <div className="space-y-8">
+      <DashboardAdminOverview grupos={grupos} />
 
       {/* ==================================
           CABECERA

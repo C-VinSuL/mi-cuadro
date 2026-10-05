@@ -52,7 +52,7 @@ const menu = [
     title: "Historial",
     icon: History,
     path: "/historial",
-    permission: "verDashboard"
+    permission: "verFondoComunitario"
   },
   {
     title: "Vista de socio",
@@ -103,11 +103,18 @@ const Sidebar = ({
       : 0;
 
 
-  const menuVisible =
-  menu.filter(
-    (item) =>
-      can(item.permission)
-  );    
+  const menuVisible = menu
+    .filter((item) => can(item.permission))
+    .map((item) => {
+      if (rol !== "administrador") return item;
+      const adminTitles = {
+        "/grupo": "Grupos",
+        "/aportes": "Control de aportes",
+        "/cuadro": "Revisar cuadro",
+        "/historial": "Reportes"
+      };
+      return { ...item, title: adminTitles[item.path] || item.title };
+    });
 
 
   return (
@@ -250,7 +257,7 @@ const Sidebar = ({
               text-emerald-300
             "
           >
-            Grupo actual
+            {rol === "administrador" ? "Centro administrativo" : "Grupo actual"}
           </p>
 
 
@@ -262,12 +269,12 @@ const Sidebar = ({
               text-white
             "
           >
-            {grupo?.nombre || "Sin grupo"}
+            {rol === "administrador" ? "Gestión de grupos y operaciones" : grupo?.nombre || "Sin grupo"}
           </p>
 
           {grupos.length > 1 && (
             <label className="mt-3 block text-xs text-emerald-100">
-              Cambiar de grupo
+              {rol === "administrador" ? "Grupo de trabajo" : "Cambiar de grupo"}
               <select
                 value={grupo?.id || ""}
                 onChange={(event) => seleccionarGrupo(event.target.value)}
@@ -281,11 +288,11 @@ const Sidebar = ({
           )}
 
           <p className="text-xs text-emerald-200 capitalize mt-1">
-            {rol}
+            {rol === "administrador" ? "Supervisión general" : rol}
           </p>
 
 
-          {participant && (
+          {rol !== "administrador" && participant && (
 
             <p
               className="
@@ -302,7 +309,7 @@ const Sidebar = ({
 
           {/* PROGRESO */}
 
-          <div className="mt-5">
+          {rol !== "administrador" && <div className="mt-5">
 
             <div
               className="
@@ -371,7 +378,7 @@ const Sidebar = ({
 
             </div>
 
-          </div>
+          </div>}
 
         </div>
 
@@ -475,7 +482,7 @@ const Sidebar = ({
 
       {/* FONDO */}
 
-      {can("verFondoComunitario") && (
+      {can("verFondoComunitario") && rol !== "administrador" && (
       <div className="p-4">
 
         <div
