@@ -19,7 +19,6 @@ npm run dev
 
 ## Grupos y sorteo
 
-Antes de usar la gestión de grupos, aplica en orden las migraciones `supabase/migrations/202609300001_group_membership_and_draw.sql`, `supabase/migrations/202609300002_delete_draft_group.sql`, `supabase/migrations/202609300003_fix_create_group_rpc.sql`, `supabase/migrations/202609300004_fix_group_requests_rpc.sql` y `supabase/migrations/202609300005_fix_group_request_result_types.sql` en el SQL Editor de Supabase. Si las cuatro anteriores ya se aplicaron, ejecuta la quinta. Estas migraciones agregan códigos de acceso y solicitudes, permiten membresías en varios grupos y crean funciones RPC con validación de roles. La tercera refresca la caché de PostgREST y desvincula membresías antiguas del administrador; la cuarta y quinta corrigen la consulta de solicitudes. Conserva una copia de seguridad antes de aplicarlas en producción.
 
 El administrador crea grupos y comparte el código. Un socio con cuenta confirmada solicita ingreso con ese código; administración o tesorería revisa la solicitud. Al iniciar, el cuadro debe estar completo y la función de base de datos asigna posiciones aleatorias y activa la primera ronda en una sola transacción. Cada usuario puede alternar entre sus grupos desde la barra lateral.
 
