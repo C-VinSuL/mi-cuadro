@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-
+ 
 const ejecutarRpc = async (nombre, parametros) => {
   const { data, error } = await supabase.rpc(nombre, parametros);
   if (error) throw error;
