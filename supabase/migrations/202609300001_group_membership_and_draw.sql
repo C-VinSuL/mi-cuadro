@@ -1,6 +1,6 @@
 ALTER TABLE public.grupos
   ADD COLUMN IF NOT EXISTS codigo_acceso text;
-
+ 
 UPDATE public.grupos
 SET codigo_acceso = upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 10))
 WHERE codigo_acceso IS NULL;
