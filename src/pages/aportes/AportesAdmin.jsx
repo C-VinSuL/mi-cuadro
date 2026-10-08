@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CircleDollarSign, Users, Wallet } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
+import { etiquetaPeriodo } from "../../services/grupoService";
 
 const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
 
@@ -120,7 +121,7 @@ const AportesAdmin = () => {
                 <tr>
                   <th className="px-5 py-3 font-semibold">Grupo</th>
                   <th className="px-5 py-3 font-semibold">Socio</th>
-                  <th className="px-5 py-3 font-semibold">Semana</th>
+                  <th className="px-5 py-3 font-semibold">Periodo</th>
                   <th className="px-5 py-3 font-semibold">Aporte</th>
                   <th className="px-5 py-3 font-semibold">Estado</th>
                   <th className="px-5 py-3 font-semibold">Fecha de pago</th>
@@ -131,7 +132,9 @@ const AportesAdmin = () => {
                   <tr key={aporte.id}>
                     <td className="px-5 py-3 font-medium text-slate-900">{aporte.grupo}</td>
                     <td className="px-5 py-3 text-slate-700">{aporte.socio}</td>
-                    <td className="px-5 py-3 text-slate-700">{aporte.semana}</td>
+                    <td className="px-5 py-3 text-slate-700">
+                      {etiquetaPeriodo(grupos.find((grupo) => grupo.id === aporte.grupo_id)?.aporte_periodicidad)} {aporte.semana}
+                    </td>
                     <td className="px-5 py-3 font-semibold text-slate-900">{currency.format(aporte.monto)}</td>
                     <td className="px-5 py-3 capitalize text-slate-700">{aporte.estado || "Sin estado"}</td>
                     <td className="px-5 py-3 text-slate-600">{aporte.fecha_pago ? new Date(aporte.fecha_pago).toLocaleDateString("es-EC") : "-"}</td>

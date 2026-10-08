@@ -15,7 +15,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { supabase } from "../../../services/supabase";
 import { useNotifications } from "../../../hooks/useNotifications";
-import { usePermissions } from "../../../hooks/usePermissions";
 
 const Navbar = ({ onMenuClick }) => {
 
@@ -23,24 +22,48 @@ const Navbar = ({ onMenuClick }) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
-  const [profileForm, setProfileForm] = useState({ nombre: "", apellido: "", telefono: "" });
+  const [welcomeDismissedFor, setWelcomeDismissedFor] = useState(null);
+  const [completingWelcome, setCompletingWelcome] = useState(false);
+  const [identityDocumentPath, setIdentityDocumentPath] = useState("");
+  const [identityDocumentVerified, setIdentityDocumentVerified] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    nombre: "",
+    apellido: "",
+    telefono: "",
+    cedula: "",
+    direccion: "",
+    fechaNacimiento: "",
+    biografia: "",
+    instagram: "",
+    facebook: "",
+    linkedin: "",
+    avatarUrl: ""
+  });
   const [savingProfile, setSavingProfile] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [uploadingIdentityDocument, setUploadingIdentityDocument] = useState(false);
   const notificationsRef = useRef(null);
   const userMenuRef = useRef(null);
   const {
     notifications,
     unreadCount,
     markAllRead,
+    markRead,
+    deleteNotification,
     clearNotifications,
     notify
   } = useNotifications();
 
   const {
+    user,
     profile,
+    grupo,
     participant
   } = useAuth();
   const { cargarPerfil } = useAuth();
-  const { can } = usePermissions();
+  const welcomeOpen = profile?.rol?.toLowerCase() === "socio"
+    && profile?.bienvenida_completada === false
+    && welcomeDismissedFor !== profile.id;
 
   useEffect(() => {
     const handlePointerDown = (event) => {
@@ -71,25 +94,47 @@ const Navbar = ({ onMenuClick }) => {
   const guardarPerfil = async (event) => {
     event.preventDefault();
     if (!profile?.id || savingProfile) return;
+    if (completingWelcome && (
+      !profileForm.telefono.trim()
+      || !profileForm.cedula.trim()
+      || !profileForm.direccion.trim()
+      || !identityDocumentPath
+    )) {
+      notify({
+        title: "Completa la verificación del perfil",
+        message: "Ingresa tu teléfono, cédula y dirección, y carga una imagen o PDF de tu documento.",
+        type: "error"
+      });
+      return;
+    }
 
     setSavingProfile(true);
     try {
-      const { data, error } = await supabase
-        .from("perfiles")
-        .update({
-          nombre: profileForm.nombre.trim(),
-          apellido: profileForm.apellido.trim(),
-          telefono: profileForm.telefono.trim() || null
-        })
-        .eq("id", profile.id)
-        .select("id")
-        .maybeSingle();
+      const { error } = await supabase.rpc("guardar_perfil_completo", {
+        p_nombre: profileForm.nombre.trim(),
+        p_apellido: profileForm.apellido.trim(),
+        p_telefono: profileForm.telefono.trim() || null,
+        p_avatar_url: profileForm.avatarUrl || null,
+        p_biografia: profileForm.biografia.trim() || null,
+        p_cedula: profileForm.cedula.trim(),
+        p_direccion: profileForm.direccion.trim() || null,
+        p_fecha_nacimiento: profileForm.fechaNacimiento || null,
+        p_redes_sociales: {
+          instagram: profileForm.instagram.trim() || null,
+          facebook: profileForm.facebook.trim() || null,
+          linkedin: profileForm.linkedin.trim() || null
+        }
+      });
 
       if (error) throw error;
-      if (!data) throw new Error("No se actualizó ningún perfil.");
+      if (completingWelcome) {
+        const { error: welcomeError } = await supabase.rpc("completar_bienvenida_flashmonkey");
+        if (welcomeError) throw welcomeError;
+      }
 
       await cargarPerfil(profile.id);
       setProfileEditorOpen(false);
+      setCompletingWelcome(false);
       setUserMenuOpen(false);
       notify({
         title: "Perfil actualizado",
@@ -105,6 +150,130 @@ const Navbar = ({ onMenuClick }) => {
       });
     } finally {
       setSavingProfile(false);
+    }
+  };
+
+  const abrirEditorPerfil = async () => {
+    const initialForm = {
+      nombre: profile?.nombre || "",
+      apellido: profile?.apellido || "",
+      telefono: profile?.telefono || "",
+      cedula: "",
+      direccion: "",
+      fechaNacimiento: "",
+      biografia: profile?.biografia || "",
+      instagram: "",
+      facebook: "",
+      linkedin: "",
+      avatarUrl: profile?.avatar_url || ""
+    };
+    try {
+      const [{ data, error }, { data: documentData, error: documentError }] = await Promise.all([
+        supabase.rpc("obtener_datos_personales"),
+        supabase.rpc("estado_documento_propio")
+      ]);
+      if (error) throw error;
+      if (documentError) throw documentError;
+      const privateData = data?.[0];
+      const socials = privateData?.redes_sociales || {};
+      const documentStatus = documentData?.[0];
+      setIdentityDocumentPath(documentStatus?.documento_identidad_path || "");
+      setIdentityDocumentVerified(Boolean(documentStatus?.documento_verificado));
+      setProfileForm({
+        ...initialForm,
+        cedula: privateData?.cedula || "",
+        direccion: privateData?.direccion || "",
+        fechaNacimiento: privateData?.fecha_nacimiento || "",
+        instagram: socials.instagram || "",
+        facebook: socials.facebook || "",
+        linkedin: socials.linkedin || ""
+      });
+    } catch (loadError) {
+      console.error("Error cargando datos personales privados:", loadError);
+      setProfileForm(initialForm);
+      notify({ title: "No se pudieron cargar los datos privados", message: loadError.message || "Verifica la conexión e inténtalo nuevamente.", type: "error" });
+    }
+    setProfileEditorOpen(true);
+    setUserMenuOpen(false);
+  };
+
+  const cargarDocumentoIdentidad = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !user?.id) return;
+    const allowedTypes = ["image/jpeg", "image/png", "application/pdf"];
+    if (!allowedTypes.includes(file.type) || file.size > 5 * 1024 * 1024) {
+      notify({
+        title: "Documento no válido",
+        message: "Carga una imagen JPG, PNG o un PDF de hasta 5 MB.",
+        type: "error"
+      });
+      event.target.value = "";
+      return;
+    }
+    setUploadingIdentityDocument(true);
+    try {
+      const extension = file.type === "application/pdf" ? "pdf" : file.type.split("/")[1];
+      const objectPath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+      const { error: uploadError } = await supabase.storage.from("identity-documents").upload(objectPath, file, {
+        contentType: file.type,
+        upsert: false
+      });
+      if (uploadError) throw uploadError;
+      const { error: pathError } = await supabase.rpc("guardar_documento_identidad", {
+        p_object_path: objectPath
+      });
+      if (pathError) throw pathError;
+      setIdentityDocumentPath(objectPath);
+      setIdentityDocumentVerified(false);
+      notify({
+        title: "Documento cargado",
+        message: "El documento quedó guardado de forma privada para su revisión.",
+        type: "success"
+      });
+    } catch (uploadError) {
+      console.error("Error cargando documento de identidad:", uploadError);
+      notify({
+        title: "No se pudo cargar el documento",
+        message: uploadError.message || "Verifica tu conexión e inténtalo nuevamente.",
+        type: "error"
+      });
+    } finally {
+      setUploadingIdentityDocument(false);
+      event.target.value = "";
+    }
+  };
+
+  const iniciarActualizacionBienvenida = () => {
+    setCompletingWelcome(true);
+    setWelcomeDismissedFor(profile.id);
+    abrirEditorPerfil();
+  };
+
+  const cargarAvatar = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !profile?.id) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 2 * 1024 * 1024) {
+      notify({ title: "Imagen no válida", message: "Usa JPG, PNG o WebP de hasta 2 MB.", type: "error" });
+      event.target.value = "";
+      return;
+    }
+    setUploadingAvatar(true);
+    try {
+      const extension = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
+      const objectPath = `${profile.id}/${crypto.randomUUID()}.${extension}`;
+      const { error } = await supabase.storage.from("profile-avatars").upload(objectPath, file, {
+        contentType: file.type,
+        upsert: false
+      });
+      if (error) throw error;
+      const { data } = supabase.storage.from("profile-avatars").getPublicUrl(objectPath);
+      setProfileForm((current) => ({ ...current, avatarUrl: data.publicUrl }));
+    } catch (uploadError) {
+      console.error("Error cargando avatar:", uploadError);
+      notify({ title: "No se pudo cargar la imagen", message: uploadError.message || "Verifica tu conexión e inténtalo nuevamente.", type: "error" });
+    } finally {
+      setUploadingAvatar(false);
+      event.target.value = "";
     }
   };
 
@@ -129,7 +298,6 @@ const Navbar = ({ onMenuClick }) => {
       return;
     }
 
-    clearNotifications();
     navigate("/login");
   };
 
@@ -304,6 +472,7 @@ const Navbar = ({ onMenuClick }) => {
                           <button
                             type="button"
                             onClick={() => {
+                              markRead(item.id);
                               navigate(item.actionPath);
                               setNotificationsOpen(false);
                             }}
@@ -316,6 +485,15 @@ const Navbar = ({ onMenuClick }) => {
                           {new Date(item.createdAt).toLocaleString("es", { dateStyle: "short", timeStyle: "short" })}
                         </time>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => deleteNotification(item.id)}
+                        title="Eliminar notificación"
+                        aria-label={`Eliminar notificación: ${item.title}`}
+                        className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-700"
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     </div>
                   </article>
                 ))}
@@ -340,24 +518,21 @@ const Navbar = ({ onMenuClick }) => {
         >
 
           <span
-            className="
-              flex
-              w-10
-              h-10
-
-              rounded-full
-
-              bg-emerald-100
-              text-emerald-700
-
-              flex
-              items-center
-              justify-center
-
-              font-bold
-            "
+          className={`
+            flex
+            size-10
+            overflow-hidden
+            rounded-full
+            bg-emerald-100
+            text-emerald-700
+            items-center
+            justify-center
+            font-bold
+          `}
           >
-            {inicial}
+          {profile?.avatar_url
+            ? <img src={profile.avatar_url} alt="" className="size-full object-cover" />
+            : inicial}
           </span>
 
           <span className="min-w-0 md:block">
@@ -388,7 +563,7 @@ const Navbar = ({ onMenuClick }) => {
                 {profile?.rol || "Socio"}
               </span>
 
-              {participant && (
+              {participant && grupo?.estado !== "borrador" && participant.posicion && (
                 <>
                   <span>•</span>
 
@@ -421,33 +596,12 @@ const Navbar = ({ onMenuClick }) => {
             </div>
             <button
               type="button"
-              onClick={() => {
-                setProfileForm({
-                  nombre: profile?.nombre || "",
-                  apellido: profile?.apellido || "",
-                  telefono: profile?.telefono || ""
-                });
-                setProfileEditorOpen(true);
-                setUserMenuOpen(false);
-              }}
+              onClick={abrirEditorPerfil}
               className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               Editar perfil
-              <span className="mt-0.5 block text-xs font-normal text-slate-500">Nombre, apellido y teléfono</span>
+              <span className="mt-0.5 block text-xs font-normal text-slate-500">Datos, avatar y redes sociales</span>
             </button>
-            {can("verVistaSocio") && (
-              <button
-                type="button"
-                onClick={() => {
-                  navigate("/vista-socio");
-                  setUserMenuOpen(false);
-                }}
-                className="w-full border-t border-slate-100 px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Vista de socio
-                <span className="mt-0.5 block text-xs font-normal text-slate-500">Consultar integrantes en modo lectura</span>
-              </button>
-            )}
           </div>
         )}
         </div>
@@ -487,11 +641,33 @@ const Navbar = ({ onMenuClick }) => {
 
       </div>
 
+      {welcomeOpen && createPortal(
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-slate-950/60 p-4">
+          <section role="dialog" aria-modal="true" aria-labelledby="welcome-title" className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
+            <img src="/flashmonkey.svg" alt="" className="mx-auto h-24 w-24 rounded-2xl" />
+            <p className="mt-5 text-center text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Bienvenido a FlashMonkey</p>
+            <h2 id="welcome-title" className="mt-2 text-center text-2xl font-bold text-slate-900">¡Qué bueno tenerte aquí!</h2>
+            <p className="mt-3 text-center text-sm leading-6 text-slate-600">
+              El primer paso es completar y verificar tus datos. Desde <strong>Editar perfil</strong> confirma tu teléfono, cédula y dirección, y carga una imagen o PDF de tu documento de identidad para que administración o tesorería lo revise.
+            </p>
+            <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              <p className="font-semibold">Garantía para participar en grupos</p>
+              <p className="mt-1">Después de completar tu perfil, deposita al menos $10 en Mi billetera para solicitar ingreso a un grupo. El saldo aprobado podrá cubrir automáticamente los aportes que sigan pendientes al vencimiento.</p>
+            </div>
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-center">
+              <button type="button" onClick={() => setWelcomeDismissedFor(profile.id)} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Más tarde</button>
+              <button type="button" onClick={iniciarActualizacionBienvenida} className="rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900">Completar mi perfil</button>
+            </div>
+          </section>
+        </div>,
+        document.body
+      )}
+
       {profileEditorOpen && createPortal(
         <div className="fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-950/40 p-4 sm:items-center" onMouseDown={(event) => {
           if (event.target === event.currentTarget) setProfileEditorOpen(false);
         }}>
-          <section role="dialog" aria-modal="true" aria-labelledby="profile-dialog-title" className="my-auto max-h-[calc(100vh-2rem)] max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-xl bg-white p-5 shadow-2xl sm:p-7">
+          <section role="dialog" aria-modal="true" aria-labelledby="profile-dialog-title" className="my-auto max-h-[calc(100vh-2rem)] max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-xl bg-white p-5 shadow-2xl sm:p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase text-emerald-700">Cuenta</p>
@@ -500,6 +676,16 @@ const Navbar = ({ onMenuClick }) => {
               <button type="button" onClick={() => setProfileEditorOpen(false)} aria-label="Cerrar edición de perfil" className="rounded-md p-2 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
             </div>
             <form onSubmit={guardarPerfil} className="mt-5 space-y-4">
+              <div className="flex items-center gap-4">
+                <span className="flex size-16 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xl font-bold text-emerald-800">
+                  {profileForm.avatarUrl ? <img src={profileForm.avatarUrl} alt="Vista previa del avatar" className="size-full object-cover" /> : inicial}
+                </span>
+                <label className="text-sm font-semibold text-emerald-800">
+                  {uploadingAvatar ? "Cargando imagen..." : "Subir foto o avatar"}
+                  <input type="file" accept="image/png,image/jpeg,image/webp" onChange={cargarAvatar} disabled={uploadingAvatar || savingProfile} className="mt-1 block max-w-full text-xs font-normal text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:font-semibold file:text-emerald-800" />
+                  <span className="mt-1 block text-xs font-normal text-slate-500">JPG, PNG o WebP; máximo 2 MB.</span>
+                </label>
+              </div>
               {[
                 ["nombre", "Nombre", "given-name"],
                 ["apellido", "Apellido", "family-name"],
@@ -517,9 +703,54 @@ const Navbar = ({ onMenuClick }) => {
                   />
                 </label>
               ))}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block text-sm font-medium text-slate-700">
+                  Cédula o documento <span className="text-red-700">*</span>
+                  <input name="cedula" value={profileForm.cedula} onChange={(event) => setProfileForm((current) => ({ ...current, cedula: event.target.value }))} required minLength={6} maxLength={20} autoComplete="off" className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20" />
+                </label>
+                <label className="block text-sm font-medium text-slate-700">
+                  Fecha de nacimiento
+                  <input name="fechaNacimiento" type="date" value={profileForm.fechaNacimiento} onChange={(event) => setProfileForm((current) => ({ ...current, fechaNacimiento: event.target.value }))} max={new Date().toISOString().slice(0, 10)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20" />
+                </label>
+              </div>
+              <label className="block text-sm font-medium text-slate-700">
+                Dirección
+                <input name="direccion" value={profileForm.direccion} onChange={(event) => setProfileForm((current) => ({ ...current, direccion: event.target.value }))} maxLength={250} autoComplete="street-address" className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20" />
+              </label>
+              <div className="rounded-xl border border-slate-200 p-4">
+                <p className="text-sm font-semibold text-slate-800">Documento de identidad</p>
+                <p className="mt-1 text-xs text-slate-500">Carga una imagen JPG/PNG o un PDF, máximo 5 MB. Solo tú y el personal que verifica documentos podrán acceder al archivo.</p>
+                <label className="mt-3 inline-flex cursor-pointer items-center rounded-lg border border-emerald-700 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50">
+                  {uploadingIdentityDocument ? "Cargando documento..." : identityDocumentPath ? "Reemplazar documento" : "Cargar documento"}
+                  <input type="file" accept="image/jpeg,image/png,application/pdf" onChange={cargarDocumentoIdentidad} disabled={uploadingIdentityDocument || savingProfile} className="sr-only" />
+                </label>
+                <p className={`mt-2 text-xs ${identityDocumentVerified ? "font-semibold text-emerald-700" : identityDocumentPath ? "text-blue-700" : "text-amber-700"}`}>
+                  {identityDocumentVerified ? "Documento verificado" : identityDocumentPath ? "Documento cargado; pendiente de revisión" : "Aún no has cargado tu documento"}
+                </p>
+              </div>
+              <label className="block text-sm font-medium text-slate-700">
+                Sobre mí
+                <textarea name="biografia" value={profileForm.biografia} onChange={(event) => setProfileForm((current) => ({ ...current, biografia: event.target.value }))} maxLength={500} rows={3} className="mt-1.5 w-full resize-y rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20" />
+              </label>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {[
+                  ["instagram", "Instagram"],
+                  ["facebook", "Facebook"],
+                  ["linkedin", "LinkedIn"]
+                ].map(([name, label]) => (
+                  <label key={name} className="block text-sm font-medium text-slate-700">
+                    {label}
+                    <input type="url" name={name} value={profileForm[name]} onChange={(event) => setProfileForm((current) => ({ ...current, [name]: event.target.value }))} placeholder="https://" className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20" />
+                  </label>
+                ))}
+              </div>
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setProfileEditorOpen(false)} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancelar</button>
-                <button type="submit" disabled={savingProfile} className="rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-60">{savingProfile ? "Guardando..." : "Guardar cambios"}</button>
+                <button type="button" onClick={() => {
+                  setProfileEditorOpen(false);
+                  if (completingWelcome) setWelcomeDismissedFor(null);
+                  setCompletingWelcome(false);
+                }} disabled={savingProfile || uploadingAvatar || uploadingIdentityDocument} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
+                <button type="submit" disabled={savingProfile || uploadingAvatar || uploadingIdentityDocument} className="rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-60">{savingProfile ? "Guardando..." : completingWelcome ? "Guardar y continuar" : "Guardar cambios"}</button>
               </div>
             </form>
           </section>

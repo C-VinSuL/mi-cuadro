@@ -55,7 +55,9 @@ const Configuracion = () => {
 
     numeroIntegrantes: "",
 
-    aporteSemanal: "",
+    aporte: "",
+
+    aportePeriodicidad: "semanal",
 
     interesPrestamo:
       "10",
@@ -105,7 +107,9 @@ const Configuracion = () => {
 
       numeroIntegrantes: String(grupo.numero_integrantes ?? 2),
 
-      aporteSemanal: String(grupo.aporte_semanal ?? 1),
+      aporte: String(grupo.aporte_semanal ?? 1),
+
+      aportePeriodicidad: grupo.aporte_periodicidad || "semanal",
 
       interesPrestamo:
         String(
@@ -231,7 +235,7 @@ const Configuracion = () => {
             );
 
       const numeroIntegrantes = Number(form.numeroIntegrantes);
-      const aporteSemanal = Number(form.aporteSemanal);
+      const aporte = Number(form.aporte);
 
       if (!Number.isInteger(numeroIntegrantes) || numeroIntegrantes < 2 || numeroIntegrantes > 500) {
         setMensaje("La capacidad debe ser un número entero entre 2 y 500 socios.");
@@ -239,17 +243,23 @@ const Configuracion = () => {
         return;
       }
 
-      if (Number.isNaN(aporteSemanal) || aporteSemanal <= 0) {
-        setMensaje("El aporte semanal debe ser mayor a cero.");
+      if (Number.isNaN(aporte) || aporte <= 0) {
+        setMensaje("El valor del aporte debe ser mayor a cero.");
+        setTipoMensaje("error");
+        return;
+      }
+      if (!["semanal", "quincenal", "mensual"].includes(form.aportePeriodicidad)) {
+        setMensaje("Selecciona una periodicidad válida para el aporte.");
         setTipoMensaje("error");
         return;
       }
 
       if (grupo.estado !== "borrador" && (
         numeroIntegrantes !== Number(grupo.numero_integrantes)
-        || aporteSemanal !== Number(grupo.aporte_semanal)
+        || aporte !== Number(grupo.aporte_semanal)
+        || form.aportePeriodicidad !== (grupo.aporte_periodicidad || "semanal")
       )) {
-        setMensaje("La capacidad y el aporte semanal solo pueden cambiarse antes de iniciar el cuadro.");
+        setMensaje("La capacidad, el valor y la periodicidad del aporte solo pueden cambiarse antes de iniciar el cuadro.");
         setTipoMensaje("error");
         return;
       }
@@ -353,7 +363,9 @@ const Configuracion = () => {
 
             numeroIntegrantes,
 
-            aporteSemanal,
+            aporte,
+
+            aportePeriodicidad: form.aportePeriodicidad,
 
             interesPrestamo:
               interes,
@@ -648,7 +660,7 @@ const Configuracion = () => {
               text-emerald-800
             "
           >
-            La capacidad y el aporte semanal definen el cuadro. La tasa y los límites financieros quedan configurados para cuando se habiliten los préstamos.
+            La capacidad y el aporte por periodo definen el cuadro. La tasa y los límites financieros quedan configurados para cuando se habiliten los préstamos.
           </p>
 
         </div>
@@ -731,7 +743,7 @@ const Configuracion = () => {
                   text-slate-500
                 "
               >
-                Ajusta la capacidad, el aporte semanal y las reglas financieras de {grupo.nombre}.
+                Ajusta la capacidad, el aporte por periodo y las reglas financieras de {grupo.nombre}.
               </p>
 
             </div>
@@ -764,12 +776,18 @@ const Configuracion = () => {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="aporteSemanal">Aporte semanal por socio</label>
+            <label className="mb-2 block text-sm font-semibold text-slate-700" htmlFor="aporte">Valor del aporte por socio</label>
             <div className="relative">
               <Wallet size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input id="aporteSemanal" name="aporteSemanal" type="number" min="0.01" step="0.01" required value={form.aporteSemanal} onChange={handleChange} disabled={grupo.estado !== "borrador" || guardando} className="w-full rounded-xl border border-slate-300 py-3 pl-11 pr-4 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 disabled:bg-slate-100 disabled:text-slate-500" />
+              <input id="aporte" name="aporte" type="number" min="0.01" step="0.01" required value={form.aporte} onChange={handleChange} disabled={grupo.estado !== "borrador" || guardando} className="w-full rounded-xl border border-slate-300 py-3 pl-11 pr-4 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 disabled:bg-slate-100 disabled:text-slate-500" />
             </div>
-            <p className="mt-2 text-xs text-slate-500">Monto de cada ronda. Solo editable antes de iniciar.</p>
+            <label className="mt-4 block text-sm font-semibold text-slate-700" htmlFor="aportePeriodicidad">Periodicidad</label>
+            <select id="aportePeriodicidad" name="aportePeriodicidad" value={form.aportePeriodicidad} onChange={handleChange} disabled={grupo.estado !== "borrador" || guardando} className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 disabled:bg-slate-100 disabled:text-slate-500">
+              <option value="semanal">Semanal</option>
+              <option value="quincenal">Quincenal</option>
+              <option value="mensual">Mensual</option>
+            </select>
+            <p className="mt-2 text-xs text-slate-500">Monto por periodo de aporte. Solo editable antes de iniciar.</p>
           </div>
 
           {/* =================================
@@ -1161,8 +1179,8 @@ const Configuracion = () => {
             </div>
 
             <div>
-              <p className="text-xs text-slate-500">Aporte semanal</p>
-              <p className="mt-1 font-bold text-slate-900">${Number(form.aporteSemanal || 0).toFixed(2)}</p>
+              <p className="text-xs capitalize text-slate-500">Aporte {form.aportePeriodicidad}</p>
+              <p className="mt-1 font-bold text-slate-900">${Number(form.aporte || 0).toFixed(2)}</p>
             </div>
 
             <div>

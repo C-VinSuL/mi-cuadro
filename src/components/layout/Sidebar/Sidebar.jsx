@@ -6,15 +6,20 @@ import {
   HandCoins,
   History,
   Settings,
+  ShieldCheck,
+  UserRoundCog,
+  FileClock,
   PiggyBank,
   CalendarDays,
-  X,
-  Eye
+  X
 } from "lucide-react";
 
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { usePermissions } from "../../../hooks/usePermissions";
+import { etiquetaPeriodo } from "../../../services/grupoService";
+import { obtenerResumenBilletera } from "../../../services/walletService";
 
 
 const menu = [
@@ -31,13 +36,19 @@ const menu = [
     permission: "verGrupo"
   },
   {
+    title: "Mi billetera",
+    icon: Wallet,
+    path: "/billetera",
+    permission: "verBilletera"
+  },
+  {
     title: "Aportes",
     icon: Wallet,
     path: "/aportes",
     permission: "verAportes"
   },
   {
-    title: "Mi Cuadro",
+    title: "Cuadro rotativo",
     icon: Landmark,
     path: "/cuadro",
     permission: "verCuadro"
@@ -55,10 +66,28 @@ const menu = [
     permission: "verFondoComunitario"
   },
   {
-    title: "Vista de socio",
-    icon: Eye,
-    path: "/vista-socio",
-    permission: "verVistaSocio"
+    title: "Auditoría",
+    icon: FileClock,
+    path: "/auditoria",
+    permission: "verAuditoria"
+  },
+  {
+    title: "Socios y roles",
+    icon: UserRoundCog,
+    path: "/usuarios",
+    permission: "gestionarUsuarios"
+  },
+  {
+    title: "Verificar documentos",
+    icon: ShieldCheck,
+    path: "/verificar-documentos",
+    permission: "verificarDocumentos"
+  },
+  {
+    title: "Solicitudes de billetera",
+    icon: Wallet,
+    path: "/admin/billetera",
+    permission: "gestionarBilletera"
   },
   {
     title: "Configuración",
@@ -77,12 +106,40 @@ const Sidebar = ({
   const { can, rol } =  usePermissions();
 
   const {
+    user,
+    profile,
     grupo,
     grupos,
     participant,
     fondoComunitario,
     seleccionarGrupo
   } = useAuth();
+  const [walletState, setWalletState] = useState({ userId: null, summary: null, error: false });
+
+  useEffect(() => {
+    if (!user?.id || profile?.rol?.toLowerCase() !== "socio") return undefined;
+
+    let active = true;
+    const refreshBalance = async () => {
+      try {
+        const summary = await obtenerResumenBilletera();
+        if (active) setWalletState({ userId: user.id, summary, error: false });
+      } catch (error) {
+        console.error("Error cargando saldo del socio:", error);
+        if (active) setWalletState({ userId: user.id, summary: null, error: true });
+      }
+    };
+
+    const timeoutId = window.setTimeout(refreshBalance, 0);
+    const intervalId = window.setInterval(refreshBalance, 30000);
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+      window.clearInterval(intervalId);
+    };
+  }, [user?.id, profile?.rol]);
+  const walletSummary = walletState.userId === user?.id ? walletState.summary : null;
+  const walletLoadError = walletState.userId === user?.id && walletState.error;
 
   
 
@@ -92,6 +149,7 @@ const Sidebar = ({
 
   const totalSemanas =
     grupo?.numero_integrantes || 0;
+  const periodoActual = etiquetaPeriodo(grupo?.aporte_periodicidad);
 
 
   const porcentaje =
@@ -157,24 +215,11 @@ const Sidebar = ({
 
           <div className="flex items-center gap-3">
 
-            <div
-              className="
-                w-11
-                h-11
-
-                bg-emerald-400/15
-
-                rounded-xl
-
-                flex
-                items-center
-                justify-center
-
-                text-xl
-              "
-            >
-              🏡
-            </div>
+            <img
+              src="/flashmonkey.svg"
+              alt=""
+              className="h-11 w-11 rounded-xl"
+            />
 
 
             <div>
@@ -186,7 +231,7 @@ const Sidebar = ({
                   text-white
                 "
               >
-                Mi Cuadro
+                FlashMonkey
               </p>
 
               <p
@@ -292,7 +337,7 @@ const Sidebar = ({
           </p>
 
 
-          {rol !== "administrador" && participant && (
+          {rol !== "administrador" && participant && grupo?.estado !== "borrador" && participant.posicion && (
 
             <p
               className="
@@ -340,7 +385,7 @@ const Sidebar = ({
 
 
               <span className="font-semibold">
-                {semanaActual} / {totalSemanas}
+                {periodoActual} {semanaActual} / {totalSemanas}
               </span>
 
             </div>
@@ -478,6 +523,26 @@ const Sidebar = ({
         })}
 
       </nav>
+
+      {rol === "socio" && (
+        <NavLink
+          to="/billetera"
+          onClick={() => {
+            if (mobile && onClose) onClose();
+          }}
+          className="mx-4 mb-3 rounded-2xl border border-white/10 bg-[#0B6651] p-4 transition hover:bg-emerald-800"
+        >
+          <span className="flex items-center gap-3">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-white/10"><Wallet size={19} /></span>
+            <span className="min-w-0">
+              <span className="block text-xs text-emerald-100">Dinero disponible</span>
+              <span className="mt-0.5 block truncate text-lg font-bold text-white">
+                {walletLoadError ? "Saldo no disponible" : walletSummary ? `$${Number(walletSummary.saldo).toFixed(2)}` : "Cargando..."}
+              </span>
+            </span>
+          </span>
+        </NavLink>
+      )}
 
 
       {/* FONDO */}

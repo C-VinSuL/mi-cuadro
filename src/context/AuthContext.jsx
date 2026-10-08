@@ -47,7 +47,10 @@ export const AuthProvider = ({ children }) => {
         nombre,
         apellido,
         telefono,
-        rol
+        rol,
+        avatar_url,
+        biografia,
+        bienvenida_completada
       `)
       .eq("id", userId)
       .single();
@@ -122,7 +125,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     let membresias = [];
-    if (rol?.toLowerCase() !== "administrador") {
+    if (!["administrador", "auditor"].includes(rol?.toLowerCase())) {
       const { data, error } = await supabase
         .from("participantes")
         .select(`
@@ -155,7 +158,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     const groupIds = [...new Set(membresias.map((item) => item.grupo_id))];
-    const esGestor = ["administrador", "tesorero"].includes(rol?.toLowerCase());
+    const esGestor = ["administrador", "tesorero", "auditor"].includes(rol?.toLowerCase());
 
     let groupsQuery = supabase.from("grupos").select("*").order("nombre", { ascending: true });
     if (!esGestor) {

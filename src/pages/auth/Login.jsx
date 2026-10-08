@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 
 import { supabase } from "../../services/supabase";
@@ -8,6 +8,7 @@ import { useNotifications } from "../../hooks/useNotifications";
 const Login = () => {
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { notify } = useNotifications();
 
   const [email, setEmail] = useState("");
@@ -53,10 +54,10 @@ const Login = () => {
 
       notify({
         title: "Sesión iniciada",
-        message: "Bienvenido nuevamente a Mi Cuadro.",
+        message: "Bienvenido nuevamente a FlashMonkey.",
         type: "success"
       });
-      navigate("/", { replace: true });
+      navigate(location.state?.from?.pathname || "/", { replace: true });
     } catch (error) {
       console.error("Error iniciando sesión:", error);
       setErrorMessage(
@@ -96,16 +97,14 @@ const Login = () => {
 
         <div className="text-center mb-8">
 
-          <div className="text-5xl">
-            🏡
-          </div>
+          <img src="/flashmonkey.svg" alt="" className="mx-auto h-20 w-20 rounded-2xl" />
 
           <h1 className="
             text-3xl
             font-bold
             mt-3
           ">
-            Mi Cuadro
+            FlashMonkey
           </h1>
 
           <p className="

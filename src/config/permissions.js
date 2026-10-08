@@ -16,11 +16,14 @@ export const PERMISSIONS = {
     solicitarPrestamo: false,
     aprobarPrestamos: false,
     verFondoComunitario: true,
-    verVistaSocio: false,
-  
-    
     verHistorialCompleto: true,
-    verConfiguracion: true
+    verConfiguracion: true,
+    gestionarUsuarios: true,
+    verAuditoria: true,
+    verificarDocumentos: true,
+    verBilletera: false,
+    gestionarBilletera: true,
+    verListaParticipantesGrupo: true
   },
 
   tesorero: {
@@ -40,10 +43,38 @@ export const PERMISSIONS = {
     solicitarPrestamo: false,
     aprobarPrestamos: false,
     verFondoComunitario: true,
-    verVistaSocio: false,
-
     verHistorialCompleto: true,
-    verConfiguracion: false
+    verConfiguracion: false,
+    gestionarUsuarios: false,
+    verAuditoria: false,
+    verificarDocumentos: true,
+    verBilletera: false,
+    gestionarBilletera: true,
+    verListaParticipantesGrupo: true
+  },
+
+  auditor: {
+    verDashboard: true,
+    verGrupo: false,
+    gestionarGrupo: false,
+    iniciarCuadro: false,
+    verAportes: false,
+    registrarAporte: false,
+    gestionarAportes: false,
+    verCuadro: false,
+    cerrarRonda: false,
+    verPrestamos: false,
+    solicitarPrestamo: false,
+    aprobarPrestamos: false,
+    verFondoComunitario: false,
+    verHistorialCompleto: false,
+    verConfiguracion: false,
+    gestionarUsuarios: false,
+    verAuditoria: true,
+    verificarDocumentos: false,
+    verBilletera: false,
+    gestionarBilletera: false,
+    verListaParticipantesGrupo: false
   },
 
   socio: {
@@ -63,9 +94,13 @@ export const PERMISSIONS = {
     solicitarPrestamo: false,
     aprobarPrestamos: false,
     verFondoComunitario: false,
-    verVistaSocio: false,
-
     verHistorialCompleto: false,
-    verConfiguracion: false
+    verConfiguracion: false,
+    gestionarUsuarios: false,
+    verAuditoria: false,
+    verificarDocumentos: false,
+    verBilletera: true,
+    gestionarBilletera: false,
+    verListaParticipantesGrupo: false
   }
 };

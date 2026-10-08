@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   AlertTriangle,
@@ -7,69 +7,75 @@ import {
   Users
 } from "lucide-react";
 
-import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../hooks/usePermissions";
 import GroupAccessPanel from "../../components/cuadro/GroupAccessPanel";
-import { iniciarCuadro } from "../../services/grupoService";
+import { contarParticipantesGrupo, etiquetaAporte, iniciarCuadro, listarParticipantesGrupoAdmin } from "../../services/grupoService";
 
 const Grupos = () => {
   const { grupo, cargarGrupo } = useAuth();
   const { can } = usePermissions();
+  const puedeVerListaParticipantes = can("verListaParticipantesGrupo");
   const [participantes, setParticipantes] = useState([]);
+  const [cantidadAprobados, setCantidadAprobados] = useState(0);
   const [loading, setLoading] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [confirmandoInicio, setConfirmandoInicio] = useState(false);
   const [iniciando, setIniciando] = useState(false);
 
-  useEffect(() => {
-    if (!grupo?.id) return undefined;
+  const actualizarParticipantes = useCallback(async (grupoId = grupo?.id) => {
+    if (!grupoId) {
+      setParticipantes([]);
+      setLoading(false);
+      return;
+    }
 
-    let active = true;
-    Promise.resolve().then(async () => {
-      if (!active) return;
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("participantes")
-        .select("id, nombre, posicion, estado, perfil_id")
-        .eq("grupo_id", grupo.id)
-        .order("posicion", { ascending: true });
-
-      if (active) {
-        if (!active) return;
-        if (error) {
-          console.error("Error cargando participantes:", error);
-          setMensaje("No se pudo cargar la lista de socios.");
-          setParticipantes([]);
-        } else {
-          setMensaje("");
-          setParticipantes(data || []);
-        }
-        setLoading(false);
+    setLoading(true);
+    try {
+      if (can("verListaParticipantesGrupo")) {
+        const miembros = await listarParticipantesGrupoAdmin(grupoId);
+        setParticipantes(miembros);
+        setCantidadAprobados(miembros.length);
+      } else {
+        setParticipantes([]);
+        setCantidadAprobados(Number(await contarParticipantesGrupo(grupoId)) || 0);
       }
-    });
+      setMensaje("");
+    } catch (error) {
+      console.error("Error cargando participantes:", error);
+      setMensaje(error.message || "No se pudo actualizar el resumen de socios.");
+      setParticipantes([]);
+      setCantidadAprobados(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [can, grupo?.id]);
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(actualizarParticipantes, 0);
+    const intervalId = window.setInterval(actualizarParticipantes, 30000);
     return () => {
-      active = false;
+      window.clearTimeout(timeoutId);
+      window.clearInterval(intervalId);
     };
-  }, [grupo?.id]);
+  }, [actualizarParticipantes]);
 
   if (!grupo) {
     return (
       <div className="space-y-5">
         <header className="border-b border-slate-200 pb-4">
           <h1 className="text-2xl font-bold text-slate-900">Grupos y cuadros</h1>
-          <p className="mt-1 text-sm text-slate-600">Solicita ingresar con un código o crea un grupo nuevo.</p>
+          <p className="mt-1 text-sm text-slate-600">Consulta los grupos disponibles y solicita una invitación, o crea un grupo nuevo si tienes permisos.</p>
         </header>
-        <GroupAccessPanel />
+        <GroupAccessPanel onMembershipChange={actualizarParticipantes} />
       </div>
     );
   }
 
   const capacidad = Number(grupo.numero_integrantes || 0);
-  const cuposDisponibles = Math.max(capacidad - participantes.length, 0);
-  const grupoCompleto = capacidad > 0 && participantes.length === capacidad;
-  const grupoExcedido = participantes.length > capacidad;
+  const cuposDisponibles = Math.max(capacidad - cantidadAprobados, 0);
+  const grupoCompleto = capacidad > 0 && cantidadAprobados === capacidad;
+  const grupoExcedido = cantidadAprobados > capacidad;
   const esBorrador = grupo.estado === "borrador";
   const esActivo = grupo.estado === "activo";
   const puedeIniciar = can("iniciarCuadro") && esBorrador && grupoCompleto && !grupoExcedido;
@@ -94,7 +100,7 @@ const Grupos = () => {
 
   return (
     <div className="space-y-7">
-      <GroupAccessPanel />
+      <GroupAccessPanel onMembershipChange={actualizarParticipantes} />
 
       <header className="flex flex-col gap-5 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -122,9 +128,9 @@ const Grupos = () => {
       {mensaje && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{mensaje}</p>}
 
       <section className="grid gap-4 sm:grid-cols-3" aria-label="Resumen del grupo">
-        <Metric icon={<Users size={19} />} label="Socios aprobados" value={`${participantes.length} / ${capacidad}`} />
+        <Metric icon={<Users size={19} />} label="Socios aprobados" value={`${cantidadAprobados} / ${capacidad}`} />
         <Metric icon={<Users size={19} />} label="Cupos disponibles" value={cuposDisponibles} />
-        <Metric label="Aporte semanal" value={`$${Number(grupo.aporte_semanal || 0).toFixed(2)}`} />
+        <Metric label={etiquetaAporte(grupo.aporte_periodicidad)} value={`$${Number(grupo.aporte_semanal || 0).toFixed(2)}`} />
       </section>
 
       {grupoExcedido && (
@@ -140,10 +146,10 @@ const Grupos = () => {
         </p>
       )}
 
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      {puedeVerListaParticipantes ? <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="font-semibold text-slate-900">Socios del grupo</h2>
-          <p className="mt-1 text-sm text-slate-500">Las posiciones actuales son provisionales; al aprobar el inicio se sortearán al azar.</p>
+          <p className="mt-1 text-sm text-slate-500">{esBorrador ? "El orden de pago se sorteará al iniciar el grupo." : "Orden de pago asignado mediante sorteo al iniciar el grupo."}</p>
         </div>
         {loading ? (
           <p className="px-5 py-8 text-sm text-slate-500" role="status">Cargando socios...</p>
@@ -154,7 +160,7 @@ const Grupos = () => {
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
-                  <th className="px-5 py-3 font-semibold">Posición provisional</th>
+                  <th className="px-5 py-3 font-semibold">Posición de pago</th>
                   <th className="px-5 py-3 font-semibold">Socio</th>
                   <th className="px-5 py-3 font-semibold">Estado</th>
                 </tr>
@@ -162,7 +168,7 @@ const Grupos = () => {
               <tbody className="divide-y divide-slate-100">
                 {participantes.map((participante) => (
                   <tr key={participante.id}>
-                    <td className="px-5 py-3">{participante.posicion ?? "Pendiente"}</td>
+                    <td className="px-5 py-3">{esBorrador ? "Pendiente de sorteo" : participante.posicion ?? "Pendiente"}</td>
                     <td className="px-5 py-3 font-medium text-slate-900">{participante.nombre}</td>
                     <td className="px-5 py-3 capitalize text-slate-600">{participante.estado || "pendiente"}</td>
                   </tr>
@@ -172,6 +178,11 @@ const Grupos = () => {
           </div>
         )}
       </section>
+      : (
+        <p className="rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm text-blue-950">
+          El total de socios aprobados se actualiza automáticamente cada 30 segundos. Podrás ver cuándo se completen todos los cupos.
+        </p>
+      )}
 
       {confirmandoInicio && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
@@ -182,7 +193,7 @@ const Grupos = () => {
             <dl className="mt-5 space-y-2 border-y border-slate-200 py-4 text-sm">
               <Row label="Grupo" value={grupo.nombre} />
               <Row label="Socios" value={capacidad} />
-              <Row label="Aporte semanal" value={`$${Number(grupo.aporte_semanal || 0).toFixed(2)}`} />
+              <Row label={etiquetaAporte(grupo.aporte_periodicidad)} value={`$${Number(grupo.aporte_semanal || 0).toFixed(2)}`} />
               <Row label="Pozo estimado" value={`$${pozo.toFixed(2)}`} />
             </dl>
             <div className="mt-6 flex justify-end gap-3">

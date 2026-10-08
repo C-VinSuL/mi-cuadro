@@ -25,6 +25,7 @@ import {
 import {
   getDashboardAdminData
 } from "../../../services/dashboardService";
+import { etiquetaAporte, etiquetaPeriodo } from "../../../services/grupoService";
 
 const DashboardTesorero = () => {
   const {
@@ -32,6 +33,7 @@ const DashboardTesorero = () => {
     profile,
     fondoComunitario
   } = useAuth();
+  const periodoActual = etiquetaPeriodo(grupo?.aporte_periodicidad);
 
   const [datos, setDatos] =
     useState({
@@ -302,7 +304,7 @@ const DashboardTesorero = () => {
             "
           >
             <p className="text-xs text-slate-500">
-              Semana actual
+              {periodoActual} actual
             </p>
 
             <p
@@ -518,7 +520,7 @@ const DashboardTesorero = () => {
           </div>
 
           <p className="mt-5 text-sm text-slate-500">
-            Aporte semanal
+            {etiquetaAporte(grupo.aporte_periodicidad)}
           </p>
 
           <p
@@ -584,7 +586,7 @@ const DashboardTesorero = () => {
                   text-blue-700
                 "
               >
-                Recaudación semanal
+                Recaudación por periodo
               </p>
 
               <h2

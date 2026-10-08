@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useCallback,
   useState
 } from "react";
 
@@ -11,9 +12,11 @@ import {
 } from "lucide-react";
 
 import { supabase } from "../../services/supabase";
+import { etiquetaPeriodo } from "../../services/grupoService";
 
 
 const CuadroBoard = ({ grupo }) => {
+  const periodoActual = etiquetaPeriodo(grupo?.aporte_periodicidad);
 
   const [participantes, setParticipantes] = useState([]);
   const [aportes, setAportes] = useState([]);
@@ -23,20 +26,11 @@ const CuadroBoard = ({ grupo }) => {
   const [errorMessage, setErrorMessage] = useState("");
 
 
-  useEffect(() => {
-
-    if (grupo?.id) {
-      cargarDatosCuadro();
-    }
-
-  }, [grupo]);
-
-
   // ========================================
   // CARGAR TODA LA INFORMACIÓN DEL CUADRO
   // ========================================
 
-  const cargarDatosCuadro = async () => {
+  const cargarDatosCuadro = useCallback(async () => {
 
     setLoading(true);
     setErrorMessage("");
@@ -141,7 +135,17 @@ const CuadroBoard = ({ grupo }) => {
     }
 
     setLoading(false);
-  };
+  }, [grupo]);
+
+  useEffect(() => {
+    if (!grupo?.id || grupo.estado === "borrador") return undefined;
+
+    const timeoutId = window.setTimeout(() => {
+      cargarDatosCuadro();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [cargarDatosCuadro, grupo?.estado, grupo?.id]);
 
 
   // ========================================
@@ -194,6 +198,17 @@ const CuadroBoard = ({ grupo }) => {
   // ========================================
   // LOADING
   // ========================================
+
+  if (grupo.estado === "borrador") {
+    return (
+      <section className="rounded-3xl border border-blue-200 bg-blue-50 p-6 text-blue-950 md:p-8">
+        <h2 className="text-xl font-bold">El orden de pago aún no está asignado</h2>
+        <p className="mt-2 text-sm leading-6">
+          Cuando administración o tesorería inicie el grupo completo, se sortearán las posiciones de pago y podrás consultar el tablero.
+        </p>
+      </section>
+    );
+  }
 
   if (loading) {
 
@@ -292,7 +307,7 @@ const CuadroBoard = ({ grupo }) => {
                 mt-1
               "
             >
-              Estado de la semana
+              Estado del periodo
             </h2>
 
             <p
@@ -301,7 +316,7 @@ const CuadroBoard = ({ grupo }) => {
                 mt-2
               "
             >
-              Semana {grupo.semana_actual}
+              {periodoActual} {grupo.semana_actual}
               {" · "}
               {totalPagados} de {participantes.length}
               {" "}integrantes han realizado su aporte.
@@ -579,7 +594,7 @@ const CuadroBoard = ({ grupo }) => {
                               mt-0.5
                             "
                           >
-                            Semana {entrega.semana}
+                            {periodoActual} {entrega.semana}
                             {" · "}
                             ${Number(
                               entrega.monto

@@ -117,7 +117,7 @@ const MiCuadro = () => {
               md:text-4xl
             "
           >
-            {profile?.rol?.toLowerCase() === "administrador" ? "Revisión de cuadros" : "Mi Cuadro"}
+            {profile?.rol?.toLowerCase() === "administrador" ? "Revisión de cuadros" : "Cuadro rotativo"}
           </h1>
 
           <p

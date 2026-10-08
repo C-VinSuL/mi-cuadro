@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
+import { etiquetaPeriodo } from "../../services/grupoService";
 
 const CuadroSummary = ({ grupo }) => {
   const { participant } = useAuth();
@@ -13,6 +14,7 @@ const CuadroSummary = ({ grupo }) => {
   const pozo =
     Number(grupo?.aporte_semanal || 0) *
     Number(grupo?.numero_integrantes || 0);
+  const sorteoRealizado = grupo?.estado !== "borrador" && participant?.posicion;
 
   const data = [
     {
@@ -26,15 +28,15 @@ const CuadroSummary = ({ grupo }) => {
       icon: Wallet
     },
     {
-      title: "Semana",
+      title: etiquetaPeriodo(grupo?.aporte_periodicidad),
       value: `${grupo?.semana_actual || 0} / ${grupo?.numero_integrantes || 0}`,
       icon: CalendarDays
     },
     {
-      title: "Tu puesto",
-      value: participant
+      title: sorteoRealizado ? "Tu posición de pago" : "Posición de pago",
+      value: sorteoRealizado
         ? `#${participant.posicion}`
-        : "Sin puesto",
+        : "Se asignará al iniciar",
       icon: Armchair
     }
   ];

@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { PERMISSIONS } from "../config/permissions";
 
@@ -11,11 +12,11 @@ export const usePermissions = () => {
     PERMISSIONS[rol] ||
     PERMISSIONS.socio;
 
-  const can = (permission) => {
+  const can = useCallback((permission) => {
     return Boolean(
       permissions?.[permission]
     );
-  };
+  }, [permissions]);
 
   return {
     rol,

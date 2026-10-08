@@ -25,6 +25,10 @@ import {
 import {
   supabase
 } from "../../../services/supabase";
+import {
+  etiquetaAporte,
+  etiquetaPeriodo
+} from "../../../services/grupoService";
 
 const DashboardSocio = () => {
   const {
@@ -32,6 +36,7 @@ const DashboardSocio = () => {
     profile,
     participant
   } = useAuth();
+  const periodoActual = etiquetaPeriodo(grupo?.aporte_periodicidad);
 
   const [aporteActual, setAporteActual] =
     useState(null);
@@ -113,22 +118,24 @@ const DashboardSocio = () => {
             )
             .maybeSingle(),
 
-          supabase
-            .from("participantes")
-            .select(`
-              id,
-              nombre,
-              posicion
-            `)
-            .eq(
-              "grupo_id",
-              grupo.id
-            )
-            .eq(
-              "posicion",
-              grupo.semana_actual
-            )
-            .maybeSingle()
+          grupo.estado === "activo"
+            ? supabase
+              .from("participantes")
+              .select(`
+                id,
+                nombre,
+                posicion
+              `)
+              .eq(
+                "grupo_id",
+                grupo.id
+              )
+              .eq(
+                "posicion",
+                grupo.semana_actual
+              )
+              .maybeSingle()
+            : Promise.resolve({ data: null, error: null })
         ]);
 
         if (aporteResponse.error) {
@@ -173,6 +180,7 @@ const DashboardSocio = () => {
 
   }, [
     grupo?.id,
+    grupo?.estado,
     grupo?.semana_actual,
     participant?.id
   ]);
@@ -246,6 +254,8 @@ const DashboardSocio = () => {
     Number(
       grupo.semana_actual || 0
     );
+  const grupoActivo = grupo.estado === "activo";
+  const sorteoRealizado = grupo.estado !== "borrador" && Boolean(participant?.posicion);
 
   const capacidad =
     Number(
@@ -266,13 +276,13 @@ const DashboardSocio = () => {
     aporteSemanal + comision;
 
   const pagado =
-    aporteActual?.estado === "pagado";
+    grupoActivo && aporteActual?.estado === "pagado";
 
   const yaRecibio =
     Boolean(entrega);
 
   const esSuTurno =
-    Number(
+    grupoActivo && Number(
       participant?.posicion
     ) === semanaActual;
 
@@ -368,7 +378,7 @@ const DashboardSocio = () => {
           >
 
             <p className="text-xs text-slate-500">
-              Semana actual
+              {grupoActivo ? `${periodoActual} actual` : "Estado del grupo"}
             </p>
 
             <p
@@ -379,7 +389,7 @@ const DashboardSocio = () => {
                 text-slate-900
               "
             >
-              {semanaActual} de {capacidad}
+              {grupoActivo ? `${semanaActual} de ${capacidad}` : "Aún no iniciado"}
             </p>
 
           </div>
@@ -432,7 +442,7 @@ const DashboardSocio = () => {
           </div>
 
           <p className="mt-5 text-sm text-slate-500">
-            Tu puesto
+            {sorteoRealizado ? "Tu posición de pago" : "Posición de pago"}
           </p>
 
           <p
@@ -443,9 +453,7 @@ const DashboardSocio = () => {
               text-slate-900
             "
           >
-            #
-            {participant?.posicion ||
-              "-"}
+            {sorteoRealizado ? `#${participant.posicion}` : "Pendiente de sorteo"}
           </p>
 
         </div>
@@ -480,7 +488,7 @@ const DashboardSocio = () => {
           </div>
 
           <p className="mt-5 text-sm text-slate-500">
-            Aporte semanal
+            {etiquetaAporte(grupo.aporte_periodicidad)}
           </p>
 
           <p
@@ -520,7 +528,9 @@ const DashboardSocio = () => {
               rounded-xl
 
               ${
-                pagado
+                !grupoActivo
+                  ? "bg-slate-100 text-slate-500"
+                  : pagado
                   ? `
                     bg-emerald-50
                     text-emerald-700
@@ -532,7 +542,9 @@ const DashboardSocio = () => {
               }
             `}
           >
-            {pagado
+            {!grupoActivo
+              ? <Clock3 size={22} />
+              : pagado
               ? <CheckCircle2 size={22} />
               : <Clock3 size={22} />
             }
@@ -549,13 +561,17 @@ const DashboardSocio = () => {
               font-bold
 
               ${
-                pagado
+                !grupoActivo
+                  ? "text-slate-600"
+                  : pagado
                   ? "text-emerald-700"
                   : "text-amber-700"
               }
             `}
           >
-            {pagado
+            {!grupoActivo
+              ? "Grupo sin iniciar"
+              : pagado
               ? "Pagado"
               : "Pendiente"
             }
@@ -604,9 +620,9 @@ const DashboardSocio = () => {
               text-slate-900
             "
           >
-            Semana{" "}
-            {participant?.posicion ||
-              "-"}
+            {sorteoRealizado
+              ? `${periodoActual} ${participant.posicion}`
+              : "Se asignará al iniciar"}
           </p>
 
         </div>
@@ -636,7 +652,9 @@ const DashboardSocio = () => {
             md:p-7
 
             ${
-              pagado
+              !grupoActivo
+                ? "border-slate-200 bg-slate-50"
+                : pagado
                 ? `
                   border-emerald-200
                   bg-emerald-50
@@ -668,13 +686,15 @@ const DashboardSocio = () => {
                   font-semibold
 
                   ${
-                    pagado
+                    !grupoActivo
+                      ? "text-slate-600"
+                      : pagado
                       ? "text-emerald-700"
                       : "text-amber-700"
                   }
                 `}
               >
-                Aporte de esta semana
+                Aporte del periodo actual
               </p>
 
               <h2
@@ -685,7 +705,9 @@ const DashboardSocio = () => {
                   text-slate-900
                 "
               >
-                {pagado
+                {!grupoActivo
+                  ? "Aporte aún no habilitado"
+                  : pagado
                   ? "Estás al día"
                   : "Tienes un aporte pendiente"
                 }
@@ -698,17 +720,15 @@ const DashboardSocio = () => {
                   text-slate-600
                 "
               >
-                Semana {semanaActual}
-                {" · "}
-                Aporte ${aporteSemanal.toFixed(2)}
-                {" + "}
-                comisión ${comision.toFixed(2)}
+                {grupoActivo
+                  ? `${periodoActual} ${semanaActual} · Aporte $${aporteSemanal.toFixed(2)} + comisión $${comision.toFixed(2)}`
+                  : "Podrás registrar tus aportes cuando administración o tesorería inicie el grupo."}
               </p>
 
             </div>
 
 
-            <div>
+            {grupoActivo && <div>
 
               <p className="text-xs text-slate-500">
                 Total
@@ -724,12 +744,12 @@ const DashboardSocio = () => {
                 ${totalPagar.toFixed(2)}
               </p>
 
-            </div>
+            </div>}
 
           </div>
 
 
-          {!pagado && (
+          {grupoActivo && !pagado && (
 
             <Link
               to="/aportes"
@@ -824,7 +844,7 @@ const DashboardSocio = () => {
               </h2>
 
               <p className="mt-2 text-sm text-slate-500">
-                Semana {entrega.semana}
+                {periodoActual} {entrega.semana}
               </p>
 
               <p
@@ -855,7 +875,7 @@ const DashboardSocio = () => {
                   text-amber-700
                 "
               >
-                Esta es tu semana
+                Este es tu periodo
               </h2>
 
               <p className="mt-2 text-sm text-slate-500">
@@ -878,14 +898,15 @@ const DashboardSocio = () => {
                   text-slate-900
                 "
               >
-                Semana{" "}
-                {participant?.posicion ||
-                  "-"}
+                {sorteoRealizado
+                  ? `${periodoActual} ${participant.posicion}`
+                  : "Pendiente de sorteo"}
               </h2>
 
               <p className="mt-2 text-sm text-slate-500">
-                Tu puesto define la ronda
-                en la que recibirás el cuadro.
+                {sorteoRealizado
+                  ? "Tu posición define la ronda en la que recibirás el cuadro."
+                  : "La ronda de entrega se definirá con el sorteo al iniciar el grupo."}
               </p>
             </>
           )}
@@ -920,7 +941,7 @@ const DashboardSocio = () => {
               text-emerald-700
             "
           >
-            Ronda actual
+            {periodoActual} actual
           </p>
 
           <div
@@ -938,7 +959,7 @@ const DashboardSocio = () => {
             <div>
 
               <p className="text-sm text-slate-500">
-                Beneficiario de la semana
+                Beneficiario del periodo
               </p>
 
               <h2
@@ -1087,7 +1108,7 @@ const DashboardSocio = () => {
             <Armchair className="text-blue-600" />
 
             <p className="mt-4 font-semibold text-slate-900">
-              Mi Cuadro
+              Cuadro rotativo
             </p>
 
             <p className="mt-1 text-sm text-slate-500">

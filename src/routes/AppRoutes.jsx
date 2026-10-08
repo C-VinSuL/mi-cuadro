@@ -7,6 +7,8 @@ import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import UpdatePassword from "../pages/auth/UpdatePassword";
+import MfaSetup from "../pages/auth/MfaSetup";
+import AcceptGroupInvite from "../pages/grupos/AcceptGroupInvite";
 
 import MainLayout from "../components/layout/MainLayout";
 
@@ -20,7 +22,10 @@ import MiCuadro from "../pages/cuadro/MiCuadro";
 import Prestamos from "../pages/prestamos/Prestamos";
 import Historial from "../pages/reportes/Historial";
 import Configuracion from "../pages/Configuracion";
-import VistaSocio from "../pages/admin/VistaSocio";
+import Usuarios from "../pages/admin/Usuarios";
+import VerificarDocumentos from "../pages/admin/VerificarDocumentos";
+import Auditoria from "../pages/reportes/Auditoria";
+import Billetera from "../pages/Billetera";
 
 const AppRoutes = () => {
   return (
@@ -51,6 +56,8 @@ const AppRoutes = () => {
         path="/actualizar-contrasena"
         element={<UpdatePassword />}
       />
+
+      <Route path="/seguridad/mfa" element={<MfaSetup />} />
 
       {/* =========================
           DASHBOARD
@@ -87,6 +94,15 @@ const AppRoutes = () => {
               </MainLayout>
 
             </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/aceptar-invitacion"
+        element={
+          <ProtectedRoute>
+            <AcceptGroupInvite />
           </ProtectedRoute>
         }
       />
@@ -193,13 +209,55 @@ const AppRoutes = () => {
       />
 
       <Route
-        path="/vista-socio"
+        path="/usuarios"
         element={
           <ProtectedRoute>
-            <RoleRoute permission="verVistaSocio">
-              <MainLayout>
-                <VistaSocio />
-              </MainLayout>
+            <RoleRoute permission="gestionarUsuarios">
+              <MainLayout><Usuarios /></MainLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/verificar-documentos"
+        element={
+          <ProtectedRoute>
+            <RoleRoute permission="verificarDocumentos">
+              <MainLayout><VerificarDocumentos /></MainLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/auditoria"
+        element={
+          <ProtectedRoute>
+            <RoleRoute permission="verAuditoria">
+              <MainLayout><Auditoria /></MainLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/billetera"
+        element={
+          <ProtectedRoute>
+            <RoleRoute permission="verBilletera">
+              <MainLayout><Billetera /></MainLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/billetera"
+        element={
+          <ProtectedRoute>
+            <RoleRoute permission="gestionarBilletera">
+              <MainLayout><Billetera /></MainLayout>
             </RoleRoute>
           </ProtectedRoute>
         }

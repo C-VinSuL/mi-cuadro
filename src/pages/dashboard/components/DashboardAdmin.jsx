@@ -27,6 +27,7 @@ import {
   getDashboardAdminData
 } from "../../../services/dashboardService";
 import DashboardAdminOverview from "./DashboardAdminOverview";
+import { etiquetaPeriodo } from "../../../services/grupoService";
 
 const DashboardAdmin = () => {
   const {
@@ -35,6 +36,7 @@ const DashboardAdmin = () => {
     profile,
     fondoComunitario
   } = useAuth();
+  const periodoActual = etiquetaPeriodo(grupo?.aporte_periodicidad);
 
   const [datos, setDatos] =
     useState({
@@ -278,7 +280,7 @@ const DashboardAdmin = () => {
                 text-slate-900
               "
             >
-              Semana {semana} de{" "}
+              {periodoActual} {semana} de{" "}
               {capacidad}
             </p>
 
@@ -419,7 +421,7 @@ const DashboardAdmin = () => {
               text-slate-400
             "
           >
-            Semana {semana}
+            {periodoActual} {semana}
           </p>
         </div>
 

@@ -21,6 +21,7 @@ import {
 } from "../../context/AuthContext";
 import { useNotifications } from "../../hooks/useNotifications";
 import AportesAdmin from "./AportesAdmin";
+import { etiquetaPeriodo, etiquetaPeriodoMinuscula } from "../../services/grupoService";
 
 const obtenerAportesSocio = async (participantId) => {
   const { data, error } = await supabase
@@ -73,6 +74,9 @@ const AportesSocio = () => {
 
   const semanaActual =
     grupo?.semana_actual || 0;
+  const grupoActivo = grupo?.estado === "activo";
+  const periodoActual = etiquetaPeriodo(grupo?.aporte_periodicidad);
+  const periodoActualMinuscula = etiquetaPeriodoMinuscula(grupo?.aporte_periodicidad);
 
 
   // =========================
@@ -154,10 +158,15 @@ const AportesSocio = () => {
         return;
       }
 
+      if (!grupoActivo) {
+        setMensaje("El grupo aún no ha iniciado. Podrás registrar aportes cuando administración o tesorería inicie el cuadro.");
+        return;
+      }
+
       if (aporteSemanaActual) {
 
         setMensaje(
-          "Ya registraste el aporte de esta semana."
+          "Ya registraste el aporte de este periodo."
         );
 
         return;
@@ -214,7 +223,7 @@ const AportesSocio = () => {
       );
       notify({
         title: "Aporte registrado",
-        message: `Tu aporte de la semana ${semanaActual} quedó registrado.`,
+        message: `Tu aporte del periodo ${semanaActual} (${periodoActualMinuscula}) quedó registrado.`,
         type: "success"
       });
 
@@ -288,7 +297,7 @@ const AportesSocio = () => {
           "
         >
           Revisa tus aportes y registra
-          el pago correspondiente a cada semana.
+          el pago correspondiente a cada {periodoActualMinuscula}.
         </p>
 
       </div>
@@ -297,6 +306,13 @@ const AportesSocio = () => {
       {/* =====================
           TARJETA PRINCIPAL
       ====================== */}
+
+      {!grupoActivo && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm text-blue-950" role="status">
+          <p className="font-semibold">Aportes todavía no habilitados</p>
+          <p className="mt-1">Podrás registrar tu aporte cuando administración o tesorería inicie el grupo.</p>
+        </div>
+      )}
 
       <section
         className="
@@ -330,7 +346,7 @@ const AportesSocio = () => {
                 text-sm
               "
             >
-              Semana actual
+              {periodoActual} actual
             </p>
 
             <h2
@@ -340,7 +356,7 @@ const AportesSocio = () => {
                 mt-1
               "
             >
-              Semana {semanaActual}
+              {grupoActivo ? `${periodoActual} ${semanaActual}` : "Grupo en preparación"}
             </h2>
 
             <p
@@ -497,7 +513,7 @@ const AportesSocio = () => {
                       text-emerald-200
                     "
                   >
-                    Esta semana ya está al día.
+                    Este periodo ya está al día.
                   </p>
                 </div>
               </>
@@ -522,7 +538,7 @@ const AportesSocio = () => {
                       text-emerald-200
                     "
                   >
-                    Registra tu aporte de esta semana.
+                    Registra tu aporte de este periodo.
                   </p>
                 </div>
               </>
@@ -538,6 +554,7 @@ const AportesSocio = () => {
             }
             disabled={
               registrando ||
+              !grupoActivo ||
               Boolean(
                 aporteSemanaActual
               )
@@ -562,6 +579,8 @@ const AportesSocio = () => {
 
             {aporteSemanaActual
               ? "Aporte pagado"
+              : !grupoActivo
+              ? "Disponible al iniciar el grupo"
               : registrando
               ? "Registrando..."
               : `Registrar $${totalPagar.toFixed(2)}`
@@ -720,7 +739,7 @@ const AportesSocio = () => {
               mt-4
             "
           >
-            Semana actual
+            {periodoActual} actual
           </p>
 
           <p
@@ -827,7 +846,7 @@ const AportesSocio = () => {
                       p-4
                     "
                   >
-                    Semana
+                    {periodoActual}
                   </th>
 
                   <th
@@ -887,7 +906,7 @@ const AportesSocio = () => {
                     >
 
                       <td className="p-4">
-                        Semana {aporte.semana}
+                        {periodoActual} {aporte.semana}
                       </td>
 
                       <td className="p-4 font-semibold">

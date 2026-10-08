@@ -15,6 +15,7 @@ import {
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../hooks/usePermissions";
+import { etiquetaPeriodo } from "../../services/grupoService";
 
 const RondaAdmin = () => {
   const {
@@ -22,6 +23,7 @@ const RondaAdmin = () => {
     profile,
     cargarGrupo
   } = useAuth();
+  const periodoActual = etiquetaPeriodo(grupo?.aporte_periodicidad);
 
   const [participantes, setParticipantes] =
     useState([]);
@@ -432,7 +434,7 @@ const puedeAdministrar =
                 md:text-3xl
               "
             >
-              Ronda {grupo.semana_actual}
+              {periodoActual} {grupo.semana_actual}
             </h2>
 
             <p
@@ -813,7 +815,7 @@ const puedeAdministrar =
                   "
                 >
                   El beneficiario de la
-                  semana {grupo.semana_actual}
+                  {periodoActual.toLowerCase()} {grupo.semana_actual}
                   {" "}es{" "}
 
                   <strong>
@@ -1013,7 +1015,7 @@ const puedeAdministrar =
               "
             >
               Estás por cerrar la ronda{" "}
-              {grupo.semana_actual}.
+              {periodoActual.toLowerCase()} {grupo.semana_actual}.
             </p>
 
 

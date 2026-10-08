@@ -1,0 +1,5 @@
+[functions.register-member]
+verify_jwt = false
+
+[functions.group-invitations]
+verify_jwt = true

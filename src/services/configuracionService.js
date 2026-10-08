@@ -10,7 +10,8 @@ export const actualizarConfiguracionGrupo =
   async ({
     grupoId,
     numeroIntegrantes,
-    aporteSemanal,
+    aporte,
+    aportePeriodicidad,
     interesPrestamo,
     maxCuotasPrestamo,
     montoMaxPrestamo,
@@ -29,8 +30,11 @@ export const actualizarConfiguracionGrupo =
         p_numero_integrantes:
           Number(numeroIntegrantes),
 
-        p_aporte_semanal:
-          Number(aporteSemanal),
+        p_aporte:
+          Number(aporte),
+
+        p_aporte_periodicidad:
+          aportePeriodicidad,
 
         p_interes_prestamo:
           Number(

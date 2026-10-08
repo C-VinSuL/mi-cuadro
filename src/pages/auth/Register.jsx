@@ -10,6 +10,10 @@ const Register = () => {
   const [form, setForm] = useState({
     nombre: "",
     apellido: "",
+    cedula: "",
+    telefono: "",
+    direccion: "",
+    fechaNacimiento: "",
     email: "",
     password: ""
   });
@@ -37,21 +41,32 @@ const Register = () => {
     setRegistroExitoso(false);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email: form.email.trim(),
-        password: form.password,
-        options: {
-          data: {
-            nombre: form.nombre.trim(),
-            apellido: form.apellido.trim()
-          }
+      const { data, error } = await supabase.functions.invoke("register-member", {
+        body: {
+          email: form.email.trim(),
+          password: form.password,
+          nombre: form.nombre.trim(),
+          apellido: form.apellido.trim(),
+          cedula: form.cedula.trim(),
+          telefono: form.telefono.trim(),
+          direccion: form.direccion.trim(),
+          fechaNacimiento: form.fechaNacimiento || null
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        let details;
+        try {
+          details = await error.context?.json();
+        } catch {
+          details = null;
+        }
+        throw new Error(details?.error || error.message);
+      }
+      if (data?.error) throw new Error(data.error);
 
       setRegistroExitoso(true);
-      setMensaje("Cuenta creada. Revisa tu correo para confirmar la dirección y activar el acceso.");
+      setMensaje(data?.message || "Cuenta creada. Revisa tu correo para confirmar la dirección y activar el acceso.");
       notify({ title: "Cuenta creada", message: "Te enviamos un correo para confirmar tu dirección.", type: "success" });
     } catch (error) {
       console.error("Error creando cuenta:", error);
@@ -82,7 +97,7 @@ const Register = () => {
         <div className="p-6 sm:p-9">
           <div className="mb-8 flex items-start justify-between gap-4">
             <div>
-              <p className="text-xs font-bold uppercase text-emerald-800">Únete a Mi Cuadro</p>
+              <p className="text-xs font-bold uppercase text-emerald-800">Únete a FlashMonkey</p>
               <h1 className="mt-2 text-3xl font-bold text-slate-950">Crear cuenta</h1>
               <p className="mt-2 text-sm leading-6 text-slate-600">Registra tus datos para preparar tu acceso seguro.</p>
             </div>
@@ -152,14 +167,33 @@ const Register = () => {
           <div>
 
             <label className="block text-sm font-semibold text-slate-700">
-              Correo
+              Cédula o documento de identidad
             </label>
 
             <input
-              name="email"
-              type="email"
-              autoComplete="email"
-              value={form.email}
+              name="cedula"
+              value={form.cedula}
+              onChange={handleChange}
+              required
+              minLength={6}
+              maxLength={20}
+              autoComplete="off"
+              className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+            />
+
+          </div>
+
+          <div>
+
+            <label className="block text-sm font-semibold text-slate-700">
+              Teléfono
+            </label>
+
+            <input
+              name="telefono"
+              type="tel"
+              autoComplete="tel"
+              value={form.telefono}
               onChange={handleChange}
               required
               className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
@@ -169,6 +203,50 @@ const Register = () => {
 
           <div>
 
+            <label className="block text-sm font-semibold text-slate-700">
+              Dirección de residencia
+            </label>
+
+            <input
+              name="direccion"
+              autoComplete="street-address"
+              value={form.direccion}
+              onChange={handleChange}
+              required
+              maxLength={250}
+              className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+            />
+
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className="block text-sm font-semibold text-slate-700">
+              Fecha de nacimiento
+              <input
+                name="fechaNacimiento"
+                type="date"
+                autoComplete="bday"
+                value={form.fechaNacimiento}
+                onChange={handleChange}
+                max={new Date().toISOString().slice(0, 10)}
+                className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 font-normal outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-700">
+              Correo
+              <input
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={form.email}
+                onChange={handleChange}
+                required
+                className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 font-normal outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+              />
+            </label>
+          </div>
+
+          <div>
             <label className="block text-sm font-semibold text-slate-700">
               Contraseña
             </label>
