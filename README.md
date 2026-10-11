@@ -96,14 +96,44 @@ el formulario con el mismo correo y contraseña. La función comprueba la
 contraseña antes de reparar un registro existente, sin crear otra cuenta.
 
 Configura `APP_URL` con el origen de la aplicación (por ejemplo,
-`https://mi-dominio.example`), `RESEND_API_KEY` con una clave de Resend y
-`INVITATION_FROM` con un remitente de un dominio verificado en Resend:
+`https://mi-dominio.example`), `BREVO_API_KEY` con una clave API de Brevo y
+`INVITATION_FROM` con un remitente de un dominio autenticado en Brevo:
 
 ```sh
 npx supabase secrets set APP_URL=https://mi-dominio.example
-npx supabase secrets set RESEND_API_KEY=re_xxxxxxxxx
+npx supabase secrets set BREVO_API_KEY=xkeysib-xxxxxxxxx
 npx supabase secrets set 'INVITATION_FROM=FlashMonkey <invitaciones@mi-dominio.example>'
+npx supabase functions deploy group-invitations
 ```
+
+Obtén la clave API desde la sección **SMTP & API > API Keys** de Brevo.
+No la pongas en `.env`, en el frontend ni en GitHub: `group-invitations` la
+lee únicamente desde los secretos de Edge Functions. Si ya habías configurado
+Resend, la función ahora usa Brevo y deja de leer `RESEND_API_KEY`.
+
+Si Brevo rechaza la clave API o devuelve HTTP 401, crea una clave nueva y
+actualiza el secreto en el proyecto Supabase vinculado:
+
+```sh
+npx supabase secrets set BREVO_API_KEY=pega_aqui_la_clave_nueva
+```
+
+No guardes ni compartas la clave. Si sospechas que fue expuesta, revócala en
+Brevo. Actualizar un secreto de Edge Functions no requiere reinstalar Deno ni
+cambiar `APP_URL`; vuelve a intentar el envío después de que Supabase aplique
+el secreto. Si Brevo rechaza el remitente, autentica el dominio en Brevo y
+confirma que `INVITATION_FROM` use una dirección de ese dominio.
+
+Para probar desde desarrollo local, configura temporalmente `APP_URL` con el
+origen local exacto, por ejemplo `http://localhost:5173`. El enlace del correo
+abrirá ese origen, por lo que solo servirá para pruebas en esa misma máquina.
+En producción, reemplázalo por el dominio HTTPS publicado y autorizado en la
+configuración de Auth/CORS de Supabase.
+
+Si Brevo rechaza el mensaje, revisa **Edge Functions > Logs** en Supabase y el
+registro de transacciones de Brevo. Comprueba que `BREVO_API_KEY` siga vigente
+y que `INVITATION_FROM` use un remitente de un dominio autenticado. No pegues
+la clave API en GitHub, en el código ni en mensajes de soporte.
 
 Supabase proporciona las variables `SUPABASE_URL`, `SUPABASE_ANON_KEY` y
 `SUPABASE_SERVICE_ROLE_KEY` a las funciones Edge. Nunca publiques la clave
@@ -113,8 +143,11 @@ en la configuración de Auth del proyecto.
 
 La invitación es de un solo uso y vence en 72 horas. El socio inicia sesión con
 el correo invitado, acepta el enlace y espera la aprobación final de
-administración. El correo de invitación lo envía Resend; las confirmaciones de
-cuenta siguen usando el proveedor SMTP configurado para Supabase Auth.
+administración. El correo de invitación lo envía Brevo mediante su API; las
+confirmaciones de cuenta siguen usando el proveedor SMTP configurado para
+Supabase Auth. Para enviar también las confirmaciones con Brevo, configura sus
+datos SMTP en **Authentication > SMTP Settings** de Supabase; la clave API de
+Brevo no reemplaza las credenciales SMTP.
 
 ## Grupos, periodicidad y sorteo
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CheckCircle2, CircleAlert, MailCheck } from "lucide-react";
-import { supabase } from "../../services/supabase";
+import { aceptarInvitacionGrupo } from "../../services/grupoService";
 import { useAuth } from "../../context/AuthContext";
 
 const AcceptGroupInvite = () => {
@@ -15,18 +15,14 @@ const AcceptGroupInvite = () => {
     if (!token || !user?.id) return;
     setStatus("loading");
     setError("");
-    const { data, error: invokeError } = await supabase.functions.invoke("group-invitations", {
-      body: { action: "accept", token }
-    });
-
-    if (invokeError || data?.error) {
-      console.error("Error aceptando invitación:", invokeError || data.error);
-      setError(data?.error || invokeError.message || "No se pudo aceptar la invitación.");
+    try {
+      await aceptarInvitacionGrupo(token);
+      setStatus("success");
+    } catch (invokeError) {
+      console.error("Error aceptando invitación:", invokeError);
+      setError(invokeError.message || "No se pudo aceptar la invitación.");
       setStatus("error");
-      return;
     }
-
-    setStatus("success");
   };
 
   return (

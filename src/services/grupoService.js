@@ -42,14 +42,54 @@ export const solicitarInvitacionGrupo = (grupoId) => ejecutarRpc("solicitar_invi
 
 export const listarSolicitudesInvitacion = () => ejecutarRpc("listar_solicitudes_invitacion_admin", {});
 
-export const enviarInvitacionGrupo = async (solicitudId) => {
+const obtenerErrorFuncion = async (error) => {
+  const response = error?.context;
+  if (!response || typeof response.clone !== "function") return error;
+
+  try {
+    const payload = await response.clone().json();
+    if (typeof payload?.error === "string" && payload.error.trim()) {
+      return new Error(payload.error);
+    }
+  } catch {
+    // Keep the original Supabase error when the response does not contain JSON.
+  }
+
+  return error;
+};
+
+const invocarFuncionInvitaciones = async (body) => {
+  const [{ data: sessionData, error: sessionError }, { data: assuranceData, error: assuranceError }] = await Promise.all([
+    supabase.auth.getSession(),
+    supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+  ]);
+  if (sessionError) throw sessionError;
+  if (assuranceError) throw assuranceError;
+  if (!sessionData.session?.access_token) {
+    throw new Error("Tu sesión expiró. Cierra sesión y vuelve a ingresar.");
+  }
+  if (assuranceData.currentLevel !== "aal2") {
+    throw new Error("La sesión no refleja la verificación MFA. Vuelve a verificar el código e inténtalo otra vez.");
+  }
+
   const { data, error } = await supabase.functions.invoke("group-invitations", {
-    body: { action: "send", requestId: solicitudId }
+    body,
+    headers: { Authorization: `Bearer ${sessionData.session.access_token}` }
   });
-  if (error) throw error;
+  if (error) throw await obtenerErrorFuncion(error);
   if (data?.error) throw new Error(data.error);
   return data;
 };
+
+export const enviarInvitacionGrupo = (solicitudId) => invocarFuncionInvitaciones({
+  action: "send",
+  requestId: solicitudId
+});
+
+export const aceptarInvitacionGrupo = (token) => invocarFuncionInvitaciones({
+  action: "accept",
+  token
+});
 
 export const rechazarInvitacionGrupo = (solicitudId) => ejecutarRpc("rechazar_invitacion_grupo", {
   p_solicitud_id: solicitudId

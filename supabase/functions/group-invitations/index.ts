@@ -39,17 +39,31 @@ Deno.serve(async (request) => {
 
   const authorization = request.headers.get("Authorization");
   if (!authorization) return jsonResponse(401, { error: "Inicia sesión para continuar." });
+  const accessToken = authorization.replace(/^Bearer\s+/i, "");
+  if (!accessToken || accessToken === authorization) {
+    return jsonResponse(401, { error: "La sesión no contiene un token de acceso válido." });
+  }
 
   const userClient = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authorization } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { data: authData, error: authError } = await userClient.auth.getUser();
+  const { data: authData, error: authError } = await userClient.auth.getUser(accessToken);
   if (authError || !authData.user) return jsonResponse(401, { error: "La sesión no es válida." });
   const { data: assurance, error: assuranceError } =
-    await userClient.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (assuranceError || assurance.currentLevel !== "aal2") {
-    return jsonResponse(403, { error: "Completa la verificación MFA antes de continuar." });
+    await userClient.auth.mfa.getAuthenticatorAssuranceLevel(accessToken);
+  if (assuranceError) {
+    console.error("No se pudo verificar el nivel MFA de la sesión:", assuranceError);
+    return jsonResponse(500, { error: "No se pudo comprobar la verificación MFA. Inténtalo de nuevo." });
+  }
+  if (assurance.currentLevel !== "aal2") {
+    console.warn("La sesión de invitaciones no tiene MFA verificado:", {
+      currentLevel: assurance.currentLevel,
+      nextLevel: assurance.nextLevel,
+    });
+    return jsonResponse(403, {
+      error: "Supabase recibió una sesión sin la verificación MFA actualizada. Vuelve a verificar tu código e inténtalo otra vez."
+    });
   }
 
   let body: { action?: string; requestId?: string; token?: string };
@@ -61,11 +75,18 @@ Deno.serve(async (request) => {
 
   if (body.action === "send") {
     if (!body.requestId) return jsonResponse(400, { error: "Falta la solicitud de invitación." });
-    const resendKey = Deno.env.get("RESEND_API_KEY");
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
     const sender = Deno.env.get("INVITATION_FROM");
     const appUrl = Deno.env.get("APP_URL");
-    if (!resendKey || !sender || !appUrl) {
-      return jsonResponse(500, { error: "Configura RESEND_API_KEY, INVITATION_FROM y APP_URL en los secretos de Supabase." });
+    if (!brevoKey || !sender || !appUrl) {
+      return jsonResponse(500, { error: "Configura BREVO_API_KEY, INVITATION_FROM y APP_URL en los secretos de Supabase." });
+    }
+
+    const senderMatch = sender.match(/^\s*(.*?)\s*<([^<>]+)>\s*$/);
+    const senderEmail = senderMatch ? senderMatch[2].trim() : sender.trim();
+    const senderName = senderMatch?.[1].trim() || "FlashMonkey";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(senderEmail)) {
+      return jsonResponse(500, { error: "INVITATION_FROM debe contener un correo válido y, opcionalmente, un nombre." });
     }
 
     const rawToken = [...crypto.getRandomValues(new Uint8Array(32))]
@@ -96,31 +117,76 @@ Deno.serve(async (request) => {
     const link = `${appUrl.replace(/\/$/, "")}/aceptar-invitacion?token=${rawToken}`;
     const name = escapeHtml(invite.nombre || "socio");
     const groupName = escapeHtml(invite.grupo_nombre);
-    const mailResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: sender,
-        to: [email],
-        subject: `Invitación al grupo ${invite.grupo_nombre}`,
-        html: `<main style="font-family:Arial,sans-serif;color:#0f172a;max-width:560px;margin:auto;padding:24px">
-          <h1 style="color:#065f46">¡Te damos la bienvenida, ${name}!</h1>
-          <p>El administrador te invita a unirte al grupo <strong>${groupName}</strong> en FlashMonkey.</p>
-          <p>Abre el enlace y accede con la cuenta a la que se envió este correo. Después, la administración confirmará tu ingreso.</p>
-          <p style="margin:28px 0"><a href="${link}" style="background:#065f46;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">Revisar invitación</a></p>
-          <p>El enlace vence en 72 horas y solo puede usarse una vez. Si no esperabas esta invitación, ignora este mensaje.</p>
-        </main>`,
-      }),
-    });
+    let mailResponse: Response;
+    try {
+      mailResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "api-key": brevoKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: { name: senderName, email: senderEmail },
+          to: [{ email }],
+          subject: `Invitación al grupo ${invite.grupo_nombre}`,
+          htmlContent: `<main style="font-family:Arial,sans-serif;color:#0f172a;max-width:560px;margin:auto;padding:24px">
+            <h1 style="color:#065f46">¡Te damos la bienvenida, ${name}!</h1>
+            <p>El administrador te invita a unirte al grupo <strong>${groupName}</strong> en FlashMonkey.</p>
+            <p>Abre el enlace y accede con la cuenta a la que se envió este correo. Después, la administración confirmará tu ingreso.</p>
+            <p style="margin:28px 0"><a href="${link}" style="background:#065f46;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none">Revisar invitación</a></p>
+            <p>El enlace vence en 72 horas y solo puede usarse una vez. Si no esperabas esta invitación, ignora este mensaje.</p>
+          </main>`,
+        }),
+      });
+    } catch (sendError) {
+      console.error("No se pudo conectar con la API de Brevo:", sendError);
+      const { error: rollbackError } = await userClient.rpc(
+        "revertir_invitacion_grupo",
+        { p_solicitud_id: body.requestId },
+      );
+      if (rollbackError) {
+        console.error("No se pudo revertir la invitación tras el error de conexión con Brevo:", rollbackError);
+      }
+      return jsonResponse(502, { error: "No se pudo conectar con Brevo. Revisa los registros de group-invitations e inténtalo de nuevo." });
+    }
 
     if (!mailResponse.ok) {
-      const details = await mailResponse.text();
-      console.error("Resend rechazó el mensaje:", details);
-      await userClient.rpc("revertir_invitacion_grupo", { p_solicitud_id: body.requestId });
-      return jsonResponse(502, { error: "No se pudo enviar el correo. Revisa la configuración del proveedor." });
+      const responseText = await mailResponse.text();
+      let providerDetails = responseText;
+      try {
+        const payload = JSON.parse(responseText);
+        providerDetails = [payload.message, payload.name, payload.code]
+          .filter((value) => typeof value === "string" && value.length > 0)
+          .join(" · ") || responseText;
+      } catch {
+        providerDetails = responseText;
+      }
+
+      console.error("Brevo rechazó el mensaje:", {
+        status: mailResponse.status,
+        details: providerDetails,
+      });
+
+      const { error: rollbackError } = await userClient.rpc(
+        "revertir_invitacion_grupo",
+        { p_solicitud_id: body.requestId },
+      );
+      if (rollbackError) {
+        console.error("No se pudo revertir el estado de la invitación tras el rechazo de Brevo:", rollbackError);
+      }
+
+      const normalizedDetails = providerDetails.toLowerCase();
+      let errorMessage = `Brevo rechazó el correo (HTTP ${mailResponse.status}). Revisa los registros de la función group-invitations en Supabase.`;
+      if (/api.?key|unauthorized|invalid.*key/.test(normalizedDetails) || mailResponse.status === 401) {
+        errorMessage = "Brevo rechazó la clave API. Verifica BREVO_API_KEY en los secretos de Supabase y actualízala si fue revocada.";
+      } else if (/domain|sender|from address|verified|not allowed to send/.test(normalizedDetails) || mailResponse.status === 403) {
+        errorMessage = "Brevo rechazó el remitente. Verifica el dominio en Brevo y que INVITATION_FROM use una dirección de ese dominio verificado.";
+      } else if (mailResponse.status === 429) {
+        errorMessage = "Brevo alcanzó el límite de envíos. Espera y vuelve a intentarlo o revisa los límites de tu cuenta.";
+      } else if (mailResponse.status === 400 || mailResponse.status === 422) {
+        errorMessage = "Brevo rechazó los datos del correo. Revisa INVITATION_FROM, el correo de destino y los registros de group-invitations en Supabase.";
+      }
+      return jsonResponse(502, { error: errorMessage });
     }
     return jsonResponse(200, { sent: true });
   }

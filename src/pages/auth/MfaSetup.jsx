@@ -130,6 +130,12 @@ const MfaSetup = () => {
         code: code.trim()
       });
       if (verifyError) throw verifyError;
+      const { data: assuranceData, error: assuranceError } =
+        await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (assuranceError) throw assuranceError;
+      if (assuranceData.currentLevel !== "aal2") {
+        throw new Error("El código fue aceptado, pero la sesión aún no refleja MFA. Espera un momento e inténtalo otra vez.");
+      }
       navigate(location.state?.from?.pathname || "/", { replace: true });
     } catch (verifyError) {
       console.error("Error verificando código MFA:", verifyError);
