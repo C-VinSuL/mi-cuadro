@@ -333,6 +333,15 @@ const cargarFondoComunitario =
           // Supabase recomienda salir del callback antes de hacer otras consultas.
           setTimeout(async () => {
             try {
+              if (["SIGNED_IN", "INITIAL_SESSION"].includes(event) && nextSession?.user) {
+                try {
+                  const { error } = await supabase.functions.invoke("send-welcome-email");
+                  if (error) throw error;
+                } catch (error) {
+                  console.error("No se pudo enviar el correo de bienvenida:", error);
+                }
+              }
+
               await cargarDatosUsuario(nextSession);
             } finally {
               if (requestId === authRequest.current) {

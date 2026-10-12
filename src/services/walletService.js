@@ -11,6 +11,14 @@ export const obtenerResumenBilletera = async () => {
   return rows?.[0] || null;
 };
 
+export const obtenerGarantiaMinimaBilleteraAdmin = () =>
+  callRpc("garantia_minima_billetera_admin");
+
+export const actualizarGarantiaMinimaBilletera = (monto) => callRpc(
+  "actualizar_garantia_minima_billetera",
+  { p_monto: Number(monto) }
+);
+
 export const listarMovimientosBilletera = () => callRpc("historial_billetera_propio");
 
 export const listarSolicitudesBilleteraPropias = () => callRpc("solicitudes_billetera_propias");

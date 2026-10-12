@@ -406,7 +406,7 @@ const Navbar = ({ onMenuClick }) => {
               mt-1
             "
           >
-            Bienvenido a tu caja comunal.
+            Ahorra en comunidad y alcanza tus metas.
           </p>
 
         </div>
@@ -644,7 +644,9 @@ const Navbar = ({ onMenuClick }) => {
       {welcomeOpen && createPortal(
         <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-slate-950/60 p-4">
           <section role="dialog" aria-modal="true" aria-labelledby="welcome-title" className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
-            <img src="/flashmonkey.svg" alt="" className="mx-auto h-24 w-24 rounded-2xl" />
+            <div className="mx-auto w-full max-w-xs overflow-hidden rounded-xl bg-[#023a2d]">
+              <img src="/flashmonkey-logo.png" alt="FlashMonkey" className="block h-auto w-full" />
+            </div>
             <p className="mt-5 text-center text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Bienvenido a FlashMonkey</p>
             <h2 id="welcome-title" className="mt-2 text-center text-2xl font-bold text-slate-900">¡Qué bueno tenerte aquí!</h2>
             <p className="mt-3 text-center text-sm leading-6 text-slate-600">
@@ -652,7 +654,7 @@ const Navbar = ({ onMenuClick }) => {
             </p>
             <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
               <p className="font-semibold">Garantía para participar en grupos</p>
-              <p className="mt-1">Después de completar tu perfil, deposita al menos $10 en Mi billetera para solicitar ingreso a un grupo. El saldo aprobado podrá cubrir automáticamente los aportes que sigan pendientes al vencimiento.</p>
+              <p className="mt-1">Después de completar tu perfil, deposita al menos $20 en Mi billetera para solicitar ingreso a un grupo. El saldo aprobado podrá cubrir automáticamente los aportes que sigan pendientes al vencimiento.</p>
             </div>
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-center">
               <button type="button" onClick={() => setWelcomeDismissedFor(profile.id)} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Más tarde</button>

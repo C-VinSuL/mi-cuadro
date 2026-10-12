@@ -53,13 +53,13 @@ Deno.serve(async (request) => {
   const password = form.password || "";
   const nombre = form.nombre?.trim() || "";
   const apellido = form.apellido?.trim() || "";
-  const cedula = form.cedula?.trim() || "";
-  const direccion = form.direccion?.trim() || "";
+  const cedula = form.cedula?.trim() || null;
+  const direccion = form.direccion?.trim() || null;
   const fechaNacimiento = form.fechaNacimiento || null;
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    || password.length < 8 || !nombre || !apellido
-    || cedula.length < 6 || cedula.length > 20 || !direccion) {
+    || password.length < 8 || !nombre
+    || (cedula !== null && (cedula.length < 6 || cedula.length > 20))) {
     return response(400, { error: "Completa los datos requeridos con formatos válidos." });
   }
   if (fechaNacimiento && (Number.isNaN(Date.parse(fechaNacimiento)) || Date.parse(fechaNacimiento) > Date.now())) {

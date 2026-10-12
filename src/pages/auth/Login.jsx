@@ -4,6 +4,7 @@ import { Eye, EyeOff } from "lucide-react";
 
 import { supabase } from "../../services/supabase";
 import { useNotifications } from "../../hooks/useNotifications";
+import GoogleAuthButton from "./GoogleAuthButton";
 
 const Login = () => {
 
@@ -75,197 +76,102 @@ const Login = () => {
   };
 
   return (
-    <div className="
-      min-h-screen
-      flex
-      items-center
-      justify-center
-      bg-slate-100
-      px-6
-    ">
-
-      <div className="
-        w-full
-        max-w-md
-        bg-white
-        rounded-3xl
-        shadow-sm
-        border
-        border-slate-200
-        p-8
-      ">
-
-        <div className="text-center mb-8">
-
-          <img src="/flashmonkey.svg" alt="" className="mx-auto h-20 w-20 rounded-2xl" />
-
-          <h1 className="
-            text-3xl
-            font-bold
-            mt-3
-          ">
-            FlashMonkey
-          </h1>
-
-          <p className="
-            text-slate-500
-            mt-2
-          ">
-            Bienvenido nuevamente
+    <main className="auth-shell flex min-h-screen items-center justify-center px-4 py-6 sm:px-6 sm:py-10">
+      <section className="grid w-full max-w-4xl overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-2xl shadow-emerald-950/10 md:h-[700px] md:grid-cols-[0.9fr_1.1fr]">
+        <aside className="flex flex-col items-center justify-center bg-[#023a2d] px-6 py-8 text-center sm:py-10 md:px-8 md:py-12">
+          <img src="/flashmonkey-logo.png" alt="FlashMonkey" className="block h-auto w-full max-w-[310px]" />
+          <p className="mt-5 max-w-xs text-sm text-emerald-100 md:mt-8 md:text-base md:leading-7">
+            Ahorra en comunidad y alcanza tus metas.
           </p>
+          <div className="mt-8 hidden h-1 w-14 rounded-full bg-emerald-400 md:block" />
+        </aside>
 
-        </div>
+        <div className="px-6 py-7 sm:px-10 sm:py-10 md:flex md:h-full md:min-h-0 md:flex-col md:px-12 md:py-12">
+          <header className="mb-6 md:mb-4">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Tu espacio financiero</p>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Inicia sesión</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Ingresa para continuar con tu comunidad.</p>
+          </header>
 
-        <form
-          onSubmit={handleLogin}
-          className="space-y-5"
-        >
+          <GoogleAuthButton />
 
-          <div>
-
-            <label className="
-              block
-              font-medium
-              mb-2
-            ">
-              Correo
-            </label>
-
-            <input
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) =>
-                setEmail(e.target.value)
-              }
-              required
-              className="
-                w-full
-                border
-                border-slate-300
-                rounded-xl
-                px-4
-                py-3
-              "
-            />
-
+          <div className="my-5 flex items-center gap-3 text-[11px] font-semibold tracking-wide text-slate-400 md:my-4">
+            <span className="h-px flex-1 bg-slate-200" />
+            O CON TU CORREO
+            <span className="h-px flex-1 bg-slate-200" />
           </div>
 
-          <div>
-
-            <label className="
-              block
-              font-medium
-              mb-2
-            ">
-              Contraseña
-            </label>
-
-            <div className="relative">
+          <form onSubmit={handleLogin} className="space-y-4 md:flex md:min-h-0 md:flex-1 md:flex-col md:gap-y-4 md:space-y-0">
+            <div>
+              <label htmlFor="login-email" className="mb-1.5 block text-sm font-semibold text-slate-700">
+                Correo
+              </label>
               <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) =>
-                  setPassword(e.target.value)
-                }
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
-                autoComplete="current-password"
-                className="
-                  w-full
-                  border
-                  border-slate-300
-                  rounded-xl
-                  px-4
-                  py-3
-                  pr-12
-                "
+                className="w-full rounded-xl border border-slate-300 bg-slate-50/60 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-600/10"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword((visible) => !visible)}
-                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                aria-pressed={showPassword}
-                className="
-                  absolute
-                  right-3
-                  top-1/2
-                  -translate-y-1/2
-                  rounded-md
-                  p-1.5
-                  text-slate-500
-                  hover:text-slate-800
-                  focus-visible:outline-none
-                  focus-visible:ring-2
-                  focus-visible:ring-emerald-600
-                "
-              >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
             </div>
 
-          </div>
+            <div>
+              <label htmlFor="login-password" className="mb-1.5 block text-sm font-semibold text-slate-700">
+                Contraseña
+              </label>
+              <div className="relative">
+                <input
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  className="w-full rounded-xl border border-slate-300 bg-slate-50/60 px-4 py-3 pr-12 text-slate-900 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-600/10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((visible) => !visible)}
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  aria-pressed={showPassword}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-500 transition hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+                >
+                  {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+                </button>
+              </div>
+            </div>
 
-          <div className="-mt-2 flex justify-end">
-            <Link to="/recuperar-contrasena" className="text-sm font-semibold text-emerald-700 hover:text-emerald-900 hover:underline">
-              ¿Olvidaste tu contraseña?
+            <div className="flex justify-end pt-0.5">
+              <Link to="/recuperar-contrasena" className="text-sm font-semibold text-emerald-700 hover:text-emerald-900 hover:underline">
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
+
+            {errorMessage && (
+              <p className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700" role="alert">
+                {errorMessage}
+              </p>
+            )}
+
+            <button
+              disabled={loading}
+              className="w-full rounded-xl bg-emerald-800 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-700/20 disabled:cursor-wait disabled:opacity-60"
+            >
+              {loading ? "Ingresando..." : "Iniciar sesión"}
+            </button>
+          </form>
+
+          <p className="mt-6 border-t border-slate-100 pt-5 text-center text-sm text-slate-500 md:mt-auto">
+            ¿Aún no tienes cuenta?
+            <Link to="/registro" className="ml-1 font-semibold text-emerald-700 hover:text-emerald-900 hover:underline">
+              Crear cuenta
             </Link>
-          </div>
-
-          {errorMessage && (
-            <p className="
-              bg-red-50
-              text-red-700
-              p-3
-              rounded-xl
-              text-sm
-            ">
-              {errorMessage}
-            </p>
-          )}
-
-          <button
-            disabled={loading}
-            className="
-              w-full
-              bg-emerald-600
-              hover:bg-emerald-700
-              text-white
-              rounded-xl
-              py-3
-              font-semibold
-            "
-          >
-
-            {loading
-              ? "Ingresando..."
-              : "Iniciar sesión"
-            }
-
-          </button>
-
-        </form>
-
-        <p className="
-          text-center
-          text-sm
-          mt-6
-          text-slate-500
-        ">
-
-          ¿Aún no tienes cuenta?
-
-          <Link
-            to="/registro"
-            className="ml-1 font-semibold text-emerald-700 hover:text-emerald-900 hover:underline"
-          >
-            Registrarse
-          </Link>
-
-        </p>
-
-      </div>
-
-    </div>
+          </p>
+        </div>
+      </section>
+    </main>
   );
 };
 

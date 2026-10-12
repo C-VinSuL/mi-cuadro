@@ -3,17 +3,13 @@ import { Link } from "react-router-dom";
 import { ArrowRight, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { useNotifications } from "../../hooks/useNotifications";
+import GoogleAuthButton from "./GoogleAuthButton";
 
 const Register = () => {
   const { notify } = useNotifications();
 
   const [form, setForm] = useState({
-    nombre: "",
-    apellido: "",
-    cedula: "",
-    telefono: "",
-    direccion: "",
-    fechaNacimiento: "",
+    nombreCompleto: "",
     email: "",
     password: ""
   });
@@ -36,6 +32,13 @@ const Register = () => {
     event.preventDefault();
     if (loading) return;
 
+    const [nombre, ...apellidoParts] = form.nombreCompleto.trim().split(/\s+/);
+    const apellido = apellidoParts.join(" ");
+    if (!nombre) {
+      setMensaje("Ingresa tu nombre completo.");
+      return;
+    }
+
     setLoading(true);
     setMensaje("");
     setRegistroExitoso(false);
@@ -45,12 +48,8 @@ const Register = () => {
         body: {
           email: form.email.trim(),
           password: form.password,
-          nombre: form.nombre.trim(),
-          apellido: form.apellido.trim(),
-          cedula: form.cedula.trim(),
-          telefono: form.telefono.trim(),
-          direccion: form.direccion.trim(),
-          fechaNacimiento: form.fechaNacimiento || null
+          nombre,
+          apellido
         }
       });
 
@@ -79,36 +78,22 @@ const Register = () => {
   };
 
   return (
-    <main className="auth-shell flex min-h-screen items-center justify-center px-4 py-10 sm:px-6">
+    <main className="auth-shell flex min-h-screen items-center justify-center px-4 py-6 sm:px-6 sm:py-10">
+      <section className="grid w-full max-w-4xl overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-2xl shadow-emerald-950/10 md:h-[700px] md:grid-cols-[0.9fr_1.1fr]">
+        <aside className="flex flex-col items-center justify-center bg-[#023a2d] px-6 py-8 text-center sm:py-10 md:px-8 md:py-12">
+          <img src="/flashmonkey-logo.png" alt="FlashMonkey" className="block h-auto w-full max-w-[310px]" />
+          <p className="mt-5 max-w-xs text-sm text-emerald-100 md:mt-8 md:text-base md:leading-7">
+            Ahorra en comunidad y alcanza tus metas.
+          </p>
+          <div className="mt-8 hidden h-1 w-14 rounded-full bg-emerald-400 md:block" />
+        </aside>
 
-      <div className="
-        w-full
-        max-w-lg
-        overflow-hidden
-        bg-white
-        rounded-2xl
-        shadow-xl
-        shadow-emerald-950/5
-        border
-        border-slate-200
-      ">
-
-        <div className="h-1.5 bg-emerald-800" />
-        <div className="p-6 sm:p-9">
-          <div className="mb-8 flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-bold uppercase text-emerald-800">Únete a FlashMonkey</p>
-              <h1 className="mt-2 text-3xl font-bold text-slate-950">Crear cuenta</h1>
-              <p className="mt-2 text-sm leading-6 text-slate-600">Registra tus datos para preparar tu acceso seguro.</p>
-            </div>
-            <div className="hidden size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-xl sm:flex">🏡</div>
-          </div>
-
-          <div className="mb-6 grid grid-cols-3 border-y border-slate-200 py-3 text-center text-xs text-slate-500">
-            <span className="font-semibold text-emerald-800">1. Tus datos</span>
-            <span>2. Confirma correo</span>
-            <span>3. Ingresa</span>
-          </div>
+        <div className="px-6 py-7 sm:px-10 sm:py-10 md:flex md:h-full md:min-h-0 md:flex-col md:px-12 md:py-12">
+          <header className="mb-6 md:mb-4">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Únete a FlashMonkey</p>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Crear cuenta</h1>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Registra tus datos para preparar tu acceso seguro.</p>
+          </header>
 
           {registroExitoso ? (
             <div className="border-l-4 border-emerald-600 bg-emerald-50 p-4" role="status">
@@ -126,133 +111,58 @@ const Register = () => {
           ) : (
           <>
 
+        <GoogleAuthButton />
+
+        <div className="my-5 flex items-center gap-3 text-[11px] font-semibold tracking-wide text-slate-400 md:my-4">
+          <span className="h-px flex-1 bg-slate-200" />
+          O REGÍSTRATE CON TUS DATOS
+          <span className="h-px flex-1 bg-slate-200" />
+        </div>
+
         <form
           onSubmit={handleSubmit}
-          className="space-y-5"
+          className="space-y-4 md:flex md:min-h-0 md:flex-1 md:flex-col md:gap-y-4 md:space-y-0"
         >
 
           <div>
-
-            <label className="block text-sm font-semibold text-slate-700">
-              Nombre
+            <label htmlFor="register-full-name" className="block text-sm font-semibold text-slate-700">
+              Nombre completo
             </label>
-
             <input
-              name="nombre"
-              value={form.nombre}
+              id="register-full-name"
+              name="nombreCompleto"
+              value={form.nombreCompleto}
               onChange={handleChange}
               required
-              autoComplete="given-name"
-              className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+              autoComplete="name"
+              className="mt-1.5 w-full rounded-xl border border-slate-300 bg-slate-50/60 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-600/10"
             />
-
           </div>
 
           <div>
-
-            <label className="block text-sm font-semibold text-slate-700">
-              Apellido
-            </label>
-
-            <input
-              name="apellido"
-              value={form.apellido}
-              onChange={handleChange}
-              autoComplete="family-name"
-              className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
-            />
-
-          </div>
-
-          <div>
-
-            <label className="block text-sm font-semibold text-slate-700">
-              Cédula o documento de identidad
-            </label>
-
-            <input
-              name="cedula"
-              value={form.cedula}
-              onChange={handleChange}
-              required
-              minLength={6}
-              maxLength={20}
-              autoComplete="off"
-              className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
-            />
-
-          </div>
-
-          <div>
-
-            <label className="block text-sm font-semibold text-slate-700">
-              Teléfono
-            </label>
-
-            <input
-              name="telefono"
-              type="tel"
-              autoComplete="tel"
-              value={form.telefono}
-              onChange={handleChange}
-              required
-              className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
-            />
-
-          </div>
-
-          <div>
-
-            <label className="block text-sm font-semibold text-slate-700">
-              Dirección de residencia
-            </label>
-
-            <input
-              name="direccion"
-              autoComplete="street-address"
-              value={form.direccion}
-              onChange={handleChange}
-              required
-              maxLength={250}
-              className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
-            />
-
-          </div>
-
-          <div className="grid gap-5 sm:grid-cols-2">
-            <label className="block text-sm font-semibold text-slate-700">
-              Fecha de nacimiento
-              <input
-                name="fechaNacimiento"
-                type="date"
-                autoComplete="bday"
-                value={form.fechaNacimiento}
-                onChange={handleChange}
-                max={new Date().toISOString().slice(0, 10)}
-                className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 font-normal outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
-              />
-            </label>
-            <label className="block text-sm font-semibold text-slate-700">
+            <label htmlFor="register-email" className="block text-sm font-semibold text-slate-700">
               Correo
-              <input
-                name="email"
-                type="email"
-                autoComplete="email"
-                value={form.email}
-                onChange={handleChange}
-                required
-                className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 font-normal outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
-              />
             </label>
+            <input
+              id="register-email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              value={form.email}
+              onChange={handleChange}
+              required
+              className="mt-1.5 w-full rounded-xl border border-slate-300 bg-slate-50/60 px-4 py-3 font-normal text-slate-900 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-600/10"
+            />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700">
+            <label htmlFor="register-password" className="block text-sm font-semibold text-slate-700">
               Contraseña
             </label>
 
             <div className="relative">
               <input
+                id="register-password"
                 name="password"
                 type={showPassword ? "text" : "password"}
                 value={form.password}
@@ -260,7 +170,7 @@ const Register = () => {
                 required
                 minLength={8}
                 autoComplete="new-password"
-                className="w-full rounded-lg border border-slate-300 px-4 py-3 pr-12 font-normal outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600/20"
+                className="w-full rounded-xl border border-slate-300 bg-slate-50/60 px-4 py-3 pr-12 font-normal text-slate-900 outline-none transition focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-600/10"
               />
               <button
                 type="button"
@@ -290,7 +200,7 @@ const Register = () => {
 
           <button
             disabled={loading}
-            className="w-full rounded-lg bg-emerald-800 px-4 py-3 font-semibold text-white transition hover:bg-emerald-900 disabled:cursor-wait disabled:opacity-60"
+            className="w-full rounded-xl bg-emerald-800 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-700/20 disabled:cursor-wait disabled:opacity-60"
           >
             {loading
               ? "Creando cuenta..."
@@ -306,17 +216,16 @@ const Register = () => {
           </p>
         )}
 
-        <p className="mt-7 flex flex-wrap items-center justify-center gap-1 border-t border-slate-200 pt-5 text-sm text-slate-600">
+        <p className="mt-6 flex flex-wrap items-center justify-center gap-1 border-t border-slate-100 pt-5 text-sm text-slate-500 md:mt-auto">
           ¿Ya tienes una cuenta?
-          <Link to="/login" className="inline-flex items-center gap-1 font-semibold text-emerald-800 hover:text-emerald-950 hover:underline">
+          <Link to="/login" className="inline-flex items-center gap-1 font-semibold text-emerald-700 hover:text-emerald-900 hover:underline">
             Inicia sesión <ArrowRight size={15} />
           </Link>
         </p>
           </>
           )}
         </div>
-
-      </div>
+      </section>
     </main>
   );
 };

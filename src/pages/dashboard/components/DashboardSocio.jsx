@@ -269,7 +269,7 @@ const DashboardSocio = () => {
 
   const comision =
     Number(
-      aporteActual?.comision_app || 1
+      aporteActual?.comision_app ?? 0
     );
 
   const totalPagar =
@@ -721,7 +721,7 @@ const DashboardSocio = () => {
                 "
               >
                 {grupoActivo
-                  ? `${periodoActual} ${semanaActual} · Aporte $${aporteSemanal.toFixed(2)} + comisión $${comision.toFixed(2)}`
+                    ? `${periodoActual} ${semanaActual} · Aporte $${aporteSemanal.toFixed(2)}${comision > 0 ? ` + comisión $${comision.toFixed(2)}` : ""}`
                   : "Podrás registrar tus aportes cuando administración o tesorería inicie el grupo."}
               </p>
 

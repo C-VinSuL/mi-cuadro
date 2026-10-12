@@ -30,6 +30,10 @@ const Billetera = () => {
   const [error, setError] = useState("");
   const [depositForm, setDepositForm] = useState({ amount: "", reference: "", receipt: null });
   const [withdrawAmount, setWithdrawAmount] = useState("");
+  const withdrawableBalance = Math.max(
+    (summary?.saldo || 0) - (summary?.garantia_minima || 0),
+    0
+  );
 
   const loadWallet = useCallback(async () => {
     setLoading(true);
@@ -221,7 +225,7 @@ const Billetera = () => {
       </section>
 
       <p className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-950">
-        Si un aporte de un grupo activo sigue impago al vencimiento, el sistema lo cubrirá automáticamente con tu saldo disponible, más la comisión actual de $1. El primer vencimiento ocurre al terminar la primera semana, quincena o mensualidad desde el inicio del grupo. Un depósito solo aumenta tu saldo cuando administración o tesorería aprueba el comprobante.
+        La garantía mínima de tu billetera permanece como saldo tuyo y no se puede retirar. Si un aporte de un grupo activo sigue impago al vencimiento, el sistema podrá cubrirlo automáticamente con tu saldo, sin comisión adicional. El primer vencimiento ocurre al terminar la primera semana, quincena o mensualidad desde el inicio del grupo. Los depósitos se acreditan después de que administración o tesorería apruebe el comprobante.
       </p>
 
       {profile?.rol?.toLowerCase() === "socio" && <section className="grid gap-5 lg:grid-cols-2">
@@ -245,12 +249,12 @@ const Billetera = () => {
 
         <form onSubmit={enviarRetiro} className="space-y-4 rounded-xl border border-slate-200 bg-white p-5">
           <h2 className="flex items-center gap-2 font-semibold text-slate-900"><ArrowUpFromLine size={19} className="text-amber-700" /> Solicitar retiro</h2>
-          <p className="text-sm text-slate-600">Los retiros requieren aprobación y solo se autorizan si el saldo disponible los cubre.</p>
+          <p className="text-sm text-slate-600">Los retiros requieren aprobación. La garantía mínima queda protegida y solo puede usarse para cubrir aportes vencidos.</p>
           <label className="block text-sm font-medium text-slate-700">
             Monto (USD)
-            <input type="number" min="0.01" max={summary?.saldo || undefined} step="0.01" required value={withdrawAmount} onChange={(event) => setWithdrawAmount(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5" />
+            <input type="number" min="0.01" max={withdrawableBalance} step="0.01" required value={withdrawAmount} onChange={(event) => setWithdrawAmount(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5" />
           </label>
-          <button type="submit" disabled={saving || loading || !summary?.saldo} className="rounded-lg border border-emerald-800 px-4 py-2.5 text-sm font-semibold text-emerald-900 hover:bg-emerald-50 disabled:opacity-50">{saving ? "Enviando..." : "Solicitar retiro"}</button>
+          <button type="submit" disabled={saving || loading || withdrawableBalance <= 0} className="rounded-lg border border-emerald-800 px-4 py-2.5 text-sm font-semibold text-emerald-900 hover:bg-emerald-50 disabled:opacity-50">{saving ? "Enviando..." : "Solicitar retiro"}</button>
         </form>
       </section>}
 

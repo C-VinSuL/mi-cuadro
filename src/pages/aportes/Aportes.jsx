@@ -67,7 +67,7 @@ const AportesSocio = () => {
       grupo?.aporte_semanal || 0
     );
 
-  const comisionApp = 1;
+  const comisionApp = 0;
 
   const totalPagar =
     aporteSemanal + comisionApp;
@@ -375,7 +375,7 @@ const AportesSocio = () => {
             className="
               grid
               grid-cols-1
-              sm:grid-cols-3
+              sm:grid-cols-2
               gap-4
               w-full
               lg:max-w-2xl
@@ -406,34 +406,6 @@ const AportesSocio = () => {
                 "
               >
                 ${aporteSemanal.toFixed(2)}
-              </p>
-            </div>
-
-
-            <div
-              className="
-                bg-white/10
-                rounded-2xl
-                p-4
-              "
-            >
-              <p
-                className="
-                  text-xs
-                  text-emerald-200
-                "
-              >
-                Comisión app
-              </p>
-
-              <p
-                className="
-                  text-2xl
-                  font-bold
-                  mt-1
-                "
-              >
-                ${comisionApp.toFixed(2)}
               </p>
             </div>
 

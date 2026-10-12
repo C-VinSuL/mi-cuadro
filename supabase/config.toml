@@ -3,3 +3,6 @@ verify_jwt = false
 
 [functions.group-invitations]
 verify_jwt = true
+
+[functions.send-welcome-email]
+verify_jwt = true

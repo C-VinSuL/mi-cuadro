@@ -1,7 +1,9 @@
 import {
   Routes,
-  Route
+  Route,
+  useLocation
 } from "react-router-dom";
+import { useEffect } from "react";
 
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
@@ -28,6 +30,12 @@ import Auditoria from "../pages/reportes/Auditoria";
 import Billetera from "../pages/Billetera";
 
 const AppRoutes = () => {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
   return (
     <Routes>
 

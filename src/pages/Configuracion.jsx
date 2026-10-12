@@ -30,6 +30,7 @@ import {
 import {
   actualizarConfiguracionGrupo
 } from "../services/configuracionService";
+import ConfiguracionGarantia from "./ConfiguracionGarantia";
 
 
 const Configuracion = () => {
@@ -439,51 +440,6 @@ const Configuracion = () => {
 
 
   // ========================================
-  // SIN GRUPO
-  // ========================================
-
-  if (!grupo) {
-
-    return (
-
-      <div
-        className="
-          rounded-2xl
-          border
-          border-slate-200
-          bg-white
-          p-6
-        "
-      >
-
-        <h2
-          className="
-            text-xl
-            font-bold
-            text-slate-900
-          "
-        >
-          No hay un grupo de trabajo seleccionado
-        </h2>
-
-
-        <p
-          className="
-            mt-2
-            text-slate-500
-          "
-        >
-          Selecciona un grupo desde el centro administrativo para revisar sus reglas.
-        </p>
-
-      </div>
-
-    );
-
-  }
-
-
-  // ========================================
   // SEGURIDAD DE UI
   // ========================================
 
@@ -553,6 +509,20 @@ const Configuracion = () => {
 
   }
 
+  if (!grupo) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6">
+          <h2 className="text-xl font-bold text-slate-900">No hay un grupo de trabajo seleccionado</h2>
+          <p className="mt-2 text-slate-500">
+            Selecciona un grupo desde el centro administrativo para revisar sus reglas.
+          </p>
+        </div>
+        <ConfiguracionGarantia />
+      </div>
+    );
+  }
+
 
   // ========================================
   // UI
@@ -613,6 +583,7 @@ const Configuracion = () => {
 
       </div>
 
+      <ConfiguracionGarantia />
 
       {/* ==================================
           SEGURIDAD

@@ -199,6 +199,7 @@ const Sidebar = ({
         className="
           px-5
           py-5
+          bg-[#023a2d]
 
           border-b
           border-white/10
@@ -213,37 +214,12 @@ const Sidebar = ({
           "
         >
 
-          <div className="flex items-center gap-3">
-
+          <div className="flex min-w-0 flex-1 items-center">
             <img
-              src="/flashmonkey.svg"
-              alt=""
-              className="h-11 w-11 rounded-xl"
+              src="/flashmonkey-logo.png"
+              alt="FlashMonkey, caja comunal"
+              className="h-auto w-full max-w-[220px] object-contain object-left"
             />
-
-
-            <div>
-
-              <p
-                className="
-                  text-xl
-                  font-bold
-                  text-white
-                "
-              >
-                FlashMonkey
-              </p>
-
-              <p
-                className="
-                  text-xs
-                  text-emerald-200
-                "
-              >
-                Caja Comunal
-              </p>
-
-            </div>
 
           </div>
 

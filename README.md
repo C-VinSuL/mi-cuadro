@@ -43,11 +43,11 @@ impide registrar aportes antes de iniciar un grupo y agrega la consulta
 administrativa protegida para refrescar sus participantes.
 La migración `202610080006_welcome_wallet_and_identity_documents.sql` agrega
 la bienvenida para socios nuevos, la carga privada del documento de identidad,
-el saldo de garantía configurable (inicia en USD 10), las solicitudes de
-depósito/retiro con aprobación de administración o tesorería y el débito
-automático de aportes vencidos. Los vencimientos se cuentan desde la fecha de
-inicio de cada grupo: 7 días, 14 días o un mes. También programa la tarea con
-`pg_cron`; verifica que la extensión esté habilitada en el proyecto Supabase.
+el saldo de garantía configurable, las solicitudes de depósito/retiro con
+aprobación de administración o tesorería y el débito automático de aportes
+vencidos. Los vencimientos se cuentan desde la fecha de inicio de cada grupo:
+7 días, 14 días o un mes. También programa la tarea con `pg_cron`; verifica que
+la extensión esté habilitada en el proyecto Supabase.
 La migración `202610080007_wallet_roles_and_admin_queue.sql` limita la
 consulta de saldos e historial a socios y corrige el listado administrativo de
 solicitudes de billetera. Los socios usan “Mi billetera”; administración y
@@ -59,6 +59,20 @@ pertenece, sin exponer la lista ni los datos de otros socios.
 La migración `202610080009_assign_payment_positions_on_group_start.sql`
 mantiene sin posición a los participantes de grupos en preparación y asigna
 el orden de pago únicamente al sortear e iniciar el grupo.
+La migración `202610120001_wallet_guarantee_reserve.sql` configura inicialmente
+la garantía mínima de billetera en USD 20, editable por administración y
+aplicable a todos los socios. La garantía permanece como saldo del socio,
+queda protegida contra retiros y solo puede utilizarse para cubrir un aporte
+que siga impago después de su vencimiento. Los nuevos aportes no cobran la
+comisión fija anterior de USD 1 ni una comisión del 20%; los registros
+históricos no se modifican.
+
+Los proyectos Supabase nuevos no tienen las tablas base de `perfiles`, `grupos`,
+`participantes` y `aportes`: las migraciones del repositorio son incrementales
+y presuponen ese esquema. No ejecutes `db push` en un proyecto vacío hasta
+preparar y revisar una migración base de esquema sin datos reales. Usa un
+proyecto de pruebas y confirma siempre el `project-ref` enlazado antes de
+aplicar migraciones.
 
 Con Supabase CLI, vincula el proyecto y aplica las migraciones:
 
@@ -88,6 +102,7 @@ Despliega las funciones después de aplicar la migración:
 ```sh
 npx supabase functions deploy register-member --no-verify-jwt
 npx supabase functions deploy group-invitations
+npx supabase functions deploy send-welcome-email
 ```
 
 Si el registro informó que la cuenta se creó pero no pudo guardar el perfil,
@@ -134,6 +149,30 @@ Si Brevo rechaza el mensaje, revisa **Edge Functions > Logs** en Supabase y el
 registro de transacciones de Brevo. Comprueba que `BREVO_API_KEY` siga vigente
 y que `INVITATION_FROM` use un remitente de un dominio autenticado. No pegues
 la clave API en GitHub, en el código ni en mensajes de soporte.
+
+### Inicio de sesión con Google y correo de bienvenida
+
+1. En Google Cloud Console, crea un cliente OAuth de tipo **Aplicación web**.
+   Agrega como URI de redirección autorizada
+   `https://TU_PROJECT_REF.supabase.co/auth/v1/callback`.
+2. En Supabase, abre **Authentication > Providers > Google**, habilítalo e
+   ingresa el identificador y secreto del cliente OAuth de Google.
+3. En **Authentication > URL Configuration**, agrega el dominio de la
+   aplicación y `http://localhost:5173` a los redirect URLs permitidos.
+4. Aplica la migración `202610110001_welcome_email.sql` y despliega
+   `send-welcome-email`. La función usa `BREVO_API_KEY`, `APP_URL` e
+   `INVITATION_FROM`, los mismos secretos seguros documentados arriba para
+   Brevo.
+5. Prueba el registro con correo y con Google. El mensaje profesional de
+   FlashMonkey se envía una sola vez a cada cuenta nueva, en el primer acceso
+   con sesión iniciada; los usuarios existentes no reciben un correo
+   retroactivo. Si el envío falla, la función libera la reserva para volver a
+   intentarlo en el siguiente acceso.
+
+El botón de Google está disponible tanto en **Iniciar sesión** como en
+**Crear cuenta**. Las cuentas nuevas creadas con Google reciben un perfil de
+socio y completan sus datos personales desde el flujo de bienvenida de la
+aplicación.
 
 Supabase proporciona las variables `SUPABASE_URL`, `SUPABASE_ANON_KEY` y
 `SUPABASE_SERVICE_ROLE_KEY` a las funciones Edge. Nunca publiques la clave
