@@ -80,7 +80,7 @@ const Usuarios = () => {
       <header className="border-b border-slate-200 pb-5">
         <p className="text-sm font-semibold text-emerald-700">Administración de acceso</p>
         <h1 className="mt-1 text-3xl font-bold text-slate-900">Socios y roles</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Listado de cuentas registradas, ordenadas desde la más reciente. Busca por nombre, cédula, correo o teléfono. Administración o tesorería debe verificar el documento antes de asignar un rol elevado; los cambios quedan auditados.</p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Listado de cuentas registradas, ordenadas desde la más reciente. Busca por nombre, cédula, correo o teléfono. El administrador debe verificar el documento antes de asignar un rol elevado; los cambios quedan auditados.</p>
       </header>
 
       <form onSubmit={buscar} className="flex flex-col gap-2 sm:flex-row">
@@ -131,7 +131,7 @@ const Usuarios = () => {
                     <td className="whitespace-nowrap px-5 py-4 text-slate-700">{profile.fecha_nacimiento ? new Date(`${profile.fecha_nacimiento}T00:00:00`).toLocaleDateString("es-EC") : "No registrada"}</td>
                     <td className="px-5 py-4">
                       <span className={`inline-flex items-center gap-1.5 ${profile.documento_verificado ? "text-emerald-800" : "text-amber-800"}`}>
-                        <ShieldCheck size={16} /> {profile.documento_verificado ? "Verificado por tesorería" : "Pendiente"}
+                        <ShieldCheck size={16} /> {profile.documento_verificado ? "Verificado" : "Pendiente"}
                       </span>
                     </td>
                     <td className="px-5 py-4">
@@ -162,7 +162,7 @@ const Usuarios = () => {
           </div>
         )}
       </section>
-      <p className="flex items-start gap-2 text-xs leading-5 text-slate-500"><UserRoundCog size={16} className="mt-0.5 shrink-0" /> Cédula y dirección son datos restringidos: esta pantalla solo está habilitada para administración.</p>
+      <p className="flex items-start gap-2 text-xs leading-5 text-slate-500"><UserRoundCog size={16} className="mt-0.5 shrink-0" /> Cédula y dirección son datos restringidos: esta pantalla y la gestión de roles solo están habilitadas para administración.</p>
     </div>
   );
 };

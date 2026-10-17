@@ -47,7 +47,7 @@ export const PERMISSIONS = {
     verConfiguracion: false,
     gestionarUsuarios: false,
     verAuditoria: false,
-    verificarDocumentos: true,
+    verificarDocumentos: false,
     verBilletera: false,
     gestionarBilletera: true,
     verListaParticipantesGrupo: true
