@@ -3,30 +3,88 @@ import ReactDOM from "react-dom/client";
 
 import { BrowserRouter } from "react-router-dom";
 
-import App from "./App";
 import "./index.css";
 
-import { AuthProvider } from "./context/AuthContext";
-import NotificationProvider from "./context/NotificationProvider";
+const root = ReactDOM.createRoot(document.getElementById("root"));
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 
-window.localStorage.removeItem("mi-cuadro-demo-v1");
+if (!supabaseUrl || !supabaseKey) {
+  root.render(
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "grid",
+        placeItems: "center",
+        padding: "24px",
+        background: "#f8fafc",
+        color: "#0f172a",
+        fontFamily: "system-ui, sans-serif",
+      }}
+    >
+      <section
+        role="alert"
+        style={{
+          boxSizing: "border-box",
+          width: "min(100%, 560px)",
+          padding: "32px",
+          border: "1px solid #e2e8f0",
+          borderRadius: "16px",
+          background: "#fff",
+          boxShadow: "0 12px 32px rgb(15 23 42 / 8%)",
+          lineHeight: 1.6,
+        }}
+      >
+        <h1 style={{ margin: "0 0 12px", fontSize: "1.5rem" }}>
+          Falta configurar Supabase
+        </h1>
+        <p>
+          La aplicación necesita la URL y la clave pública de tu proyecto
+          Supabase para iniciar. Créalo o consúltalo en el panel de Supabase,
+          en <strong>Project Settings → API Keys</strong>.
+        </p>
+        <p>
+          Crea el archivo <code>mi-cuadro/.env</code> junto a{" "}
+          <code>package.json</code> y agrega:
+        </p>
+        <pre
+          style={{
+            overflowX: "auto",
+            padding: "16px",
+            borderRadius: "8px",
+            background: "#f1f5f9",
+          }}
+        >
+          <code>
+            VITE_SUPABASE_URL=la_url_de_tu_proyecto{"\n"}
+            VITE_SUPABASE_ANON_KEY=tu_clave_publica
+          </code>
+        </pre>
+        <p style={{ marginBottom: 0 }}>
+          Guarda el archivo y reinicia el servidor con <code>npm run dev</code>.
+          No compartas la clave en chats ni la publiques.
+        </p>
+      </section>
+    </main>
+  );
+} else {
+  void Promise.all([
+    import("./App"),
+    import("./context/AuthContext"),
+    import("./context/NotificationProvider"),
+  ]).then(([{ default: App }, { AuthProvider }, { default: NotificationProvider }]) => {
+    window.localStorage.removeItem("mi-cuadro-demo-v1");
 
-ReactDOM.createRoot(
-  document.getElementById("root")
-).render(
-
-  <React.StrictMode>
-
-    <BrowserRouter>
-
-      <AuthProvider>
-        <NotificationProvider>
-          <App />
-        </NotificationProvider>
-      </AuthProvider>
-
-    </BrowserRouter>
-
-  </React.StrictMode>
-
-);
+    root.render(
+      <React.StrictMode>
+        <BrowserRouter>
+          <AuthProvider>
+            <NotificationProvider>
+              <App />
+            </NotificationProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </React.StrictMode>,
+    );
+  });
+}
