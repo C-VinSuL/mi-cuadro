@@ -650,7 +650,7 @@ const Navbar = ({ onMenuClick }) => {
             <p className="mt-5 text-center text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Bienvenido a FlashMonkey</p>
             <h2 id="welcome-title" className="mt-2 text-center text-2xl font-bold text-slate-900">¡Qué bueno tenerte aquí!</h2>
             <p className="mt-3 text-center text-sm leading-6 text-slate-600">
-              El primer paso es completar y verificar tus datos. Desde <strong>Editar perfil</strong> confirma tu teléfono, cédula y dirección, y carga una imagen o PDF de tu documento de identidad para que administración o tesorería lo revise.
+              El primer paso es completar y verificar tus datos. Desde <strong>Editar perfil</strong> confirma tu teléfono, cédula y dirección, y carga una imagen o PDF de tu documento de identidad para que el administrador lo revise.
             </p>
             <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
               <p className="font-semibold">Garantía para participar en grupos</p>

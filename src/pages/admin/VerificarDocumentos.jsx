@@ -66,9 +66,9 @@ const VerificarDocumentos = () => {
   return (
     <div className="space-y-6">
       <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-semibold text-emerald-700">Administración y tesorería</p>
+        <p className="text-sm font-semibold text-emerald-700">Solo administrador</p>
         <h1 className="mt-1 text-3xl font-bold text-slate-900">Verificación documental</h1>
-        <p className="mt-2 text-sm text-slate-600">Administración y tesorería pueden comparar los datos declarados con el documento original. Esta revisión humana queda registrada en auditoría; no valida automáticamente la identidad.</p>
+        <p className="mt-2 text-sm text-slate-600">Solo el administrador puede comparar los datos declarados con el documento original. Esta revisión humana queda registrada en auditoría; no valida automáticamente la identidad.</p>
       </header>
       {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
       {loading ? (
