@@ -27,8 +27,18 @@ que valide identidad, rol, MFA y reglas de negocio.
   se usa un dominio personalizado de Supabase, hay que ajustar `connect-src`.
 - Las migraciones incorporan RLS y restringen el acceso directo en áreas como
   notificaciones, solicitudes/invitaciones, auditoría, datos personales
-  privados, documentos de identidad y billetera. Esto no demuestra que las
-  tablas principales ni las políticas desplegadas estén completas.
+  privados, documentos de identidad y billetera.
+- `202610170002_member_scoped_access.sql` restringe los perfiles al titular,
+  grupos y registros de aportes/entregas al grupo del socio, y préstamos/cuotas
+  al titular. Socios no acceden al fondo comunitario. Administración, tesorería
+  y auditoría conservan la lectura general que requiere la aplicación.
+- Se revocó la escritura directa por PostgREST en perfiles, grupos,
+  participantes y registros financieros. Los cambios se realizan mediante
+  RPC/funciones de servidor. El socio registra su aporte con
+  `registrar_aporte_propio`, que valida titularidad, MFA, estado del grupo,
+  periodo, monto y duplicados, y registra el evento en auditoría. Se conservan
+  las solicitudes propias de billetera/invitación y la edición del propio
+  perfil mediante sus funciones existentes.
 - `npm audit` se ejecutó para dependencias de producción y para el árbol
   completo; ambos reportaron cero vulnerabilidades en la fecha de revisión.
 - `.env` está excluido por `.gitignore` y no está versionado. La clave pública
@@ -40,7 +50,7 @@ que valide identidad, rol, MFA y reglas de negocio.
 
 | Riesgo | Estado observado | Siguiente paso |
 |---|---|---|
-| **A01 Control de acceso roto** | Las migraciones aplican controles de RLS y RPC a varias áreas sensibles. No se pudo confirmar que las políticas de `perfiles`, `grupos`, `participantes`, `aportes`, préstamos y demás tablas existentes estén completas ni desplegadas. | Revisar todas las tablas expuestas por PostgREST en el proyecto Supabase; probar con usuarios de prueba de distintos grupos y roles. No confiar en `RoleRoute` como control de servidor. |
+| **A01 Control de acceso roto** | La migración `202610170002_member_scoped_access.sql` instala políticas de lectura por titular/grupo y quita escritura directa a sesiones autenticadas en perfiles, grupos, participantes y finanzas. Los socios pueden leer el libro de aportes/entregas de sus grupos, no los de otros grupos ni el fondo comunitario. La migración aún no se ha ejecutado en una instancia Supabase. | Aplicar la migración y probar lecturas cruzadas, escrituras directas y RPC con socios de prueba. No confiar en `RoleRoute` como control de servidor. |
 | **A02 Configuración de seguridad incorrecta** | `.env` no está versionado. Los encabezados para Vercel están definidos, pero aún no se han probado en un despliegue real. | Mantener los secretos fuera de Git/Vercel client env; comprobar encabezados después del primer despliegue y rotar cualquier secreto que se hubiera expuesto históricamente. |
 | **A03 Cadena de suministro** | `npm audit --omit=dev --audit-level=high` y `npm audit --audit-level=high` reportaron cero vulnerabilidades. | Repetir la auditoría en CI y al actualizar dependencias. |
 | **A04 Fallas criptográficas** | Se usa Supabase Auth con PKCE y no se guardan contraseñas propias. HTTPS/HSTS se configura para Vercel; todavía no hay dominio desplegado que validar. | Usar HTTPS en el dominio final y revisar ajustes de Auth, recuperación de cuenta y retención de sesiones. |
@@ -92,13 +102,17 @@ que valide identidad, rol, MFA y reglas de negocio.
 Realizar estas pruebas solo con datos ficticios en un proyecto de prueba:
 
 1. Crear dos socios de grupos distintos y un usuario para cada rol.
-2. Desde el cliente Supabase de cada socio, intentar leer y modificar filas
-   ajenas en grupos, participantes, aportes, billetera y documentos.
-3. Repetir con identificadores, importes, estado, rol y nivel AAL manipulados.
-4. Confirmar denegación o cero filas y que no haya cambios persistidos.
+2. Desde el cliente Supabase, comprobar que cada socio solo puede leer su
+   perfil y los grupos/registros de aportes y entregas de sus propios grupos.
+3. Intentar insertar, actualizar o eliminar directamente perfiles, grupos,
+   participantes y registros financieros; las escrituras directas deben fallar.
+4. Llamar a `registrar_aporte_propio` con el ID de otro participante, con un
+   grupo inactivo, después de registrar el periodo y con una sesión sin MFA;
+   todas esas llamadas deben fallar. Un aporte propio válido debe guardar el
+   monto y periodo configurados por el grupo y aparecer en auditoría.
 5. Probar las RPC privilegiadas con sesión AAL1, AAL2 sin rol y AAL2 con rol;
-   solo la última combinación autorizada debe completar la operación.
+   solo la combinación autorizada debe completar la operación.
 
-Hasta completar estas comprobaciones en el proyecto desplegado, el control de
-acceso de las tablas principales y la configuración de Auth se consideran
-pendientes de verificación.
+Hasta aplicar la migración y completar estas comprobaciones en un proyecto de
+prueba, estos controles del repositorio no se consideran verificados en el
+entorno de Supabase.

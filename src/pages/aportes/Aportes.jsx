@@ -176,64 +176,27 @@ const AportesSocio = () => {
       setMensaje("");
 
 
-      const {
-        error
-      } = await supabase
-        .from("aportes")
-        .insert({
-          participante_id:
-            participant.id,
+      try {
+        const { error } = await supabase.rpc("registrar_aporte_propio", {
+          p_participante_id: participant.id
+        });
+        if (error) throw error;
 
-          grupo_id:
-            grupo.id,
-
-          semana:
-            semanaActual,
-
-          monto:
-            aporteSemanal,
-
-          comision_app:
-            comisionApp,
-
-          estado:
-            "pagado"
+        setMensaje("Aporte registrado correctamente.");
+        notify({
+          title: "Aporte registrado",
+          message: `Tu aporte del periodo ${semanaActual} (${periodoActualMinuscula}) quedó registrado.`,
+          type: "success"
         });
 
-
-      if (error) {
-
-        console.error(
-          "Error registrando aporte:",
-          error
-        );
-
-        setMensaje(
-          "No se pudo registrar el aporte."
-        );
-
+        await cargarAportes();
+        await cargarFondoComunitario(grupo.id);
+      } catch (error) {
+        console.error("Error registrando aporte:", error);
+        setMensaje(error.message || "No se pudo registrar el aporte.");
+      } finally {
         setRegistrando(false);
-
-        return;
       }
-
-
-      setMensaje(
-        "Aporte registrado correctamente."
-      );
-      notify({
-        title: "Aporte registrado",
-        message: `Tu aporte del periodo ${semanaActual} (${periodoActualMinuscula}) quedó registrado.`,
-        type: "success"
-      });
-
-      // Recargar historial de aportes
-      await cargarAportes();
-
-      // Actualizar fondo comunitario global
-      await cargarFondoComunitario(grupo.id);
-
-      setRegistrando(false);
     };
 
 
