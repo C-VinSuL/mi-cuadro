@@ -36,9 +36,14 @@ que valide identidad, rol, MFA y reglas de negocio.
   participantes y registros financieros. Los cambios se realizan mediante
   RPC/funciones de servidor. El socio registra su aporte con
   `registrar_aporte_propio`, que valida titularidad, MFA, estado del grupo,
-  periodo, monto y duplicados, y registra el evento en auditoría. Se conservan
-  las solicitudes propias de billetera/invitación y la edición del propio
-  perfil mediante sus funciones existentes.
+  periodo, comprobante privado y duplicados, y lo deja pendiente de revisión.
+  La migración `202610170003_contribution_receipt_review.sql` añade el bucket
+  privado de comprobantes, limita la lectura a su titular o a tesorería/
+  administración con MFA, y permite aprobar/rechazar mediante
+  `resolver_aporte_comprobante`. La decisión se valida en servidor y se audita;
+  un aporte solo pasa a pagado al aprobarse. Se conservan las solicitudes
+  propias de billetera/invitación y la edición del propio perfil mediante sus
+  funciones existentes.
 - `npm audit` se ejecutó para dependencias de producción y para el árbol
   completo; ambos reportaron cero vulnerabilidades en la fecha de revisión.
 - `.env` está excluido por `.gitignore` y no está versionado. La clave pública
@@ -50,7 +55,7 @@ que valide identidad, rol, MFA y reglas de negocio.
 
 | Riesgo | Estado observado | Siguiente paso |
 |---|---|---|
-| **A01 Control de acceso roto** | La migración `202610170002_member_scoped_access.sql` instala políticas de lectura por titular/grupo y quita escritura directa a sesiones autenticadas en perfiles, grupos, participantes y finanzas. Los socios pueden leer el libro de aportes/entregas de sus grupos, no los de otros grupos ni el fondo comunitario. La migración aún no se ha ejecutado en una instancia Supabase. | Aplicar la migración y probar lecturas cruzadas, escrituras directas y RPC con socios de prueba. No confiar en `RoleRoute` como control de servidor. |
+| **A01 Control de acceso roto** | Las migraciones `202610170002_member_scoped_access.sql` y `202610170003_contribution_receipt_review.sql` instalan políticas de lectura por titular/grupo, limitan los comprobantes privados y quitan escritura directa a sesiones autenticadas en perfiles, grupos, participantes y finanzas. Los socios pueden leer el libro de aportes/entregas de sus grupos, no los de otros grupos ni el fondo comunitario. Las migraciones aún no se han ejecutado en una instancia Supabase. | Aplicar las migraciones y probar lecturas cruzadas, escritura directa y RPC con socios de prueba. No confiar en `RoleRoute` como control de servidor. |
 | **A02 Configuración de seguridad incorrecta** | `.env` no está versionado. Los encabezados para Vercel están definidos, pero aún no se han probado en un despliegue real. | Mantener los secretos fuera de Git/Vercel client env; comprobar encabezados después del primer despliegue y rotar cualquier secreto que se hubiera expuesto históricamente. |
 | **A03 Cadena de suministro** | `npm audit --omit=dev --audit-level=high` y `npm audit --audit-level=high` reportaron cero vulnerabilidades. | Repetir la auditoría en CI y al actualizar dependencias. |
 | **A04 Fallas criptográficas** | Se usa Supabase Auth con PKCE y no se guardan contraseñas propias. HTTPS/HSTS se configura para Vercel; todavía no hay dominio desplegado que validar. | Usar HTTPS en el dominio final y revisar ajustes de Auth, recuperación de cuenta y retención de sesiones. |
@@ -96,6 +101,10 @@ que valide identidad, rol, MFA y reglas de negocio.
    usar `service_role` en el navegador.
 5. Desplegar las Edge Functions y probar una llamada desde el dominio
    autorizado y otra desde un origen distinto; la última debe devolver 403.
+6. Probar el flujo de comprobantes con socios y tesorería AAL2: el archivo
+   debe ser privado, el socio solo debe poder adjuntar el suyo, tesorería debe
+   poder abrirlo y resolver una solicitud pendiente, y un segundo intento de
+   resolución o una llamada desde un rol no autorizado deben fallar.
 
 ## Validación de autorización
 
@@ -107,12 +116,14 @@ Realizar estas pruebas solo con datos ficticios en un proyecto de prueba:
 3. Intentar insertar, actualizar o eliminar directamente perfiles, grupos,
    participantes y registros financieros; las escrituras directas deben fallar.
 4. Llamar a `registrar_aporte_propio` con el ID de otro participante, con un
-   grupo inactivo, después de registrar el periodo y con una sesión sin MFA;
-   todas esas llamadas deben fallar. Un aporte propio válido debe guardar el
-   monto y periodo configurados por el grupo y aparecer en auditoría.
-5. Probar las RPC privilegiadas con sesión AAL1, AAL2 sin rol y AAL2 con rol;
-   solo la combinación autorizada debe completar la operación.
+   comprobante ajeno/inexistente, un grupo inactivo, un periodo ya pendiente o
+   aprobado, y con una sesión sin MFA; todas esas llamadas deben fallar. Un
+   aporte propio válido debe quedar pendiente con el monto y periodo del grupo
+   y aparecer en auditoría.
+5. Probar `resolver_aporte_comprobante` con sesión AAL1, AAL2 sin rol,
+   un aporte ajeno al estado pendiente y AAL2 con rol de tesorero/admin; solo
+   la operación autorizada sobre un comprobante pendiente debe completarse.
 
-Hasta aplicar la migración y completar estas comprobaciones en un proyecto de
-prueba, estos controles del repositorio no se consideran verificados en el
+Hasta aplicar las migraciones y completar estas comprobaciones en un proyecto
+de prueba, estos controles del repositorio no se consideran verificados en el
 entorno de Supabase.

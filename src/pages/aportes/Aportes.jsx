@@ -38,9 +38,9 @@ const obtenerAportesSocio = async (participantId) => {
 const AportesSocio = () => {
 
   const {
+    user,
     grupo,
     participant,
-    cargarFondoComunitario
   } = useAuth();
   const { notify } = useNotifications();
 
@@ -57,6 +57,8 @@ const AportesSocio = () => {
   const [mensaje, setMensaje] =
     useState("");
 
+  const [comprobante, setComprobante] = useState(null);
+  const [comprobanteInputKey, setComprobanteInputKey] = useState(0);
 
   // =========================
   // DATOS CALCULADOS
@@ -151,10 +153,7 @@ const AportesSocio = () => {
   const registrarAporte =
     async () => {
 
-      if (
-        !participant ||
-        !grupo
-      ) {
+      if (!participant || !grupo || !user?.id) {
         return;
       }
 
@@ -163,37 +162,84 @@ const AportesSocio = () => {
         return;
       }
 
-      if (aporteSemanaActual) {
+      if (aporteSemanaActual && aporteSemanaActual.estado_revision !== "rechazado") {
 
         setMensaje(
-          "Ya registraste el aporte de este periodo."
+          aporteSemanaActual.estado_revision === "pendiente"
+            ? "Tu comprobante ya está pendiente de revisión."
+            : "Este periodo ya tiene un aporte aprobado."
         );
 
+        return;
+      }
+
+      if (!comprobante) {
+        setMensaje("Adjunta el comprobante de pago para enviarlo a revisión.");
+        return;
+      }
+
+      const tiposPermitidos = ["image/jpeg", "image/png", "application/pdf"];
+      if (!tiposPermitidos.includes(comprobante.type) || comprobante.size > 5 * 1024 * 1024) {
+        setMensaje("Adjunta un comprobante JPG, PNG o PDF de hasta 5 MB.");
         return;
       }
 
       setRegistrando(true);
       setMensaje("");
 
-
+      let objectPath = null;
+      const comprobanteAnterior = aporteSemanaActual?.estado_revision === "rechazado"
+        ? aporteSemanaActual.comprobante_path
+        : null;
       try {
+        const extension = comprobante.type === "application/pdf"
+          ? "pdf"
+          : comprobante.type.split("/")[1];
+        objectPath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+        const { error: uploadError } = await supabase.storage
+          .from("contribution-receipts")
+          .upload(objectPath, comprobante, {
+            contentType: comprobante.type,
+            upsert: false
+          });
+        if (uploadError) throw uploadError;
+
         const { error } = await supabase.rpc("registrar_aporte_propio", {
-          p_participante_id: participant.id
+          p_participante_id: participant.id,
+          p_comprobante_path: objectPath
         });
         if (error) throw error;
 
-        setMensaje("Aporte registrado correctamente.");
+        if (comprobanteAnterior && comprobanteAnterior !== objectPath) {
+          const { error: cleanupError } = await supabase.storage
+            .from("contribution-receipts")
+            .remove([comprobanteAnterior]);
+          if (cleanupError) {
+            console.error("No se pudo limpiar el comprobante rechazado reemplazado:", cleanupError);
+          }
+        }
+
+        setComprobante(null);
+        setComprobanteInputKey((current) => current + 1);
+        setMensaje("Comprobante enviado. El aporte quedará pendiente hasta que tesorería lo revise.");
         notify({
-          title: "Aporte registrado",
-          message: `Tu aporte del periodo ${semanaActual} (${periodoActualMinuscula}) quedó registrado.`,
+          title: "Comprobante enviado",
+          message: `Tesorería revisará tu aporte del periodo ${semanaActual} (${periodoActualMinuscula}).`,
           type: "success"
         });
 
         await cargarAportes();
-        await cargarFondoComunitario(grupo.id);
       } catch (error) {
         console.error("Error registrando aporte:", error);
         setMensaje(error.message || "No se pudo registrar el aporte.");
+        if (objectPath) {
+          const { error: cleanupError } = await supabase.storage
+            .from("contribution-receipts")
+            .remove([objectPath]);
+          if (cleanupError) {
+            console.error("No se pudo limpiar el comprobante sin solicitud:", cleanupError);
+          }
+        }
       } finally {
         setRegistrando(false);
       }
@@ -431,15 +477,17 @@ const AportesSocio = () => {
             {aporteSemanaActual ? (
 
               <>
-                <CheckCircle2
-                  className="
-                    text-lime-300
-                  "
-                />
+                {aporteSemanaActual.estado_revision === "pendiente"
+                  ? <Clock3 className="text-amber-300" />
+                  : <CheckCircle2 className="text-lime-300" />}
 
                 <div>
                   <p className="font-semibold">
-                    Aporte registrado
+                    {aporteSemanaActual.estado_revision === "pendiente"
+                      ? "Comprobante en revisión"
+                      : aporteSemanaActual.estado_revision === "rechazado"
+                      ? "Comprobante rechazado"
+                      : "Aporte registrado"}
                   </p>
 
                   <p
@@ -448,7 +496,11 @@ const AportesSocio = () => {
                       text-emerald-200
                     "
                   >
-                    Este periodo ya está al día.
+                    {aporteSemanaActual.estado_revision === "pendiente"
+                      ? "Tesorería confirmará el pago después de revisar el comprobante."
+                      : aporteSemanaActual.estado_revision === "rechazado"
+                      ? aporteSemanaActual.nota_revision || "Adjunta nuevamente el comprobante para solicitar otra revisión."
+                      : "Este periodo ya está al día."}
                   </p>
                 </div>
               </>
@@ -473,7 +525,7 @@ const AportesSocio = () => {
                       text-emerald-200
                     "
                   >
-                    Registra tu aporte de este periodo.
+                    Adjunta el comprobante de pago de este periodo.
                   </p>
                 </div>
               </>
@@ -483,45 +535,36 @@ const AportesSocio = () => {
           </div>
 
 
-          <button
-            onClick={
-              registrarAporte
-            }
-            disabled={
-              registrando ||
-              !grupoActivo ||
-              Boolean(
-                aporteSemanaActual
-              )
-            }
-            className="
-              rounded-xl
-              bg-white
-              text-emerald-800
-
-              px-6
-              py-3
-
-              font-semibold
-
-              hover:bg-emerald-50
-
-              disabled:opacity-60
-
-              transition
-            "
-          >
-
-            {aporteSemanaActual
-              ? "Aporte pagado"
-              : !grupoActivo
-              ? "Disponible al iniciar el grupo"
-              : registrando
-              ? "Registrando..."
-              : `Registrar $${totalPagar.toFixed(2)}`
-            }
-
-          </button>
+          <div className="w-full space-y-3 lg:max-w-sm">
+            {(!aporteSemanaActual || aporteSemanaActual.estado_revision === "rechazado") && (
+              <>
+                <label className="block text-sm font-semibold text-white" htmlFor="aporte-comprobante">
+                  Comprobante (JPG, PNG o PDF; máximo 5 MB)
+                  <input
+                    key={comprobanteInputKey}
+                    id="aporte-comprobante"
+                    type="file"
+                    accept="image/jpeg,image/png,application/pdf"
+                    onChange={(event) => setComprobante(event.target.files?.[0] || null)}
+                    className="mt-1.5 block w-full rounded-lg bg-white/10 p-2 text-xs file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:font-semibold file:text-emerald-800"
+                  />
+                </label>
+                <button
+                  onClick={registrarAporte}
+                  disabled={registrando || !grupoActivo || !comprobante}
+                  className="w-full rounded-xl bg-white px-6 py-3 font-semibold text-emerald-800 transition hover:bg-emerald-50 disabled:opacity-60"
+                >
+                  {registrando
+                    ? "Enviando comprobante..."
+                    : !grupoActivo
+                    ? "Disponible al iniciar el grupo"
+                    : comprobante
+                    ? `Enviar aporte de $${totalPagar.toFixed(2)} a revisión`
+                    : "Adjunta el comprobante para continuar"}
+                </button>
+              </>
+            )}
+          </div>
 
         </div>
 
@@ -595,7 +638,7 @@ const AportesSocio = () => {
               mt-1
             "
           >
-            {aportes.length}
+            {aportes.filter((aporte) => aporte.estado?.toLowerCase() === "pagado").length}
           </p>
         </div>
 
@@ -871,15 +914,24 @@ const AportesSocio = () => {
                             font-semibold
                           "
                         >
-                          {aporte.estado}
+                          {aporte.estado_revision === "rechazado"
+                            ? "Rechazado"
+                            : aporte.estado_revision === "pendiente"
+                            ? "En revisión"
+                            : aporte.estado_revision === "aprobado"
+                            ? "Aprobado"
+                            : aporte.estado}
+                          {aporte.estado_revision === "rechazado" && aporte.nota_revision && (
+                            <span className="mt-1 block max-w-xs text-xs font-normal text-red-700">{aporte.nota_revision}</span>
+                          )}
                         </span>
 
                       </td>
 
                       <td className="p-4 text-slate-500">
-                        {new Date(
-                          aporte.fecha_pago
-                        ).toLocaleDateString()}
+                        {aporte.fecha_pago
+                          ? new Date(aporte.fecha_pago).toLocaleDateString("es-EC")
+                          : "-"}
                       </td>
 
                     </tr>
@@ -904,7 +956,7 @@ const AportesSocio = () => {
 
 const Aportes = () => {
   const { profile } = useAuth();
-  return profile?.rol?.toLowerCase() === "administrador"
+  return ["administrador", "tesorero"].includes(profile?.rol?.toLowerCase())
     ? <AportesAdmin />
     : <AportesSocio />;
 };
