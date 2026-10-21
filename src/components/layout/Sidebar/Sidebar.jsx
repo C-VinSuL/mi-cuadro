@@ -179,11 +179,13 @@ const Sidebar = ({
   <aside
     className={`
       h-screen
+      h-dvh
+      min-h-0
       bg-[#064E3B]
       text-white
       flex
       flex-col
-      overflow-y-auto
+      overflow-hidden
 
       ${
         mobile
@@ -411,6 +413,7 @@ const Sidebar = ({
       <nav
         className="
           flex-1
+          min-h-0
 
           px-4
           pt-6
@@ -418,6 +421,7 @@ const Sidebar = ({
           space-y-1
 
           overflow-y-auto
+          overscroll-contain
         "
       >
 
