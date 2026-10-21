@@ -66,6 +66,10 @@ queda protegida contra retiros y solo puede utilizarse para cubrir un aporte
 que siga impago después de su vencimiento. Los nuevos aportes no cobran la
 comisión fija anterior de USD 1 ni una comisión del 20%; los registros
 históricos no se modifican.
+La migración `202610200001_auth_user_profiles.sql` crea el perfil de socio
+cuando Supabase Auth registra una cuenta nueva, incluidas las cuentas creadas
+con Google. El inicio de sesión con correo y el registro existente conservan su
+flujo; las sesiones se persisten con Supabase Auth.
 
 Los proyectos Supabase nuevos no tienen las tablas base de `perfiles`, `grupos`,
 `participantes` y `aportes`: las migraciones del repositorio son incrementales
@@ -159,8 +163,10 @@ la clave API en GitHub, en el código ni en mensajes de soporte.
    ingresa el identificador y secreto del cliente OAuth de Google.
 3. En **Authentication > URL Configuration**, agrega el dominio de la
    aplicación y `http://localhost:5173` a los redirect URLs permitidos.
-4. Aplica la migración `202610110001_welcome_email.sql` y despliega
-   `send-welcome-email`. La función usa `BREVO_API_KEY`, `APP_URL` e
+4. Aplica las migraciones pendientes en orden, incluida
+   `202610200001_auth_user_profiles.sql`, que crea perfiles de socio para
+   cuentas nuevas de Google y repara cuentas Auth que no tenían perfil.
+   Despliega también `send-welcome-email`. La función usa `BREVO_API_KEY`, `APP_URL` e
    `INVITATION_FROM`, los mismos secretos seguros documentados arriba para
    Brevo.
 5. Prueba el registro con correo y con Google. El mensaje profesional de
