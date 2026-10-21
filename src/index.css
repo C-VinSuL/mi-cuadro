@@ -63,11 +63,32 @@ svg {
   animation: loading-sweep 1.35s ease-in-out infinite;
 }
 
+@keyframes navbar-glass-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.navbar-glass-pop {
+  animation: navbar-glass-pop 180ms ease-out both;
+  transform-origin: top right;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .loading-progress {
     animation: none;
     width: 100%;
     opacity: 0.65;
+  }
+
+  .navbar-glass-pop {
+    animation: none;
   }
 }
 

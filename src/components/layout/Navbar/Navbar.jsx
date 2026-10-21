@@ -440,7 +440,7 @@ const Navbar = ({ onMenuClick }) => {
           </button>
 
           {notificationsOpen && (
-            <div className="absolute right-0 top-14 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+            <div className="navbar-glass-pop absolute right-0 top-14 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-white/70 bg-white/75 shadow-xl shadow-emerald-950/10 backdrop-blur-xl backdrop-saturate-150">
               <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
                 <div>
                   <h2 className="text-sm font-semibold text-slate-900">Notificaciones</h2>
@@ -462,7 +462,7 @@ const Navbar = ({ onMenuClick }) => {
                 {notifications.length === 0 ? (
                   <p className="px-4 py-10 text-center text-sm text-slate-500">No tienes notificaciones todavía.</p>
                 ) : notifications.map((item) => (
-                  <article key={item.id} className={`border-b border-slate-100 px-4 py-3 last:border-b-0 ${item.read ? "bg-white" : "bg-emerald-50/60"}`}>
+                  <article key={item.id} className={`border-b border-white/70 px-4 py-3 last:border-b-0 ${item.read ? "bg-white/25" : "bg-emerald-100/35"}`}>
                     <div className="flex items-start gap-2">
                       <span className={`mt-1.5 size-2 shrink-0 rounded-full ${item.type === "error" ? "bg-red-500" : item.type === "success" ? "bg-emerald-600" : "bg-blue-500"}`} />
                       <div className="min-w-0 flex-1">
@@ -589,7 +589,7 @@ const Navbar = ({ onMenuClick }) => {
         </button>
 
         {userMenuOpen && (
-          <div className="absolute right-0 top-14 z-50 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+          <div className="navbar-glass-pop absolute right-0 top-14 z-50 w-64 overflow-hidden rounded-2xl border border-white/70 bg-white/75 shadow-xl shadow-emerald-950/10 backdrop-blur-xl backdrop-saturate-150">
             <div className="border-b border-slate-100 px-4 py-3">
               <p className="truncate text-sm font-semibold text-slate-900">{profile?.nombre} {profile?.apellido}</p>
               <p className="mt-0.5 text-xs capitalize text-slate-500">{profile?.rol || "Socio"}</p>
