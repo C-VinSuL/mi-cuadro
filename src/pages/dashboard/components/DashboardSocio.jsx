@@ -338,6 +338,8 @@ const DashboardSocio = () => {
 
             <h1
               className="
+                min-w-0
+                break-words
                 text-3xl
                 font-bold
                 text-slate-900
@@ -352,6 +354,8 @@ const DashboardSocio = () => {
 
             <p
               className="
+                min-w-0
+                break-words
                 mt-2
                 text-slate-500
               "

@@ -43,9 +43,28 @@ export const solicitarRestablecimientoMfaAdministrador = async (perfilId) => {
   return data;
 };
 
-export const eliminarUsuarioAdministrador = async ({ perfilId, motivo }) => {
+export const cambiarEstadoUsuarioAdministrador = async ({ perfilId, activo }) => {
+  const { data, error } = await supabase.functions.invoke("admin-set-user-status", {
+    body: { userId: perfilId, active: activo }
+  });
+  if (error) {
+    if (error.context instanceof Response) {
+      let responseBody;
+      try {
+        responseBody = await error.context.clone().json();
+      } catch {
+        throw error;
+      }
+      if (typeof responseBody?.error === "string") throw new Error(responseBody.error);
+    }
+    throw error;
+  }
+  return data;
+};
+
+export const eliminarUsuarioAdministrador = async ({ perfilId, motivo, purgarDatosPersonales = false }) => {
   const { data, error } = await supabase.functions.invoke("admin-delete-user", {
-    body: { userId: perfilId, reason: motivo }
+    body: { userId: perfilId, reason: motivo, purgePersonalData: purgarDatosPersonales }
   });
   if (error) {
     if (error.context instanceof Response) {

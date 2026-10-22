@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, KeyRound, Search, ShieldCheck, Trash2, UserRoundCog, X } from "lucide-react";
+import { Ban, ChevronLeft, ChevronRight, KeyRound, RotateCcw, Search, ShieldCheck, Trash2, UserRoundCog, X } from "lucide-react";
 import { useNotifications } from "../../hooks/useNotifications";
-import { cambiarRolPerfil, eliminarUsuarioAdministrador, listarPerfilesAdministrador, solicitarRestablecimientoMfaAdministrador } from "../../services/adminService";
+import { cambiarEstadoUsuarioAdministrador, cambiarRolPerfil, eliminarUsuarioAdministrador, listarPerfilesAdministrador, solicitarRestablecimientoMfaAdministrador } from "../../services/adminService";
 
 const ROLES = ["socio", "tesorero", "auditor", "administrador"];
 const PAGE_SIZE = 50;
@@ -20,9 +20,11 @@ const Usuarios = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState("");
+  const [changingStatusId, setChangingStatusId] = useState("");
   const [resettingMfaId, setResettingMfaId] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteReason, setDeleteReason] = useState("No completa el registro.");
+  const [purgePrivateDataConfirmed, setPurgePrivateDataConfirmed] = useState(false);
   const [deletingId, setDeletingId] = useState("");
 
   const cargarPerfiles = useCallback(async (busqueda = "", desplazamiento = 0) => {
@@ -79,6 +81,36 @@ const Usuarios = () => {
     }
   };
 
+  const cambiarEstado = async (profile) => {
+    const active = !profile.activo;
+    const fullName = `${profile.nombre} ${profile.apellido || ""}`.trim();
+    const description = active
+      ? `¿Reactivar la cuenta de ${fullName}? Podrá volver a iniciar sesión con los datos y registros conservados.`
+      : `¿Desactivar la cuenta de ${fullName}? No podrá volver a iniciar sesión; sus documentos y registros se conservarán.`;
+    if (!window.confirm(description)) return;
+
+    setChangingStatusId(profile.id);
+    setError("");
+    try {
+      await cambiarEstadoUsuarioAdministrador({ perfilId: profile.id, activo: active });
+      setProfiles((current) => current.map((item) => item.id === profile.id ? { ...item, activo: active } : item));
+      notify({
+        title: active ? "Cuenta reactivada" : "Cuenta desactivada",
+        message: active
+          ? `Se reactivó la cuenta de ${fullName}.`
+          : `Se bloqueó el acceso de ${fullName}; sus datos permanecen conservados.`,
+        type: "success"
+      });
+    } catch (statusError) {
+      console.error("Error cambiando el estado de la cuenta:", statusError);
+      const message = statusError.message || "No se pudo cambiar el estado de la cuenta.";
+      setError(message);
+      notify({ title: "No se pudo cambiar el estado de la cuenta", message, type: "error" });
+    } finally {
+      setChangingStatusId("");
+    }
+  };
+
   const restablecerSegundoFactor = async (profile) => {
     if (!profile.correo || resettingMfaId) return;
     const fullName = `${profile.nombre} ${profile.apellido || ""}`.trim();
@@ -128,6 +160,7 @@ const Usuarios = () => {
     if (deletingId) return;
     setDeleteTarget(null);
     setDeleteReason("No completa el registro.");
+    setPurgePrivateDataConfirmed(false);
   }, [deletingId]);
 
   useEffect(() => {
@@ -143,17 +176,23 @@ const Usuarios = () => {
     event.preventDefault();
     const motivo = deleteReason.trim();
     if (!deleteTarget || motivo.length < 10 || motivo.length > 500 || deletingId) return;
+    if (deleteTarget.tiene_datos_privados && !purgePrivateDataConfirmed) return;
 
     setDeletingId(deleteTarget.id);
     setError("");
     try {
-      const result = await eliminarUsuarioAdministrador({ perfilId: deleteTarget.id, motivo });
+      const result = await eliminarUsuarioAdministrador({
+        perfilId: deleteTarget.id,
+        motivo,
+        purgarDatosPersonales: purgePrivateDataConfirmed
+      });
       const remainingProfiles = profiles.filter((profile) => profile.id !== deleteTarget.id);
       const remainingTotal = Math.max(total - 1, 0);
       setProfiles(remainingProfiles);
       setTotal(remainingTotal);
       setDeleteTarget(null);
       setDeleteReason("No completa el registro.");
+      setPurgePrivateDataConfirmed(false);
       notify({
         title: result?.auditUpdated === false ? "Usuario eliminado; auditoría pendiente de actualizar" : "Usuario eliminado",
         message: result?.auditUpdated === false
@@ -237,7 +276,7 @@ const Usuarios = () => {
                     </td>
                     <td className="px-5 py-4">
                       <label className="sr-only" htmlFor={`role-${profile.id}`}>Rol para {profile.nombre}</label>
-                      <select id={`role-${profile.id}`} value={profile.rol} onChange={(event) => actualizarRol(profile, event.target.value)} disabled={savingId === profile.id} className="rounded-lg border border-slate-300 bg-white px-3 py-2 capitalize disabled:opacity-60">
+                      <select id={`role-${profile.id}`} value={profile.rol} onChange={(event) => actualizarRol(profile, event.target.value)} disabled={!profile.activo || savingId === profile.id} className="rounded-lg border border-slate-300 bg-white px-3 py-2 capitalize disabled:opacity-60">
                         {ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
                       </select>
                     </td>
@@ -245,7 +284,7 @@ const Usuarios = () => {
                       <button
                         type="button"
                         onClick={() => restablecerSegundoFactor(profile)}
-                        disabled={!profile.correo || Boolean(resettingMfaId)}
+                        disabled={!profile.activo || !profile.correo || Boolean(resettingMfaId) || Boolean(changingStatusId)}
                         className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <KeyRound size={15} />
@@ -253,10 +292,24 @@ const Usuarios = () => {
                       </button>
                     </td>
                     <td className="px-5 py-4">
+                      <span className={`mb-2 block text-xs font-semibold ${profile.activo ? "text-emerald-800" : "text-red-800"}`}>
+                        {profile.activo ? "Activa" : "Desactivada"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => cambiarEstado(profile)}
+                        disabled={Boolean(deletingId) || Boolean(resettingMfaId) || Boolean(changingStatusId)}
+                        className={`mb-2 inline-flex items-center gap-2 whitespace-nowrap rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${profile.activo ? "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100" : "border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"}`}
+                      >
+                        {profile.activo ? <Ban size={15} /> : <RotateCcw size={15} />}
+                        {changingStatusId === profile.id
+                          ? "Procesando..."
+                          : profile.activo ? "Desactivar cuenta" : "Reactivar cuenta"}
+                      </button>
                       <button
                         type="button"
                         onClick={() => setDeleteTarget(profile)}
-                        disabled={Boolean(deletingId) || Boolean(resettingMfaId)}
+                        disabled={Boolean(deletingId) || Boolean(resettingMfaId) || Boolean(changingStatusId)}
                         className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 transition hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <Trash2 size={15} />
@@ -305,6 +358,7 @@ const Usuarios = () => {
                 <p id="delete-user-description" className="mt-2 text-sm leading-6 text-slate-600">
                   Esta acción es permanente. Se eliminará la cuenta de <strong>{deleteTarget.nombre} {deleteTarget.apellido || ""}</strong>
                   {deleteTarget.correo ? <> ({deleteTarget.correo})</> : ""}. El motivo se guardará en auditoría.
+                  {" "}No se podrá eliminar si existen registros operativos que deban conservarse.
                 </p>
               </div>
               <button type="button" onClick={cerrarModalEliminacion} disabled={Boolean(deletingId)} aria-label="Cerrar" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50">
@@ -325,11 +379,26 @@ const Usuarios = () => {
               className="mt-2 w-full resize-y rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20 disabled:bg-slate-100"
             />
             <p className="mt-1 text-xs text-slate-500">Ejemplo: “No completa el registro”. Escribe al menos 10 caracteres. El auditor podrá consultar este motivo.</p>
+            {deleteTarget.tiene_datos_privados && (
+              <label className="mt-4 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+                <input
+                  type="checkbox"
+                  checked={purgePrivateDataConfirmed}
+                  onChange={(event) => setPurgePrivateDataConfirmed(event.target.checked)}
+                  disabled={Boolean(deletingId)}
+                  className="mt-1"
+                />
+                <span>
+                  Confirmo que es una cuenta de prueba o existe autorización para eliminar sus datos personales.
+                  Se purgarán los datos privados y el documento de identidad; la operación quedará auditada.
+                </span>
+              </label>
+            )}
             <div className="mt-6 flex flex-col-reverse justify-end gap-2 sm:flex-row">
               <button type="button" onClick={cerrarModalEliminacion} disabled={Boolean(deletingId)} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
                 Cancelar
               </button>
-              <button type="submit" disabled={Boolean(deletingId) || deleteReason.trim().length < 10} className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50">
+              <button type="submit" disabled={Boolean(deletingId) || deleteReason.trim().length < 10 || (deleteTarget.tiene_datos_privados && !purgePrivateDataConfirmed)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50">
                 <Trash2 size={16} />
                 {deletingId === deleteTarget.id ? "Eliminando..." : "Confirmar eliminación"}
               </button>

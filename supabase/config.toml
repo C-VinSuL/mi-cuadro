@@ -12,3 +12,6 @@ verify_jwt = true
 
 [functions.admin-delete-user]
 verify_jwt = true
+
+[functions.admin-set-user-status]
+verify_jwt = true

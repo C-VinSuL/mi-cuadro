@@ -218,14 +218,19 @@ de nuevo y registrar otro QR. Si el envío de correo falla después de eliminar
 el factor, la pantalla lo indica para que administración contacte al socio por
 un canal verificado. No se envía el QR por correo.
 
-La eliminación de cuentas se habilita con la migración
-`202610220002_admin_user_deletion.sql` y la función `admin-delete-user`. Solo un
-administrador con MFA puede ejecutarla; el modal solicita un motivo editable y
-lo registra en auditoría junto con una copia del nombre/correo, incluso después
-de borrar el perfil. El auditor puede consultar el evento y su motivo desde
-**Auditoría**. Para proteger el historial, no se permite eliminar cuentas con
-registros operativos asociados, saldos distintos de cero ni eliminar la propia
-cuenta o al último administrador.
+La gestión de cuentas requiere aplicar las migraciones pendientes, incluidas
+`202610220002_admin_user_deletion.sql`,
+`202610220003_fix_user_deletion_validation_types.sql` y
+`202610220004_account_deactivation_and_safe_deletion.sql`, y desplegar
+`admin-delete-user` y `admin-set-user-status`. Solo administración con MFA puede
+usar estas acciones desde **Socios y roles**. Desactivar bloquea el acceso,
+conserva datos y documentos y permite reactivar; la acción queda auditada.
+Eliminar es permanente: pide un motivo y no procede con operaciones que deban
+conservarse, saldos distintos de cero, la propia cuenta o el último
+administrador. Si hay datos privados, exige confirmar que se trata de una
+cuenta de prueba o que existe autorización para purgarlos; el archivo de
+identidad se elimina del almacenamiento privado y la acción queda registrada
+en auditoría.
 
 La invitación es de un solo uso y vence en 72 horas. El socio inicia sesión con
 el correo invitado, acepta el enlace y espera la aprobación final de

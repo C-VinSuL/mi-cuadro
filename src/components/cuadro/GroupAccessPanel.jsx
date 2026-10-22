@@ -240,16 +240,16 @@ const GroupAccessPanel = ({ onMembershipChange }) => {
   };
 
   return (
-    <section className="space-y-5 border-y border-slate-200 py-5">
+    <section className="min-w-0 w-full space-y-5 border-y border-slate-200 py-5">
       {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
 
       <div className={`grid gap-6 ${esSocio && puedeGestionarGrupos ? "lg:grid-cols-2" : ""}`}>
         {esSocio && (
-          <div className="space-y-3">
+          <div className="min-w-0 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="flex items-center gap-2 font-semibold text-slate-900"><UserRoundPlus size={18} /> Grupos disponibles</h2>
-                <p className="mt-1 text-sm text-slate-500">Solicita una invitación. El administrador revisará tu petición antes de enviar el enlace.</p>
+              <div className="min-w-0 flex-1">
+                <h2 className="flex min-w-0 items-center gap-2 font-semibold text-slate-900"><UserRoundPlus size={18} className="shrink-0" /> <span className="break-words">Grupos disponibles</span></h2>
+                <p className="mt-1 break-words text-sm text-slate-500">Solicita una invitación. El administrador revisará tu petición antes de enviar el enlace.</p>
               </div>
               <button type="button" onClick={actualizarDirectorio} disabled={cargandoDirectorio} className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-800 hover:text-emerald-950 disabled:opacity-60">
                 <RefreshCw size={15} /> Actualizar
@@ -262,9 +262,9 @@ const GroupAccessPanel = ({ onMembershipChange }) => {
             ) : (
               <div className="divide-y divide-slate-200 border-y border-slate-200">
                 {gruposDisponibles.map((item) => (
-                  <article key={item.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
-                    <div>
-                      <h3 className="font-semibold text-slate-900">{item.nombre}</h3>
+                  <article key={item.id} className="flex min-w-0 flex-col items-start gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0 w-full sm:flex-1">
+                      <h3 className="break-words font-semibold text-slate-900">{item.nombre}</h3>
                       <p className="mt-1 text-sm text-slate-600">
                         {item.integrantes} / {item.capacidad} socios · ${Number(item.aporte).toFixed(2)} {item.periodicidad}
                       </p>
@@ -274,7 +274,7 @@ const GroupAccessPanel = ({ onMembershipChange }) => {
                         {item.mi_estado === "invitacion_enviada" ? "Invitación enviada" : item.mi_estado === "pendiente" ? "Solicitud enviada" : item.mi_estado}
                       </span>
                     ) : (
-                      <button type="button" onClick={() => solicitarInvitacion(item.id)} disabled={enviando} className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-60">
+                      <button type="button" onClick={() => solicitarInvitacion(item.id)} disabled={enviando} className="inline-flex w-full items-center justify-center gap-2 whitespace-normal rounded-lg bg-emerald-800 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-60 sm:w-auto">
                         <Mail size={16} /> Solicitar invitación
                       </button>
                     )}

@@ -45,16 +45,20 @@ Deno.serve(async (request) => {
     return jsonResponse(403, { error: "Debes verificar tu segundo factor antes de eliminar una cuenta." });
   }
 
-  let body: { userId?: string; reason?: string };
+  let body: { userId?: string; reason?: string; purgePersonalData?: boolean };
   try {
-    body = await request.json();
+    const payload = await request.json();
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return jsonResponse(400, { error: "La solicitud no contiene un objeto JSON válido." });
+    }
+    body = payload;
   } catch {
     return jsonResponse(400, { error: "La solicitud no contiene JSON válido." });
   }
-  if (!body.userId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.userId)) {
+  if (typeof body.userId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.userId)) {
     return jsonResponse(400, { error: "La cuenta seleccionada no es válida." });
   }
-  const reason = body.reason?.trim();
+  const reason = typeof body.reason === "string" ? body.reason.trim() : "";
   if (!reason || reason.length < 10 || reason.length > 500) {
     return jsonResponse(400, { error: "El motivo debe tener entre 10 y 500 caracteres." });
   }
@@ -72,10 +76,27 @@ Deno.serve(async (request) => {
   if (!validation.puede_eliminar) {
     return jsonResponse(409, { error: validation.mensaje || "La cuenta tiene registros que deben conservarse." });
   }
+  if (validation.tiene_datos_privados && body.purgePersonalData !== true) {
+    return jsonResponse(409, { error: "Confirma la purga de los datos personales privados para continuar." });
+  }
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  let identityDocumentPath: string | null = null;
+  if (validation.tiene_datos_privados) {
+    const { data: privateData, error: privateDataError } = await adminClient
+      .from("datos_personales_privados")
+      .select("documento_identidad_path")
+      .eq("perfil_id", body.userId)
+      .maybeSingle();
+    if (privateDataError) {
+      console.error("No se pudieron consultar los datos privados antes de eliminar la cuenta:", privateDataError);
+      return jsonResponse(500, { error: "No se pudieron verificar los datos privados de la cuenta." });
+    }
+    identityDocumentPath = privateData?.documento_identidad_path || null;
+  }
+
   const { data: auditRow, error: auditError } = await adminClient
     .from("auditoria_eventos")
     .insert({
@@ -87,6 +108,7 @@ Deno.serve(async (request) => {
         usuario_nombre: validation.usuario_nombre || "Usuario sin nombre",
         usuario_correo: validation.correo || null,
         usuario_rol: validation.rol || null,
+        datos_personales_purgados: Boolean(validation.tiene_datos_privados),
         resultado: "en_proceso",
       },
     })
@@ -95,6 +117,32 @@ Deno.serve(async (request) => {
   if (auditError || !auditRow) {
     console.error("No se pudo registrar la eliminación antes de ejecutarla:", auditError);
     return jsonResponse(500, { error: "No se pudo registrar la acción en auditoría; la cuenta no fue eliminada." });
+  }
+
+  if (identityDocumentPath) {
+    const { error: storageError } = await adminClient.storage
+      .from("identity-documents")
+      .remove([identityDocumentPath]);
+    if (storageError) {
+      console.error("No se pudo purgar el documento privado antes de eliminar la cuenta:", storageError);
+      const { error: auditUpdateError } = await adminClient
+        .from("auditoria_eventos")
+        .update({
+          detalles: {
+            motivo: reason,
+            usuario_nombre: validation.usuario_nombre || "Usuario sin nombre",
+            usuario_correo: validation.correo || null,
+            usuario_rol: validation.rol || null,
+            datos_personales_purgados: false,
+            resultado: "fallida_purga_documento",
+          },
+        })
+        .eq("id", auditRow.id);
+      if (auditUpdateError) {
+        console.error("No se pudo registrar el fallo de purga en auditoría:", auditUpdateError);
+      }
+      return jsonResponse(502, { error: "No se pudo eliminar el documento privado; la cuenta no fue eliminada." });
+    }
   }
 
   const { error: deleteError } = await adminClient.auth.admin.deleteUser(body.userId, false);
@@ -108,14 +156,77 @@ Deno.serve(async (request) => {
           usuario_nombre: validation.usuario_nombre || "Usuario sin nombre",
           usuario_correo: validation.correo || null,
           usuario_rol: validation.rol || null,
-          resultado: "fallida",
+          datos_personales_purgados: Boolean(validation.tiene_datos_privados),
+          resultado: identityDocumentPath ? "fallida_documento_purgado" : "fallida",
         },
       })
       .eq("id", auditRow.id);
     if (auditUpdateError) {
       console.error("No se pudo registrar el fallo de eliminación en auditoría:", auditUpdateError);
     }
-    return jsonResponse(502, { error: "Supabase no pudo eliminar la cuenta. No se completó la eliminación." });
+    return jsonResponse(502, {
+      error: identityDocumentPath
+        ? "Se purgó el documento privado, pero Supabase no pudo eliminar la cuenta. No reintentes sin revisar el registro."
+        : "Supabase no pudo eliminar la cuenta. No se completó la eliminación.",
+    });
+  }
+
+  const { error: profileDeleteError } = await adminClient
+    .from("perfiles")
+    .delete()
+    .eq("id", body.userId);
+  if (profileDeleteError) {
+    console.error("La cuenta de autenticación se eliminó, pero no se pudo eliminar el perfil:", profileDeleteError);
+    const { error: auditUpdateError } = await adminClient
+      .from("auditoria_eventos")
+      .update({
+        detalles: {
+          motivo: reason,
+          usuario_nombre: validation.usuario_nombre || "Usuario sin nombre",
+          usuario_correo: validation.correo || null,
+          usuario_rol: validation.rol || null,
+          datos_personales_purgados: Boolean(validation.tiene_datos_privados),
+          resultado: "auth_eliminada_perfil_pendiente",
+        },
+      })
+      .eq("id", auditRow.id);
+    if (auditUpdateError) {
+      console.error("No se pudo registrar el perfil pendiente de eliminación en auditoría:", auditUpdateError);
+    }
+    return jsonResponse(500, {
+      error: "Se eliminó el acceso de autenticación, pero el perfil sigue pendiente de eliminación. Contacta a soporte antes de volver a intentar.",
+    });
+  }
+
+  const { data: remainingProfile, error: profileCheckError } = await adminClient
+    .from("perfiles")
+    .select("id")
+    .eq("id", body.userId)
+    .maybeSingle();
+  if (profileCheckError || remainingProfile) {
+    console.error(
+      "La cuenta de autenticación se eliminó, pero no se pudo confirmar la eliminación del perfil:",
+      profileCheckError || "El perfil aún existe",
+    );
+    const { error: auditUpdateError } = await adminClient
+      .from("auditoria_eventos")
+      .update({
+        detalles: {
+          motivo: reason,
+          usuario_nombre: validation.usuario_nombre || "Usuario sin nombre",
+          usuario_correo: validation.correo || null,
+          usuario_rol: validation.rol || null,
+          datos_personales_purgados: Boolean(validation.tiene_datos_privados),
+          resultado: "auth_eliminada_perfil_pendiente",
+        },
+      })
+      .eq("id", auditRow.id);
+    if (auditUpdateError) {
+      console.error("No se pudo registrar la verificación pendiente del perfil en auditoría:", auditUpdateError);
+    }
+    return jsonResponse(500, {
+      error: "Se eliminó el acceso de autenticación, pero no se pudo confirmar que desapareciera el perfil. Contacta a soporte antes de volver a intentar.",
+    });
   }
 
   const { error: auditUpdateError } = await adminClient
@@ -126,6 +237,7 @@ Deno.serve(async (request) => {
         usuario_nombre: validation.usuario_nombre || "Usuario sin nombre",
         usuario_correo: validation.correo || null,
         usuario_rol: validation.rol || null,
+        datos_personales_purgados: Boolean(validation.tiene_datos_privados),
         resultado: "completada",
       },
     })

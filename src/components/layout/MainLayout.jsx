@@ -87,7 +87,7 @@ const MainLayout = ({ children }) => {
   }, [menuOpen]);
 
   return (
-    <div className="min-h-screen bg-[#F4F7F5]">
+    <div className="min-h-dvh min-w-0 bg-[#F4F7F5]">
 
       {/* SIDEBAR DESKTOP AND TABLET */}
       <div className="hidden lg:block">
@@ -107,7 +107,7 @@ const MainLayout = ({ children }) => {
       )}
 
       {/* CONTENIDO */}
-      <div className={`min-h-screen w-full transition-[padding] duration-300 ease-in-out motion-reduce:transition-none ${menuOpen ? "lg:pl-[290px]" : "xl:pl-[290px]"}`}>
+      <div className={`min-h-dvh min-w-0 w-full transition-[padding] duration-300 ease-in-out motion-reduce:transition-none ${menuOpen ? "lg:pl-[290px]" : "xl:pl-[290px]"}`}>
         <Navbar
           onMenuClick={() => setMenuOpen((open) => !open)}
           menuOpen={menuOpen}
