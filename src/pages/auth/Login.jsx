@@ -32,7 +32,7 @@ const Login = () => {
     setErrorMessage("");
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
 
         email: email.trim(),
         password
@@ -56,7 +56,8 @@ const Login = () => {
       notify({
         title: "Sesión iniciada",
         message: "Bienvenido nuevamente a FlashMonkey.",
-        type: "success"
+        type: "success",
+        recipientId: data.user.id
       });
       navigate(location.state?.from?.pathname || "/", { replace: true });
     } catch (error) {
