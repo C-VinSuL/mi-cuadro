@@ -95,9 +95,16 @@ npx supabase migration repair --status applied 202610070001
 npx supabase db push
 ```
 
-También se pueden ejecutar los archivos SQL en orden desde el SQL Editor de
-Supabase. No vuelvas a ejecutar la migración 001 si ya se aplicó; ejecuta solo
-la 002 pendiente.
+También se pueden ejecutar los archivos SQL pendientes en orden desde el SQL
+Editor de Supabase. Antes de ejecutar una migración manualmente, comprueba que
+no se haya aplicado ya. Para esta funcionalidad, aplica
+`202610220001_mfa_reset_requests.sql` y luego
+`202610220002_admin_user_deletion.sql`. Si ya instalaste esa migración,
+aplica también `202610220003_fix_user_deletion_validation_types.sql` para
+corregir los tipos de retorno del RPC de validación. Si ejecutaste los SQL
+desde el SQL Editor y después usarás `db push`, registra en el historial remoto
+solo las migraciones que realmente ejecutaste, con
+`npx supabase migration repair --status applied <VERSION>`.
 
 ### Funciones Edge y correo de invitación
 
@@ -107,6 +114,8 @@ Despliega las funciones después de aplicar la migración:
 npx supabase functions deploy register-member --no-verify-jwt
 npx supabase functions deploy group-invitations
 npx supabase functions deploy send-welcome-email
+npx supabase functions deploy admin-reset-mfa
+npx supabase functions deploy admin-delete-user
 ```
 
 Si el registro informó que la cuenta se creó pero no pudo guardar el perfil,
@@ -123,6 +132,8 @@ npx supabase secrets set APP_URL=https://mi-dominio.example
 npx supabase secrets set BREVO_API_KEY=xkeysib-xxxxxxxxx
 npx supabase secrets set 'INVITATION_FROM=FlashMonkey <invitaciones@mi-dominio.example>'
 npx supabase functions deploy group-invitations
+npx supabase functions deploy admin-reset-mfa
+npx supabase functions deploy admin-delete-user
 ```
 
 Obtén la clave API desde la sección **SMTP & API > API Keys** de Brevo.
@@ -185,6 +196,36 @@ Supabase proporciona las variables `SUPABASE_URL`, `SUPABASE_ANON_KEY` y
 `service_role` en el frontend ni en el repositorio. Configura también el envío
 de confirmaciones de cuenta de Supabase Auth mediante SMTP y habilita TOTP/MFA
 en la configuración de Auth del proyecto.
+
+El QR TOTP solo se entrega al crear el factor y no puede recuperarse después.
+Si un socio pierde acceso a su aplicación, primero debe intentar restaurar sus
+códigos mediante la sincronización de Google Authenticator. Si no es posible,
+administración debe verificar su identidad y restablecer el factor TOTP desde
+la gestión segura de usuarios de Supabase Auth. Al iniciar sesión de nuevo, la
+aplicación le permitirá registrar un factor nuevo y mostrará otro QR. No se debe
+desactivar MFA ni pedir al socio que comparta su contraseña o códigos.
+Desde la pantalla de verificación, el socio puede solicitar el restablecimiento;
+la petición se notifica a administración y se limita a una cada 24 horas.
+
+Para habilitar el flujo desde la aplicación, aplica la migración
+`202610220001_mfa_reset_requests.sql` y despliega `admin-reset-mfa`. La persona
+administradora debe localizar la cuenta indicada en la notificación de
+solicitud, verificar la identidad del socio por un canal confiable y usar
+**Restablecer MFA** en la pantalla **Socios y roles**. La función comprueba
+sesión administrativa con MFA, rol y solicitud pendiente; elimina solo los
+factores TOTP y envía al correo confirmado las instrucciones para iniciar sesión
+de nuevo y registrar otro QR. Si el envío de correo falla después de eliminar
+el factor, la pantalla lo indica para que administración contacte al socio por
+un canal verificado. No se envía el QR por correo.
+
+La eliminación de cuentas se habilita con la migración
+`202610220002_admin_user_deletion.sql` y la función `admin-delete-user`. Solo un
+administrador con MFA puede ejecutarla; el modal solicita un motivo editable y
+lo registra en auditoría junto con una copia del nombre/correo, incluso después
+de borrar el perfil. El auditor puede consultar el evento y su motivo desde
+**Auditoría**. Para proteger el historial, no se permite eliminar cuentas con
+registros operativos asociados, saldos distintos de cero ni eliminar la propia
+cuenta o al último administrador.
 
 La invitación es de un solo uso y vence en 72 horas. El socio inicia sesión con
 el correo invitado, acepta el enlace y espera la aprobación final de

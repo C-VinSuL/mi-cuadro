@@ -12,6 +12,8 @@ const MfaSetup = () => {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [requestingMfaReset, setRequestingMfaReset] = useState(false);
+  const [mfaResetRequestStatus, setMfaResetRequestStatus] = useState("");
   const [error, setError] = useState("");
   const [setupAttempt, setSetupAttempt] = useState(0);
   const setupPromise = useRef(null);
@@ -110,6 +112,29 @@ const MfaSetup = () => {
     setSetupAttempt((attempt) => attempt + 1);
   };
 
+  const solicitarRestablecimientoMfa = async () => {
+    if (requestingMfaReset) return;
+
+    setRequestingMfaReset(true);
+    setMfaResetRequestStatus("");
+    try {
+      const { data, error: requestError } = await supabase.rpc("solicitar_restablecimiento_mfa");
+      if (requestError) throw requestError;
+      if (data === "sent") {
+        setMfaResetRequestStatus("sent");
+      } else if (data === "already_sent") {
+        setMfaResetRequestStatus("already_sent");
+      } else {
+        throw new Error("No se pudo confirmar el envío de la solicitud.");
+      }
+    } catch (requestError) {
+      console.error("Error solicitando restablecimiento de MFA:", requestError);
+      setMfaResetRequestStatus("error");
+    } finally {
+      setRequestingMfaReset(false);
+    }
+  };
+
   const verificarCodigo = async (event) => {
     event.preventDefault();
     if (!factor?.id || submitting) return;
@@ -150,7 +175,11 @@ const MfaSetup = () => {
       <section className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl sm:p-9">
         <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Protección de cuenta</p>
         <h1 className="mt-2 text-2xl font-bold text-slate-950">Verificación en dos pasos</h1>
-        <p className="mt-2 text-sm leading-6 text-slate-600">Para proteger la información y los movimientos de dinero, usa Google Authenticator para escanear el código QR y confirmar tu acceso.</p>
+        <p className="mt-2 text-sm leading-6 text-slate-600">
+          {qrCode
+            ? "Para proteger la información y los movimientos de dinero, escanea el código con Google Authenticator y confirma tu acceso."
+            : "Ingresa el código actual de tu aplicación de autenticación para confirmar tu acceso."}
+        </p>
 
         {loading ? (
           <p className="mt-6 text-sm text-slate-600" role="status">Preparando MFA...</p>
@@ -175,6 +204,48 @@ const MfaSetup = () => {
                   <summary className="cursor-pointer font-medium">No puedo escanear el código</summary>
                   <code className="mt-2 block break-all rounded bg-slate-50 p-2">{secret}</code>
                 </details>
+              </div>
+            )}
+            {!qrCode && (
+              <aside className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+                <p className="font-semibold">¿Borraste Google Authenticator o perdiste el teléfono?</p>
+                <p className="mt-2">
+                  Si tenías la sincronización de Google Authenticator activada, reinstala la aplicación e inicia sesión con la misma cuenta de Google. El QR anterior no se puede volver a mostrar.
+                </p>
+                <p className="mt-2">
+                  Si no puedes recuperar tus códigos, solicita el restablecimiento a administración. Verificarán tu identidad antes de ayudarte. No compartas tu contraseña ni códigos de verificación.
+                </p>
+              </aside>
+            )}
+            {!qrCode && (
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={solicitarRestablecimientoMfa}
+                  disabled={requestingMfaReset || mfaResetRequestStatus === "sent" || mfaResetRequestStatus === "already_sent"}
+                  className="text-left text-sm font-semibold text-emerald-800 underline decoration-emerald-300 underline-offset-4 transition hover:text-emerald-950 disabled:cursor-default disabled:text-slate-500"
+                >
+                  {requestingMfaReset
+                    ? "Enviando solicitud..."
+                    : mfaResetRequestStatus === "sent" || mfaResetRequestStatus === "already_sent"
+                      ? "Solicitud enviada a administración"
+                      : "Solicitar restablecimiento del segundo factor"}
+                </button>
+                {mfaResetRequestStatus === "sent" && (
+                  <p className="mt-2 text-sm text-emerald-800" role="status">
+                    Administración recibió tu solicitud y verificará tu identidad antes de restablecer el acceso.
+                  </p>
+                )}
+                {mfaResetRequestStatus === "already_sent" && (
+                  <p className="mt-2 text-sm text-emerald-800" role="status">
+                    Ya enviaste una solicitud recientemente. Administración recibió el aviso; espera su respuesta.
+                  </p>
+                )}
+                {mfaResetRequestStatus === "error" && (
+                  <p className="mt-2 text-sm text-red-700" role="alert">
+                    No se pudo enviar la solicitud. Inténtalo nuevamente más tarde.
+                  </p>
+                )}
               </div>
             )}
             <form onSubmit={verificarCodigo} className="mt-6 space-y-4">

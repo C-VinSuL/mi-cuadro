@@ -24,6 +24,44 @@ export const cambiarRolPerfil = (perfilId, rol) => callRpc("cambiar_rol_perfil_a
   p_nuevo_rol: rol
 });
 
+export const solicitarRestablecimientoMfaAdministrador = async (perfilId) => {
+  const { data, error } = await supabase.functions.invoke("admin-reset-mfa", {
+    body: { userId: perfilId }
+  });
+  if (error) {
+    if (error.context instanceof Response) {
+      let responseBody;
+      try {
+        responseBody = await error.context.clone().json();
+      } catch {
+        throw error;
+      }
+      if (typeof responseBody?.error === "string") throw new Error(responseBody.error);
+    }
+    throw error;
+  }
+  return data;
+};
+
+export const eliminarUsuarioAdministrador = async ({ perfilId, motivo }) => {
+  const { data, error } = await supabase.functions.invoke("admin-delete-user", {
+    body: { userId: perfilId, reason: motivo }
+  });
+  if (error) {
+    if (error.context instanceof Response) {
+      let responseBody;
+      try {
+        responseBody = await error.context.clone().json();
+      } catch {
+        throw error;
+      }
+      if (typeof responseBody?.error === "string") throw new Error(responseBody.error);
+    }
+    throw error;
+  }
+  return data;
+};
+
 export const listarDocumentosPendientes = () => callRpc("listar_documentos_pendientes_tesorero", {});
 
 export const verificarDocumento = (perfilId) => callRpc("verificar_documento_tesorero", {

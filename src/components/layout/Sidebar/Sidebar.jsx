@@ -11,7 +11,6 @@ import {
   FileClock,
   PiggyBank,
   CalendarDays,
-  X
 } from "lucide-react";
 
 import { useEffect, useState } from "react";
@@ -100,7 +99,9 @@ const menu = [
 
 const Sidebar = ({
   mobile = false,
-  onClose
+  onClose,
+  navigationRef,
+  desktopCollapsed = false
 }) => {
 
   const { can, rol } =  usePermissions();
@@ -186,28 +187,28 @@ const Sidebar = ({
       flex
       flex-col
       overflow-hidden
-
+      ${mobile ? "mobile-menu-panel" : "transition-transform duration-300 ease-in-out motion-reduce:transition-none"}
       ${
         mobile
           ? "w-full"
-          : "fixed inset-y-0 left-0 w-[290px]"
+          : `fixed inset-y-0 left-0 w-[290px] ${desktopCollapsed ? "-translate-x-full xl:translate-x-0" : "translate-x-0"}`
       }
     `}
+    id={mobile ? "mobile-navigation" : "desktop-navigation"}
+    ref={mobile ? navigationRef : undefined}
+    role={mobile ? "dialog" : undefined}
+    aria-modal={mobile ? true : undefined}
+    aria-label={mobile ? "Menú de navegación" : undefined}
   >
 
       {/* LOGO */}
 
       <div
-        className="
-          px-5
-          py-5
-          bg-[#023a2d]
-
-          border-b
-          border-white/10
-        "
+        className={`shrink-0 border-b border-white/10 bg-[#023a2d] ${
+          mobile ? "px-4 py-4 sm:px-5 sm:py-5" : "px-5 py-5"
+        }`}
+        style={mobile ? { paddingTop: "max(1rem, env(safe-area-inset-top))" } : undefined}
       >
-
         <div
           className="
             flex
@@ -215,40 +216,17 @@ const Sidebar = ({
             justify-between
           "
         >
-
-          <div className="flex min-w-0 flex-1 items-center">
+          <div className={`flex min-w-0 flex-1 items-center ${
+            mobile ? "justify-end" : ""
+          }`}>
             <img
               src="/flashmonkey-logo.png"
               alt="FlashMonkey, caja comunal"
-              className="h-auto w-full max-w-[220px] object-contain object-left"
+              className={mobile
+                ? "h-[104px] w-auto max-w-[calc(100vw-104px)] object-contain object-right"
+                : "h-auto w-full max-w-[220px] object-contain object-left"}
             />
-
           </div>
-
-
-          {/* CERRAR MOBILE */}
-
-          {mobile && (
-
-            <button
-              onClick={onClose}
-              className="
-                w-10
-                h-10
-
-                flex
-                items-center
-                justify-center
-
-                rounded-xl
-
-                hover:bg-white/10
-              "
-            >
-              <X size={21} />
-            </button>
-
-          )}
 
         </div>
 

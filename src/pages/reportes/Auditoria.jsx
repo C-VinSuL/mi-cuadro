@@ -9,6 +9,14 @@ const escapeCsv = (input) => {
   return `"${safe.replaceAll('"', '""')}"`;
 };
 
+const formatAuditDetails = (details) => {
+  const { motivo, ...otherDetails } = details || {};
+  return [
+    motivo ? `Motivo: ${motivo}` : "",
+    Object.keys(otherDetails).length > 0 ? JSON.stringify(otherDetails) : ""
+  ].filter(Boolean).join(" · ") || "—";
+};
+
 const Auditoria = () => {
   const { grupos } = useAuth();
   const [groupId, setGroupId] = useState("");
@@ -70,7 +78,7 @@ const Auditoria = () => {
         <div>
           <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700"><ShieldCheck size={17} /> Control y trazabilidad</p>
           <h1 className="mt-1 text-3xl font-bold text-slate-900">Auditoría</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Registro de invitaciones, aceptación de términos de ingreso, aprobación de membresía, inicio de cuadros y cambios de roles. La IP solo queda disponible cuando la acción pasó por el servicio seguro de invitación.</p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Registro de invitaciones, aceptación de términos de ingreso, aprobación de membresía, inicio de cuadros, cambios de roles y eliminaciones de cuentas. El motivo de cada eliminación queda disponible para administración y auditoría.</p>
         </div>
         <div className="flex gap-2 print:hidden">
           <button type="button" onClick={exportCsv} disabled={events.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><Download size={16} /> Exportar CSV</button>
@@ -130,7 +138,7 @@ const Auditoria = () => {
                     <td className="px-4 py-3 text-slate-700">{event.actor || "—"}</td>
                     <td className="px-4 py-3 text-slate-700">{event.objetivo || "—"}</td>
                     <td className="px-4 py-3 font-mono text-xs text-slate-600">{event.direccion_ip || "No disponible"}</td>
-                    <td className="max-w-xs px-4 py-3 text-xs text-slate-500">{JSON.stringify(event.detalles || {})}</td>
+                    <td className="max-w-xs whitespace-normal px-4 py-3 text-xs text-slate-500">{formatAuditDetails(event.detalles)}</td>
                   </tr>
                 ))}
               </tbody>
