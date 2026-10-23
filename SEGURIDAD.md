@@ -1,129 +1,63 @@
 # Seguridad de FlashMonkey
 
-## Alcance y estado
+Este documento ofrece recomendaciones para desarrollar, configurar y operar
+FlashMonkey de forma segura. No contiene credenciales ni sustituye la
+configuración de seguridad del proyecto Supabase o del proveedor de hosting.
 
-Evaluación del código, las migraciones versionadas y la configuración del
-repositorio al 17 de octubre de 2026. La aplicación aún no está desplegada; no
-se pudieron inspeccionar los ajustes efectivos de Supabase ni probar políticas
-contra un proyecto real. Los elementos que dependen de esos entornos siguen
-marcados como pendientes, no como vulnerabilidades confirmadas.
+## Protección de credenciales
 
-La interfaz nunca es la frontera de autorización: cada lectura o cambio de
-datos debe estar protegido también por RLS o por una función de base de datos
-que valide identidad, rol, MFA y reglas de negocio.
+- No guardes contraseñas, tokens, claves privadas, archivos de servicio ni
+  credenciales de proveedores en el repositorio.
+- Mantén `.env` local fuera de Git; el archivo está excluido por `.gitignore`.
+- Usa únicamente variables `VITE_*` para valores que pueden ser públicos en el
+  navegador, como la URL de Supabase y su clave publicable.
+- La clave `service_role`, claves de correo y otros secretos deben permanecer
+  en el almacén seguro del servidor o de Supabase Edge Functions. Nunca deben
+  exponerse al cliente.
+- Si un secreto se publica accidentalmente, revócalo y rótalo inmediatamente.
+  Eliminarlo de un archivo no lo borra de versiones anteriores del repositorio.
+- Antes de compartir capturas o registros, oculta tokens, cookies, correos,
+  nombres, documentos e información financiera.
 
-## Controles incorporados al repositorio
+## Autorización y datos
 
-- Supabase Auth usa el flujo PKCE. Las rutas de la aplicación exigen MFA TOTP
-  AAL2 y varias RPC críticas también comprueban AAL2 y el rol en la base de
-  datos.
-- Las Edge Functions comparan el encabezado `Origin` con el origen HTTPS de
-  `APP_URL`; ya no responden con CORS `*`. Las llamadas sin `Origin` siguen
-  permitidas para clientes no navegador, y cada función conserva su propia
-  autenticación/autorización.
-- `vercel.json` configura CSP, HSTS, protección contra MIME sniffing y
-  framing, política de referrer y permisos del navegador. La CSP permite
-  avatares desde URLs HTTPS y conexiones al dominio estándar de Supabase; si
-  se usa un dominio personalizado de Supabase, hay que ajustar `connect-src`.
-- Las migraciones incorporan RLS y restringen el acceso directo en áreas como
-  notificaciones, solicitudes/invitaciones, auditoría, datos personales
-  privados, documentos de identidad y billetera.
-- `202610170002_member_scoped_access.sql` restringe los perfiles al titular,
-  grupos y registros de aportes/entregas al grupo del socio, y préstamos/cuotas
-  al titular. Socios no acceden al fondo comunitario. Administración, tesorería
-  y auditoría conservan la lectura general que requiere la aplicación.
-- Se revocó la escritura directa por PostgREST en perfiles, grupos,
-  participantes y registros financieros. Los cambios se realizan mediante
-  RPC/funciones de servidor. El socio registra su aporte con
-  `registrar_aporte_propio`, que valida titularidad, MFA, estado del grupo,
-  periodo, comprobante privado y duplicados, y lo deja pendiente de revisión.
-  La migración `202610170003_contribution_receipt_review.sql` añade el bucket
-  privado de comprobantes, limita la lectura a su titular o a tesorería/
-  administración con MFA, y permite aprobar/rechazar mediante
-  `resolver_aporte_comprobante`. La decisión se valida en servidor y se audita;
-  un aporte solo pasa a pagado al aprobarse. Se conservan las solicitudes
-  propias de billetera/invitación y la edición del propio perfil mediante sus
-  funciones existentes.
-- `npm audit` se ejecutó para dependencias de producción y para el árbol
-  completo; ambos reportaron cero vulnerabilidades en la fecha de revisión.
-- `.env` está excluido por `.gitignore` y no está versionado. La clave pública
-  de Supabase incluida en el bundle del navegador no es un secreto; la clave
-  `service_role` y las claves de correo sí lo son y solo deben existir en los
-  secretos de Supabase.
+- La interfaz no es una frontera de seguridad. Valida permisos en el backend y
+  aplica políticas de acceso a las tablas, archivos y funciones.
+- Mantén habilitadas y revisadas las políticas de Row Level Security (RLS) para
+  los datos expuestos al cliente.
+- Limita cada rol a las operaciones que necesita. Las acciones financieras y
+  administrativas deben validarse en el servidor y quedar auditables cuando
+  corresponda.
+- No uses datos reales para pruebas de acceso, migraciones o cambios de
+  permisos; crea cuentas y grupos ficticios en un proyecto separado.
+- Protege los comprobantes y documentos personales con almacenamiento privado
+  y acceso autorizado.
 
-## Matriz OWASP
+## Configuración de entornos
 
-| Riesgo | Estado observado | Siguiente paso |
-|---|---|---|
-| **A01 Control de acceso roto** | Las migraciones `202610170002_member_scoped_access.sql` y `202610170003_contribution_receipt_review.sql` instalan políticas de lectura por titular/grupo, limitan los comprobantes privados y quitan escritura directa a sesiones autenticadas en perfiles, grupos, participantes y finanzas. Los socios pueden leer el libro de aportes/entregas de sus grupos, no los de otros grupos ni el fondo comunitario. Las migraciones aún no se han ejecutado en una instancia Supabase. | Aplicar las migraciones y probar lecturas cruzadas, escritura directa y RPC con socios de prueba. No confiar en `RoleRoute` como control de servidor. |
-| **A02 Configuración de seguridad incorrecta** | `.env` no está versionado. Los encabezados para Vercel están definidos, pero aún no se han probado en un despliegue real. | Mantener los secretos fuera de Git/Vercel client env; comprobar encabezados después del primer despliegue y rotar cualquier secreto que se hubiera expuesto históricamente. |
-| **A03 Cadena de suministro** | `npm audit --omit=dev --audit-level=high` y `npm audit --audit-level=high` reportaron cero vulnerabilidades. | Repetir la auditoría en CI y al actualizar dependencias. |
-| **A04 Fallas criptográficas** | Se usa Supabase Auth con PKCE y no se guardan contraseñas propias. HTTPS/HSTS se configura para Vercel; todavía no hay dominio desplegado que validar. | Usar HTTPS en el dominio final y revisar ajustes de Auth, recuperación de cuenta y retención de sesiones. |
-| **A05 Inyección** | No se observó uso de `innerHTML`, `dangerouslySetInnerHTML`, `eval` o `new Function` en las áreas inspeccionadas. | Mantener consultas parametrizadas/RPC, validar entradas en servidor y evitar renderizar HTML no confiable. |
-| **A06 Diseño inseguro** | La app maneja importes, pertenencias y movimientos financieros; las reglas deben ejecutarse en RPC/transacciones y restricciones de base de datos. No se pudo probar el esquema desplegado. | Probar importes, IDs, roles, pertenencia, estados y reintentos manipulados desde un usuario de prueba no privilegiado. |
-| **A07 Identificación y autenticación** | Las rutas de la app requieren MFA AAL2; la garantía depende también de Auth/RLS/RPC, pues un cliente puede llamar a Supabase directamente. `register-member` omite verificación JWT intencionalmente para permitir registros públicos. | En Supabase, establecer AAL2 como nivel requerido, habilitar protección de contraseñas filtradas, límites de Auth y CAPTCHA para registro si está disponible; mantener confirmación de correo y allow-list de redirects. |
-| **A08 Integridad de software y datos** | Varias RPC elevadas usan `SECURITY DEFINER`, `search_path` explícito, validación de MFA/rol y permisos de ejecución restringidos. | Revisar permisos y autorización de cada nueva RPC/trigger antes de desplegar; probarla con anon, socio y rol administrativo. |
-| **A09 Registro y alertas** | Hay una tabla de auditoría para ciertos cambios, pero no se revisaron la retención, alertas ni registros del proyecto Supabase. | Definir retención y alertas en Supabase; registrar acciones administrativas/financieras sin guardar credenciales ni tokens. |
-| **A10 Manejo inadecuado de condiciones excepcionales** | Las migraciones agrupan varias operaciones financieras en RPC transaccionales; no se ejecutaron pruebas de integración ni de fallos porque no hay instancia Supabase disponible. | Probar errores, reintentos y concurrencia en un proyecto de prueba y confirmar que el saldo y el libro de movimientos siguen consistentes. |
+- Separa desarrollo, pruebas y producción; verifica cuidadosamente el proyecto
+  Supabase seleccionado antes de aplicar cambios.
+- Revisa el historial remoto y local de migraciones antes de ejecutar `db push`.
+  Las migraciones del repositorio son incrementales y pueden modificar datos o
+  permisos; respáldalos y pruébalos primero.
+- Limita los dominios de Auth, OAuth, CORS y redirección a los orígenes
+  necesarios. Usa HTTPS en producción.
+- Configura las variables de entorno y secretos desde el panel seguro del
+  proveedor correspondiente; evita pegarlos en comandos que queden guardados en
+  el historial de terminal.
+- Mantén dependencias y herramientas actualizadas. Revisa los resultados de
+  `npm audit` y analiza cualquier actualización antes de desplegarla.
 
-## Configuración antes del primer despliegue
+## Si sospechas una exposición
 
-### Vercel
+1. Revoca o rota la credencial afectada en el proveedor que la emitió.
+2. Revisa los registros de acceso y las acciones recientes del servicio.
+3. Identifica en qué entornos se usó y actualiza sus secretos.
+4. Elimina la credencial del repositorio y, si estuvo en el historial, sigue el
+   procedimiento del proveedor Git para sanearlo; la rotación sigue siendo
+   obligatoria.
+5. Notifica a las personas responsables del proyecto por un canal privado.
 
-1. Importar el proyecto y usar `mi-cuadro` como raíz de proyecto, con el build
-   `npm run build` y salida `dist`.
-2. Definir `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en el entorno de
-   compilación. Son valores visibles para el navegador; nunca añadir
-   `SUPABASE_SERVICE_ROLE_KEY` ni claves de Brevo a variables `VITE_*`.
-3. Tras desplegar, comprobar que la respuesta HTML incluye las cabeceras
-   declaradas en `vercel.json` y que Login, OAuth de Google, MFA, QR de TOTP,
-   avatares y llamadas a Supabase funcionan bajo la CSP.
-4. Mantener HTTPS en el dominio. Si se habilitan imágenes o servicios bajo
-   dominios distintos, agregar solo los orígenes necesarios a la CSP.
-
-### Supabase
-
-1. Configurar `APP_URL` como el origen exacto de la app (sin rutas), por
-   ejemplo `https://app.example.com`; para desarrollo local se permite
-   `http://localhost` o `http://127.0.0.1`. Las Edge Functions rechazan
-   orígenes diferentes; las vistas previas de Vercel no funcionarán con otro
-   origen hasta definir una estrategia de allow-list por entorno.
-2. Verificar que `SUPABASE_SERVICE_ROLE_KEY` esté disponible solo como secreto
-   de Edge Function (Supabase normalmente lo provee); configurar
-   `BREVO_API_KEY` e `INVITATION_FROM` como secretos si se despliegan las
-   funciones de correo.
-3. En Auth, configurar el dominio y URLs de redirección permitidos, confirmar
-   correo, nivel AAL2 requerido, protección contra contraseñas filtradas y
-   límites de intentos. Habilitar CAPTCHA/Turnstile para registro si se activa
-   en el proyecto.
-4. Aplicar las migraciones y auditar en el SQL Editor los permisos/RLS de cada
-   tabla expuesta. Probar accesos cruzados usando sesiones normales; nunca
-   usar `service_role` en el navegador.
-5. Desplegar las Edge Functions y probar una llamada desde el dominio
-   autorizado y otra desde un origen distinto; la última debe devolver 403.
-6. Probar el flujo de comprobantes con socios y tesorería AAL2: el archivo
-   debe ser privado, el socio solo debe poder adjuntar el suyo, tesorería debe
-   poder abrirlo y resolver una solicitud pendiente, y un segundo intento de
-   resolución o una llamada desde un rol no autorizado deben fallar.
-
-## Validación de autorización
-
-Realizar estas pruebas solo con datos ficticios en un proyecto de prueba:
-
-1. Crear dos socios de grupos distintos y un usuario para cada rol.
-2. Desde el cliente Supabase, comprobar que cada socio solo puede leer su
-   perfil y los grupos/registros de aportes y entregas de sus propios grupos.
-3. Intentar insertar, actualizar o eliminar directamente perfiles, grupos,
-   participantes y registros financieros; las escrituras directas deben fallar.
-4. Llamar a `registrar_aporte_propio` con el ID de otro participante, con un
-   comprobante ajeno/inexistente, un grupo inactivo, un periodo ya pendiente o
-   aprobado, y con una sesión sin MFA; todas esas llamadas deben fallar. Un
-   aporte propio válido debe quedar pendiente con el monto y periodo del grupo
-   y aparecer en auditoría.
-5. Probar `resolver_aporte_comprobante` con sesión AAL1, AAL2 sin rol,
-   un aporte ajeno al estado pendiente y AAL2 con rol de tesorero/admin; solo
-   la operación autorizada sobre un comprobante pendiente debe completarse.
-
-Hasta aplicar las migraciones y completar estas comprobaciones en un proyecto
-de prueba, estos controles del repositorio no se consideran verificados en el
-entorno de Supabase.
+Para reportar un problema de seguridad, contacta a las personas mantenedoras de
+forma privada. No publiques credenciales, datos personales ni instrucciones
+para explotar sistemas en un issue público.

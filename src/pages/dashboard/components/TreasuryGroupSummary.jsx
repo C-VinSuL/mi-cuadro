@@ -10,17 +10,22 @@ const TreasuryGroupSummary = () => {
   const { grupo, grupos, seleccionarGrupo, user } = useAuth();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
   const [error, setError] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ showRefreshing = false } = {}) => {
+    if (showRefreshing) setRefreshing(true);
     try {
       setRows(await getTreasuryGroupSummary());
       setError("");
+      setLastUpdated(new Date());
     } catch (loadError) {
       console.error("Error cargando resumen financiero de grupos:", loadError);
       setError("No se pudo cargar el resumen financiero de los grupos.");
     } finally {
       setLoading(false);
+      if (showRefreshing) setRefreshing(false);
     }
   }, []);
 
@@ -51,9 +56,19 @@ const TreasuryGroupSummary = () => {
           <h2 id="resumen-grupos-tesoreria" className="mt-1 text-2xl font-bold text-slate-900">Resumen financiero por grupo</h2>
           <p className="mt-1 text-sm text-slate-600">Aportes aprobados del periodo, comprobantes pendientes y saldo del fondo. Selecciona un grupo para ver su actividad en el tablero.</p>
         </div>
-        <button type="button" onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">
-          <RefreshCw size={15} /> Actualizar
-        </button>
+        <div className="flex flex-col items-end gap-1">
+          <button type="button" onClick={() => load({ showRefreshing: true })} disabled={loading || refreshing} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 disabled:cursor-wait disabled:opacity-60">
+            <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />
+            {refreshing ? "Actualizando..." : "Actualizar"}
+          </button>
+          <span className="min-h-4 text-xs text-slate-500" aria-live="polite">
+            {refreshing
+              ? "Consultando los datos más recientes"
+              : lastUpdated
+                ? `Actualizado a las ${lastUpdated.toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" })}`
+                : ""}
+          </span>
+        </div>
       </header>
       {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
       {loading ? (
