@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, CircleDollarSign, ExternalLink, Users, Wallet, X } from "lucide-react";
+import { Check, CircleDollarSign, ExternalLink, RefreshCw, Users, Wallet, X } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
 import { etiquetaPeriodo } from "../../services/grupoService";
@@ -22,16 +22,18 @@ const AportesAdmin = () => {
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [procesandoId, setProcesandoId] = useState(null);
+  const [estadoTiempoReal, setEstadoTiempoReal] = useState("conectando");
   const puedeRevisar = ["administrador", "tesorero"].includes(profile?.rol?.toLowerCase());
+  const estadoTiempoRealVisible = !profile?.id || grupos.length === 0 ? "inactivo" : estadoTiempoReal;
 
-  const cargarAportes = useCallback(async () => {
+  const cargarAportes = useCallback(async ({ mostrarCarga = true } = {}) => {
     if (!grupos.length) {
       setAportes([]);
       setLoading(false);
       return;
     }
 
-    setLoading(true);
+    if (mostrarCarga) setLoading(true);
     setError("");
     const groupIds = grupos.map((grupo) => grupo.id);
     const [participantsResponse, contributionsResponse] = await Promise.all([
@@ -54,7 +56,7 @@ const AportesAdmin = () => {
       socio: participantNames.get(item.participante_id) || "Socio sin identificar",
       grupo: groupNames.get(item.grupo_id) || "Grupo"
     })));
-    setLoading(false);
+    if (mostrarCarga) setLoading(false);
   }, [grupos]);
 
   useEffect(() => {
@@ -72,6 +74,41 @@ const AportesAdmin = () => {
       active = false;
     };
   }, [cargarAportes]);
+
+  useEffect(() => {
+    if (!profile?.id || grupos.length === 0) {
+      return undefined;
+    }
+
+    const groupIds = new Set(grupos.map((grupo) => grupo.id));
+    const channel = supabase
+      .channel(`aportes-admin-${profile.id}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "aportes"
+      }, (payload) => {
+        const changedGroupId = payload.new?.grupo_id || payload.old?.grupo_id;
+        if (changedGroupId && !groupIds.has(changedGroupId)) return;
+
+        cargarAportes({ mostrarCarga: false }).catch((refreshError) => {
+          console.error("Error actualizando aportes en tiempo real:", refreshError);
+          setError("No se pudo actualizar el registro en tiempo real. Usa Actualizar para volver a intentarlo.");
+        });
+      })
+      .subscribe((status, subscriptionError) => {
+        if (status === "SUBSCRIBED") {
+          setEstadoTiempoReal("activo");
+        } else if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
+          if (subscriptionError) console.error("Error en la conexión de tiempo real de aportes:", subscriptionError);
+          setEstadoTiempoReal("error");
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [cargarAportes, grupos, profile?.id]);
 
   const aportesFiltrados = useMemo(() => aportes.filter((aporte) => (
     (grupoFiltro === "todos" || aporte.grupo_id === grupoFiltro)
@@ -134,6 +171,18 @@ const AportesAdmin = () => {
           <p className="mt-2 text-sm text-slate-600">Consulta los aportes registrados por los socios en todos los grupos.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => cargarAportes().catch((loadError) => {
+              console.error("Error actualizando aportes administrativos:", loadError);
+              setError("No se pudieron actualizar los aportes. Intenta nuevamente.");
+              setLoading(false);
+            })}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            <RefreshCw size={16} /> Actualizar
+          </button>
           <select value={grupoFiltro} onChange={(event) => setGrupoFiltro(event.target.value)} aria-label="Filtrar aportes por grupo" className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
             <option value="todos">Todos los grupos</option>
             {grupos.map((grupo) => <option key={grupo.id} value={grupo.id}>{grupo.nombre}</option>)}
@@ -158,7 +207,21 @@ const AportesAdmin = () => {
 
       <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-5 py-4">
-          <h2 className="font-semibold text-slate-900">Registro de aportes</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-semibold text-slate-900">Registro de aportes</h2>
+            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
+              estadoTiempoRealVisible === "activo" ? "text-emerald-700"
+                : estadoTiempoRealVisible === "error" ? "text-amber-700" : "text-slate-500"
+            }`}>
+              <span className={`size-2 rounded-full ${
+                estadoTiempoRealVisible === "activo" ? "bg-emerald-500"
+                  : estadoTiempoRealVisible === "error" ? "bg-amber-500" : "bg-slate-400"
+              }`} />
+              {estadoTiempoRealVisible === "activo" ? "Actualización en tiempo real activa"
+                : estadoTiempoRealVisible === "error" ? "Tiempo real no disponible"
+                  : estadoTiempoRealVisible === "inactivo" ? "Sin grupos para supervisar" : "Conectando en tiempo real..."}
+            </span>
+          </div>
         </div>
         {loading ? (
           <p className="px-5 py-8 text-sm text-slate-500" role="status">Cargando aportes...</p>

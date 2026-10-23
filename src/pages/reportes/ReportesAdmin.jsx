@@ -1,21 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
-import { Download, FileBarChart2, TrendingDown, TrendingUp } from "lucide-react";
+import { Download, FileBarChart2, Printer, TrendingDown, TrendingUp } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
 
 const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
 
-const obtenerTodosLosMovimientos = async (groupIds) => {
+const obtenerTodosLosMovimientos = async (groupIds, { grupoFiltro, tipoFiltro, desde, hasta }) => {
   const allMovements = [];
   const pageSize = 1000;
 
   for (let offset = 0; ; offset += pageSize) {
-    const { data, error } = await supabase
+    let query = supabase
       .from("movimientos_fondo")
       .select("id, grupo_id, tipo, concepto, monto, descripcion, created_at")
       .in("grupo_id", groupIds)
       .order("created_at", { ascending: false })
       .range(offset, offset + pageSize - 1);
+    if (grupoFiltro !== "todos") query = query.eq("grupo_id", grupoFiltro);
+    if (tipoFiltro !== "todos") query = query.eq("tipo", tipoFiltro);
+    if (desde) query = query.gte("created_at", new Date(`${desde}T00:00:00`).toISOString());
+    if (hasta) {
+      const nextDay = new Date(`${hasta}T00:00:00`);
+      nextDay.setDate(nextDay.getDate() + 1);
+      query = query.lt("created_at", nextDay.toISOString());
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     allMovements.push(...(data || []));
@@ -30,6 +40,8 @@ const ReportesAdmin = () => {
   const [movimientos, setMovimientos] = useState([]);
   const [grupoFiltro, setGrupoFiltro] = useState("todos");
   const [tipoFiltro, setTipoFiltro] = useState("todos");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -48,7 +60,12 @@ const ReportesAdmin = () => {
       setLoading(true);
       setError("");
       try {
-        const rows = await obtenerTodosLosMovimientos(grupos.map((grupo) => grupo.id));
+        const rows = await obtenerTodosLosMovimientos(grupos.map((grupo) => grupo.id), {
+          grupoFiltro,
+          tipoFiltro,
+          desde,
+          hasta
+        });
         const groupNames = new Map(grupos.map((grupo) => [grupo.id, grupo.nombre]));
         if (active) {
           setMovimientos(rows.map((row) => ({ ...row, grupo: groupNames.get(row.grupo_id) || "Grupo" })));
@@ -65,12 +82,14 @@ const ReportesAdmin = () => {
     return () => {
       active = false;
     };
-  }, [grupos]);
+  }, [grupos, grupoFiltro, tipoFiltro, desde, hasta]);
 
   const movimientosFiltrados = useMemo(() => movimientos.filter((movimiento) => (
     (grupoFiltro === "todos" || movimiento.grupo_id === grupoFiltro)
     && (tipoFiltro === "todos" || movimiento.tipo === tipoFiltro)
-  )), [movimientos, grupoFiltro, tipoFiltro]);
+    && (!desde || new Date(movimiento.created_at) >= new Date(`${desde}T00:00:00`))
+    && (!hasta || new Date(movimiento.created_at) < new Date(`${hasta}T00:00:00`).getTime() + 86400000)
+  )), [movimientos, grupoFiltro, tipoFiltro, desde, hasta]);
 
   const resumen = useMemo(() => movimientosFiltrados.reduce((totals, movimiento) => {
     const amount = Number(movimiento.monto || 0);
@@ -79,26 +98,52 @@ const ReportesAdmin = () => {
     return totals;
   }, { ingresos: 0, egresos: 0 }), [movimientosFiltrados]);
 
-  const descargarReporte = () => {
-    const rows = [
-      ["Fecha", "Grupo", "Tipo", "Concepto", "Descripción", "Monto"],
-      ...movimientosFiltrados.map((movimiento) => [
-        movimiento.created_at || "",
-        movimiento.grupo,
-        movimiento.tipo,
-        movimiento.concepto,
-        movimiento.descripcion,
-        movimiento.monto
-      ])
-    ];
-    const csvCell = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
-    const csv = `\uFEFF${rows.map((row) => row.map(csvCell).join(",")).join("\r\n")}`;
-    const fileUrl = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = fileUrl;
-    link.download = `reporte-financiero-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(fileUrl);
+  const descargarReporte = async () => {
+    try {
+      const { default: ExcelJS } = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "FlashMonkey";
+      workbook.subject = "Reporte financiero";
+      const worksheet = workbook.addWorksheet("Libro consolidado", {
+        views: [{ state: "frozen", ySplit: 1 }],
+        autoFilter: "A1:F1"
+      });
+      worksheet.columns = [
+        { header: "Fecha y hora", key: "fecha", width: 22 },
+        { header: "Grupo", key: "grupo", width: 24 },
+        { header: "Tipo", key: "tipo", width: 14 },
+        { header: "Concepto", key: "concepto", width: 28 },
+        { header: "Descripción", key: "descripcion", width: 44 },
+        { header: "Monto", key: "monto", width: 18 }
+      ];
+      movimientosFiltrados.forEach((movimiento) => worksheet.addRow({
+        fecha: movimiento.created_at ? new Date(movimiento.created_at) : null,
+        grupo: movimiento.grupo,
+        tipo: movimiento.tipo,
+        concepto: movimiento.concepto || "",
+        descripcion: movimiento.descripcion || "",
+        monto: Number(movimiento.monto || 0)
+      }));
+      worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      worksheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF065F46" } };
+      worksheet.getColumn(1).numFmt = "dd/mm/yyyy hh:mm";
+      worksheet.getColumn(6).numFmt = '"$"#,##0.00';
+      worksheet.eachRow((row) => row.eachCell((cell) => {
+        cell.alignment = { vertical: "middle", wrapText: true };
+      }));
+      const buffer = await workbook.xlsx.writeBuffer();
+      const fileUrl = URL.createObjectURL(new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      }));
+      const link = document.createElement("a");
+      link.href = fileUrl;
+      link.download = `reporte-financiero-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(fileUrl);
+    } catch (exportError) {
+      console.error("Error exportando reporte financiero:", exportError);
+      setError("No se pudo generar el archivo Excel.");
+    }
   };
 
   return (
@@ -109,12 +154,17 @@ const ReportesAdmin = () => {
           <h1 className="mt-1 text-3xl font-bold text-slate-900">Reportes financieros</h1>
           <p className="mt-2 text-sm text-slate-600">Consolida los movimientos registrados en todos los grupos.</p>
         </div>
-        <button type="button" onClick={descargarReporte} disabled={loading || movimientosFiltrados.length === 0} className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50">
-          <Download size={17} /> Exportar CSV
-        </button>
+        <div className="flex gap-2 print:hidden">
+          <button type="button" onClick={descargarReporte} disabled={loading || movimientosFiltrados.length === 0} className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50">
+            <Download size={17} /> Exportar Excel
+          </button>
+          <button type="button" onClick={() => window.print()} disabled={loading || movimientosFiltrados.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 disabled:opacity-50">
+            <Printer size={17} /> Guardar PDF
+          </button>
+        </div>
       </header>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-end gap-2 print:hidden">
         <select value={grupoFiltro} onChange={(event) => setGrupoFiltro(event.target.value)} aria-label="Filtrar reporte por grupo" className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
           <option value="todos">Todos los grupos</option>
           {grupos.map((grupo) => <option key={grupo.id} value={grupo.id}>{grupo.nombre}</option>)}
@@ -124,6 +174,14 @@ const ReportesAdmin = () => {
           <option value="ingreso">Ingresos</option>
           <option value="egreso">Egresos</option>
         </select>
+        <label className="text-sm font-medium text-slate-700">
+          Desde
+          <input type="date" value={desde} onChange={(event) => setDesde(event.target.value)} className="mt-1 block rounded-lg border border-slate-300 px-3 py-2" />
+        </label>
+        <label className="text-sm font-medium text-slate-700">
+          Hasta
+          <input type="date" value={hasta} onChange={(event) => setHasta(event.target.value)} className="mt-1 block rounded-lg border border-slate-300 px-3 py-2" />
+        </label>
       </div>
 
       {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}

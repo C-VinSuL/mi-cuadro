@@ -202,7 +202,9 @@ Deno.serve(async (request) => {
       p_perfil_id: authData.user.id,
       p_token_hash: await sha256(body.token),
       p_direccion_ip: forwarded || null,
-      p_agente_usuario: request.headers.get("user-agent") || "",
+      p_agente_usuario: request.headers.get("x-browser-user-agent")
+        || request.headers.get("user-agent")
+        || "",
     });
     if (error) return jsonResponse(400, { error: error.message });
     return jsonResponse(200, { accepted: true });

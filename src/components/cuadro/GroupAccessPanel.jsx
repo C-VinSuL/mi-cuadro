@@ -21,6 +21,7 @@ const GroupAccessPanel = ({ onMembershipChange }) => {
   const { can } = usePermissions();
   const { notify, groupRequests, groupRequestsError, refreshGroupRequests } = useNotifications();
   const esSocio = profile?.rol?.toLowerCase() === "socio";
+  const esTesorero = profile?.rol?.toLowerCase() === "tesorero";
   const puedeGestionarGrupos = can("gestionarGrupo");
   const [formGrupo, setFormGrupo] = useState({
     nombre: "",
@@ -289,6 +290,69 @@ const GroupAccessPanel = ({ onMembershipChange }) => {
         )}
 
       </div>
+
+      {esTesorero && (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="flex items-center gap-2 font-semibold text-slate-900">
+                <Layers3 size={18} className="text-emerald-800" /> Grupos creados
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Selecciona un grupo para consultar sus operaciones. La gestión de grupos sigue reservada al administrador.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={actualizarMembresias}
+              disabled={enviando}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-800 hover:text-emerald-950 disabled:opacity-60"
+            >
+              <RefreshCw size={15} /> Actualizar grupos
+            </button>
+          </div>
+          {grupos.length === 0 ? (
+            <p className="border-y border-slate-200 py-5 text-sm text-slate-500">No hay grupos creados para consultar.</p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {grupos.map((item) => {
+                const seleccionado = grupo?.id === item.id;
+                const estado = item.estado || "sin estado";
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => seleccionarGrupo(item.id)}
+                    aria-pressed={seleccionado}
+                    className={`rounded-xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 ${
+                      seleccionado
+                        ? "border-emerald-700 bg-emerald-50 shadow-sm"
+                        : "border-slate-200 bg-white hover:border-emerald-300 hover:shadow-sm"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="font-semibold text-slate-900">{item.nombre}</span>
+                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
+                        item.estado === "activo" ? "bg-emerald-100 text-emerald-800"
+                          : item.estado === "borrador" ? "bg-amber-100 text-amber-800"
+                            : "bg-slate-100 text-slate-700"
+                      }`}>
+                        {estado === "borrador" ? "En preparación" : estado}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm text-slate-600">
+                      {item.numero_integrantes || 0} cupos · ${Number(item.aporte_semanal || 0).toFixed(2)} {item.aporte_periodicidad || "semanal"}
+                    </p>
+                    <p className={`mt-3 text-sm font-semibold ${seleccionado ? "text-emerald-800" : "text-slate-500"}`}>
+                      {seleccionado ? "Grupo seleccionado" : "Ver operaciones del grupo"}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {puedeGestionarGrupos && (
         <div className="space-y-3">

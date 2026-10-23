@@ -113,22 +113,23 @@ Deno.serve(async (request) => {
     .ilike("rol", "administrador");
   if (administratorProfilesError) {
     console.error("No se pudo comprobar la lista de administradores:", administratorProfilesError);
-    return jsonResponse(500, { error: "No se pudo comprobar la solicitud del socio." });
+    return jsonResponse(500, { error: "No se pudo comprobar la lista de administradores." });
   }
-  const administratorIds = (administratorProfiles || []).map((profile) => profile.id);
-  const { data: resetRequest, error: resetRequestError } = await adminClient
+  const administratorIds = new Set((administratorProfiles || []).map((profile) => profile.id));
+  const { data: resetRequests, error: resetRequestError } = await adminClient
     .from("notificaciones")
-    .select("id")
-    .in("usuario_id", administratorIds)
+    .select("usuario_id")
     .like("fuente", `mfa-reset:${body.userId}:%`)
     .gte("creada_en", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-    .limit(1)
-    .maybeSingle();
+    .limit(1000);
   if (resetRequestError) {
     console.error("No se pudo comprobar la solicitud de restablecimiento MFA:", resetRequestError);
-    return jsonResponse(500, { error: "No se pudo comprobar la solicitud del socio." });
+    return jsonResponse(500, { error: "No se pudo comprobar la solicitud de restablecimiento MFA." });
   }
-  if (!resetRequest) {
+  const hasResetRequest = (resetRequests || []).some((notification) =>
+    administratorIds.has(notification.usuario_id)
+  );
+  if (!hasResetRequest) {
     return jsonResponse(409, { error: "El socio no tiene una solicitud de restablecimiento pendiente. Pídele que la envíe desde la pantalla de seguridad." });
   }
 
@@ -197,7 +198,6 @@ Deno.serve(async (request) => {
   const { error: closeRequestError } = await adminClient
     .from("notificaciones")
     .update({ leida: true })
-    .in("usuario_id", administratorIds)
     .like("fuente", `mfa-reset:${body.userId}:%`);
   if (closeRequestError) {
     console.error("No se pudo marcar como atendida la solicitud de restablecimiento MFA:", closeRequestError);

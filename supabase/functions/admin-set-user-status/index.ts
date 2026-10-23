@@ -28,8 +28,17 @@ Deno.serve(async (request) => {
     return jsonResponse(401, { error: "La sesión no contiene un token de acceso válido." });
   }
 
+  const browserUserAgent = request.headers.get("x-browser-user-agent")
+    || request.headers.get("user-agent");
   const userClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authorization } },
+    global: {
+      headers: {
+        Authorization: authorization,
+        ...(browserUserAgent
+          ? { "x-browser-user-agent": browserUserAgent }
+          : {}),
+      },
+    },
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data: authData, error: authError } = await userClient.auth.getUser(accessToken);

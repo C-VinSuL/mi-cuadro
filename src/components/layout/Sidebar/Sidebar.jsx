@@ -59,6 +59,12 @@ const menu = [
     permission: "verPrestamos"
   },
   {
+    title: "Solicitudes de billetera",
+    icon: Wallet,
+    path: "/admin/billetera",
+    permission: "gestionarBilletera"
+  },
+  {
     title: "Historial",
     icon: History,
     path: "/historial",
@@ -81,12 +87,6 @@ const menu = [
     icon: ShieldCheck,
     path: "/verificar-documentos",
     permission: "verificarDocumentos"
-  },
-  {
-    title: "Solicitudes de billetera",
-    icon: Wallet,
-    path: "/admin/billetera",
-    permission: "gestionarBilletera"
   },
   {
     title: "Configuración",
@@ -172,7 +172,11 @@ const Sidebar = ({
         "/cuadro": "Revisar cuadro",
         "/historial": "Reportes"
       };
-      return { ...item, title: adminTitles[item.path] || item.title };
+      const roleTitles = {
+        ...adminTitles,
+        ...(rol === "tesorero" ? { "/grupo": "Grupos" } : {})
+      };
+      return { ...item, title: roleTitles[item.path] || item.title };
     });
 
 

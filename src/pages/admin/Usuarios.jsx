@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Ban, ChevronLeft, ChevronRight, KeyRound, RotateCcw, Search, ShieldCheck, Trash2, UserRoundCog, X } from "lucide-react";
+import { Ban, CheckCircle2, ChevronLeft, ChevronRight, KeyRound, RotateCcw, Search, ShieldCheck, Trash2, UserRoundCog, X } from "lucide-react";
 import { useNotifications } from "../../hooks/useNotifications";
 import { cambiarEstadoUsuarioAdministrador, cambiarRolPerfil, eliminarUsuarioAdministrador, listarPerfilesAdministrador, solicitarRestablecimientoMfaAdministrador } from "../../services/adminService";
 
@@ -218,7 +218,7 @@ const Usuarios = () => {
       <header className="border-b border-slate-200 pb-5">
         <p className="text-sm font-semibold text-emerald-700">Administración de acceso</p>
         <h1 className="mt-1 text-3xl font-bold text-slate-900">Socios y roles</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Listado de cuentas registradas, ordenadas desde la más reciente. Busca por nombre, cédula, correo o teléfono. El administrador debe verificar el documento antes de asignar un rol elevado; los cambios y las eliminaciones con su motivo quedan auditados.</p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Listado de cuentas registradas, ordenadas desde la más reciente. Las cuentas nuevas ingresan como socios; el administrador principal puede asignarles un rol sin cargar el documento. Para los demás administradores, la verificación documental sigue siendo obligatoria. Los cambios y las eliminaciones con su motivo quedan auditados.</p>
       </header>
 
       <form onSubmit={buscar} className="flex flex-col gap-2 sm:flex-row">
@@ -292,29 +292,32 @@ const Usuarios = () => {
                       </button>
                     </td>
                     <td className="px-5 py-4">
-                      <span className={`mb-2 block text-xs font-semibold ${profile.activo ? "text-emerald-800" : "text-red-800"}`}>
-                        {profile.activo ? "Activa" : "Desactivada"}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => cambiarEstado(profile)}
-                        disabled={Boolean(deletingId) || Boolean(resettingMfaId) || Boolean(changingStatusId)}
-                        className={`mb-2 inline-flex items-center gap-2 whitespace-nowrap rounded-lg border px-3 py-2 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${profile.activo ? "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100" : "border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"}`}
-                      >
-                        {profile.activo ? <Ban size={15} /> : <RotateCcw size={15} />}
-                        {changingStatusId === profile.id
-                          ? "Procesando..."
-                          : profile.activo ? "Desactivar cuenta" : "Reactivar cuenta"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDeleteTarget(profile)}
-                        disabled={Boolean(deletingId) || Boolean(resettingMfaId) || Boolean(changingStatusId)}
-                        className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 transition hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <Trash2 size={15} />
-                        Eliminar usuario
-                      </button>
+                      <div className="flex min-w-[160px] flex-col items-stretch gap-2">
+                        <span className={`inline-flex w-fit items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${profile.activo ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-slate-100 text-slate-600"}`}>
+                          {profile.activo ? <CheckCircle2 size={14} /> : <Ban size={14} />}
+                          {profile.activo ? "Cuenta activa" : "Cuenta inactiva"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => cambiarEstado(profile)}
+                          disabled={Boolean(deletingId) || Boolean(resettingMfaId) || Boolean(changingStatusId)}
+                          className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50 ${profile.activo ? "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 focus-visible:ring-amber-500" : "border-emerald-300 bg-emerald-700 text-white hover:bg-emerald-800 focus-visible:ring-emerald-500"}`}
+                        >
+                          {profile.activo ? <Ban size={15} /> : <RotateCcw size={15} />}
+                          {changingStatusId === profile.id
+                            ? "Procesando..."
+                            : profile.activo ? "Desactivar cuenta" : "Reactivar cuenta"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(profile)}
+                          disabled={Boolean(deletingId) || Boolean(resettingMfaId) || Boolean(changingStatusId)}
+                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-700 transition hover:border-red-400 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Trash2 size={15} />
+                          Eliminar usuario
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

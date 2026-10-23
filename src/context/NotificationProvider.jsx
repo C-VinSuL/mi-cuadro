@@ -83,6 +83,13 @@ const NotificationProvider = ({ children }) => {
             updateNotifications(user.id, (current) => current.some((item) => item.id === notification.id)
               ? current
               : [notification, ...current]);
+            toast.custom((toastItem) => (
+              <NotificationToast
+                notification={notification}
+                visible={toastItem.visible}
+                onDismiss={() => toast.dismiss(toastItem.id)}
+              />
+            ), { duration: TOAST_DURATION, id: `notification-${notification.id}` });
           } else if (payload.eventType === "UPDATE") {
             const notification = toNotification(payload.new);
             updateNotifications(user.id, (current) => current.map((item) => (

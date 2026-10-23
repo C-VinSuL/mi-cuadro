@@ -26,6 +26,8 @@ import {
   getDashboardAdminData
 } from "../../../services/dashboardService";
 import { etiquetaAporte, etiquetaPeriodo } from "../../../services/grupoService";
+import TreasuryQueuePanel from "./TreasuryQueuePanel";
+import TreasuryGroupSummary from "./TreasuryGroupSummary";
 
 const DashboardTesorero = () => {
   const {
@@ -51,6 +53,7 @@ const DashboardTesorero = () => {
 
   const [error, setError] =
     useState("");
+  const [currentTime, setCurrentTime] = useState(null);
 
   // ========================================
   // CARGAR DATOS
@@ -92,10 +95,17 @@ const DashboardTesorero = () => {
 
     cargarDashboard();
 
-  }, [
-    grupo?.id,
-    grupo?.semana_actual
-  ]);
+  }, [grupo]);
+
+  useEffect(() => {
+    const updateTime = () => setCurrentTime(new Date());
+    const timeoutId = window.setTimeout(updateTime, 0);
+    const intervalId = window.setInterval(updateTime, 60000);
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   // ========================================
   // SIN GRUPO
@@ -213,6 +223,32 @@ const DashboardTesorero = () => {
   const todosPagaron =
     capacidad > 0 &&
     datos.totalPagados === capacidad;
+  const fechaVencimientoActual = (() => {
+    if (!grupo.fecha_inicio || grupo.estado !== "activo" || semana < 1) return null;
+    const deadline = new Date(grupo.fecha_inicio);
+    if (grupo.aporte_periodicidad === "mensual") {
+      const dayOfMonth = deadline.getUTCDate();
+      const targetMonth = deadline.getUTCMonth() + semana;
+      deadline.setUTCDate(1);
+      deadline.setUTCMonth(targetMonth);
+      const lastDayOfTargetMonth = new Date(Date.UTC(
+        deadline.getUTCFullYear(),
+        deadline.getUTCMonth() + 1,
+        0
+      )).getUTCDate();
+      deadline.setUTCDate(Math.min(dayOfMonth, lastDayOfTargetMonth));
+    } else {
+      deadline.setUTCDate(deadline.getUTCDate() + semana * (grupo.aporte_periodicidad === "quincenal" ? 14 : 7));
+    }
+    return deadline;
+  })();
+  const aportesEnRevision = new Set(datos.aportes
+    .filter((aporte) => aporte.semana === semana && aporte.estado_revision === "pendiente")
+    .map((aporte) => aporte.participante_id));
+  const aportesSinPagoAprobado = datos.pendientes.filter((item) => !aportesEnRevision.has(item.id)).length;
+  const aportesVencidos = fechaVencimientoActual && currentTime && currentTime.getTime() >= fechaVencimientoActual.getTime()
+    ? aportesSinPagoAprobado
+    : 0;
 
   // ========================================
   // UI
@@ -322,6 +358,21 @@ const DashboardTesorero = () => {
         </div>
 
       </section>
+
+      <TreasuryGroupSummary />
+      <TreasuryQueuePanel />
+
+      {aportesVencidos > 0 && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4" role="status">
+          <div>
+            <p className="font-semibold text-amber-950">{aportesVencidos} aporte{aportesVencidos === 1 ? "" : "s"} vencido{aportesVencidos === 1 ? "" : "s"} en {grupo.nombre}</p>
+            <p className="mt-1 text-sm text-amber-900">El plazo del periodo actual venció el {fechaVencimientoActual.toLocaleDateString("es-EC")}.</p>
+          </div>
+          <Link to="/aportes" className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-semibold text-amber-950 hover:bg-amber-100">
+            Revisar aportes
+          </Link>
+        </section>
+      )}
 
 
       {/* ==================================
@@ -984,41 +1035,31 @@ const DashboardTesorero = () => {
           </Link>
 
 
-          <Link
-            to="/prestamos"
+          <div
+            aria-disabled="true"
             className="
-              group
+              relative
               rounded-2xl
               border
               border-slate-200
               bg-white
               p-5
-              transition
-              hover:-translate-y-1
-              hover:shadow-md
+              opacity-80
             "
           >
             <HandCoins className="text-violet-600" />
 
-            <p className="mt-4 font-semibold text-slate-900">
-              Préstamos
-            </p>
+            <div className="mt-4 flex items-center justify-between gap-2">
+              <p className="font-semibold text-slate-900">Préstamos</p>
+              <span className="rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700">
+                Próximamente
+              </span>
+            </div>
 
             <p className="mt-1 text-sm text-slate-500">
-              Revisa las solicitudes
-              relacionadas con el fondo.
+              Esta función estará disponible más adelante.
             </p>
-
-            <ArrowRight
-              size={18}
-              className="
-                mt-5
-                text-slate-400
-                transition
-                group-hover:translate-x-1
-              "
-            />
-          </Link>
+          </div>
 
         </div>
 

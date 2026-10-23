@@ -111,6 +111,11 @@ Deno.serve(async (request) => {
         datos_personales_purgados: Boolean(validation.tiene_datos_privados),
         resultado: "en_proceso",
       },
+      agente_usuario: (
+        request.headers.get("x-browser-user-agent")
+        || request.headers.get("user-agent")
+        || ""
+      ).slice(0, 500) || null,
     })
     .select("id")
     .single();
