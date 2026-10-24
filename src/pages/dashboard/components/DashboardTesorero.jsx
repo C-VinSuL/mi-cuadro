@@ -399,6 +399,7 @@ const DashboardTesorero = () => {
             bg-white
             p-6
             shadow-sm
+            transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none
           "
         >
 
@@ -449,6 +450,7 @@ const DashboardTesorero = () => {
             bg-white
             p-6
             shadow-sm
+            transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none
           "
         >
 
@@ -499,6 +501,7 @@ const DashboardTesorero = () => {
             bg-white
             p-6
             shadow-sm
+            transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none
           "
         >
 
@@ -536,7 +539,7 @@ const DashboardTesorero = () => {
           </p>
 
           <p className="mt-1 text-xs text-slate-400">
-            Disponible para préstamos
+            Saldo registrado en el fondo
           </p>
 
         </div>
@@ -552,6 +555,7 @@ const DashboardTesorero = () => {
             bg-white
             p-6
             shadow-sm
+            transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none
           "
         >
 

@@ -185,8 +185,8 @@ const Grupos = () => {
       )}
 
       {confirmandoInicio && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
-          <section className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="confirmar-sorteo-titulo">
+        <div className="ui-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
+          <section className="ui-dialog-panel w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="confirmar-sorteo-titulo">
             <p className="text-sm font-semibold text-emerald-800">Aprobación de inicio</p>
             <h2 id="confirmar-sorteo-titulo" className="mt-1 text-xl font-bold text-slate-900">¿Sortear posiciones e iniciar?</h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">La base de datos asignará una posición aleatoria a cada socio y activará la primera ronda. Esta acción no se puede deshacer.</p>

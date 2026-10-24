@@ -965,6 +965,7 @@ const puedeAdministrar =
       {mostrarConfirmacion && (
         <div
           className="
+            ui-dialog-backdrop
             fixed
             inset-0
             z-50
@@ -977,7 +978,11 @@ const puedeAdministrar =
         >
 
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="confirmar-entrega-titulo"
             className="
+              ui-dialog-panel
               w-full
               max-w-lg
               rounded-3xl
@@ -998,6 +1003,7 @@ const puedeAdministrar =
             </p>
 
             <h2
+              id="confirmar-entrega-titulo"
               className="
                 mt-1
                 text-2xl
@@ -1017,6 +1023,7 @@ const puedeAdministrar =
               Estás por cerrar la ronda{" "}
               {periodoActual.toLowerCase()} {grupo.semana_actual}.
             </p>
+            <p className="mt-1 text-sm font-medium text-slate-700">Grupo: {grupo.nombre}</p>
 
 
             <div
@@ -1115,10 +1122,7 @@ const puedeAdministrar =
                 text-amber-800
               "
             >
-              Al confirmar se registrará
-              oficialmente la entrega y el
-              sistema avanzará a la siguiente
-              ronda.
+              Esta acción no se puede deshacer. Al confirmar se registrará oficialmente la entrega y el sistema avanzará a la siguiente ronda.
             </div>
 
 

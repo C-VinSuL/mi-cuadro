@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, CircleDollarSign, ExternalLink, RefreshCw, Users, Wallet, X } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
 import { etiquetaPeriodo } from "../../services/grupoService";
@@ -15,13 +16,18 @@ const estadoAporte = (aporte) => {
 
 const AportesAdmin = () => {
   const { grupos, profile } = useAuth();
+  const [searchParams] = useSearchParams();
   const [aportes, setAportes] = useState([]);
   const [grupoFiltro, setGrupoFiltro] = useState("todos");
-  const [estadoFiltro, setEstadoFiltro] = useState("todos");
+  const [estadoFiltro, setEstadoFiltro] = useState(() => searchParams.get("estado") || "todos");
+  const [periodoFiltro, setPeriodoFiltro] = useState("todos");
+  const [antiguedadFiltro, setAntiguedadFiltro] = useState("todos");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [mensaje, setMensaje] = useState("");
   const [procesandoId, setProcesandoId] = useState(null);
+  const [aporteRechazo, setAporteRechazo] = useState(null);
+  const [notaRechazo, setNotaRechazo] = useState("");
   const [estadoTiempoReal, setEstadoTiempoReal] = useState("conectando");
   const puedeRevisar = ["administrador", "tesorero"].includes(profile?.rol?.toLowerCase());
   const estadoTiempoRealVisible = !profile?.id || grupos.length === 0 ? "inactivo" : estadoTiempoReal;
@@ -40,7 +46,7 @@ const AportesAdmin = () => {
       supabase.from("participantes").select("id, grupo_id, nombre").in("grupo_id", groupIds),
       supabase
         .from("aportes")
-        .select("id, grupo_id, participante_id, semana, monto, comision_app, estado, fecha_pago, comprobante_path, estado_revision, revisado_en, nota_revision")
+        .select("id, grupo_id, participante_id, semana, monto, comision_app, estado, fecha_pago, comprobante_en, comprobante_path, estado_revision, revisado_en, nota_revision")
         .in("grupo_id", groupIds)
         .order("semana", { ascending: false })
     ]);
@@ -113,11 +119,25 @@ const AportesAdmin = () => {
   const aportesFiltrados = useMemo(() => aportes.filter((aporte) => (
     (grupoFiltro === "todos" || aporte.grupo_id === grupoFiltro)
     && (estadoFiltro === "todos" || estadoAporte(aporte) === estadoFiltro)
-  )), [aportes, grupoFiltro, estadoFiltro]);
+    && (periodoFiltro === "todos" || String(aporte.semana) === periodoFiltro)
+    && (antiguedadFiltro === "todos" || (() => {
+      const fechaRegistro = aporte.comprobante_en || aporte.fecha_pago;
+      return estadoAporte(aporte) === "pendiente"
+        && Boolean(fechaRegistro)
+        && Date.now() - new Date(fechaRegistro).getTime() >= Number(antiguedadFiltro);
+    })())
+  )), [aportes, grupoFiltro, estadoFiltro, periodoFiltro, antiguedadFiltro]);
+
+  const periodosDisponibles = useMemo(() => [...new Set(
+    aportes
+      .filter((aporte) => grupoFiltro === "todos" || aporte.grupo_id === grupoFiltro)
+      .map((aporte) => Number(aporte.semana))
+      .filter(Number.isFinite)
+  )].sort((a, b) => b - a), [aportes, grupoFiltro]);
 
   const pagados = aportesFiltrados.filter((aporte) => estadoAporte(aporte) === "pagado");
-  const pendientes = aportesFiltrados.filter((aporte) => estadoAporte(aporte) === "pendiente");
   const totalPagado = pagados.reduce((total, aporte) => total + Number(aporte.monto || 0), 0);
+  const pendientesRevision = aportes.filter((aporte) => estadoAporte(aporte) === "pendiente" && aporte.estado_revision === "pendiente");
 
   const abrirComprobante = async (aporte) => {
     setError("");
@@ -141,7 +161,7 @@ const AportesAdmin = () => {
     }
   };
 
-  const resolverAporte = async (aporte, aprobar) => {
+  const resolverAporte = async (aporte, aprobar, nota = null) => {
     setProcesandoId(aporte.id);
     setError("");
     setMensaje("");
@@ -149,10 +169,12 @@ const AportesAdmin = () => {
       const { error: reviewError } = await supabase.rpc("resolver_aporte_comprobante", {
         p_aporte_id: aporte.id,
         p_aprobar: aprobar,
-        p_nota: null
+        p_nota: nota
       });
       if (reviewError) throw reviewError;
       setMensaje(aprobar ? "Comprobante aprobado y aporte acreditado." : "Comprobante rechazado; el socio podrá enviar uno nuevo.");
+      setAporteRechazo(null);
+      setNotaRechazo("");
       await cargarAportes();
     } catch (reviewError) {
       console.error("Error revisando comprobante de aporte:", reviewError);
@@ -168,7 +190,7 @@ const AportesAdmin = () => {
         <div>
           <p className="text-sm font-semibold text-emerald-700">Supervisión general</p>
           <h1 className="mt-1 text-3xl font-bold text-slate-900">Control de aportes</h1>
-          <p className="mt-2 text-sm text-slate-600">Consulta los aportes registrados por los socios en todos los grupos.</p>
+          <p className="mt-2 text-sm text-slate-600">Prioriza comprobantes pendientes y revisa por grupo, periodo o antigüedad.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -197,18 +219,21 @@ const AportesAdmin = () => {
       </header>
 
       <section className="grid gap-4 sm:grid-cols-3" aria-label="Resumen de aportes">
-        <Metric icon={<Users size={19} />} label="Registros" value={aportesFiltrados.length} />
+        <Metric icon={<Users size={19} />} label="Registros filtrados" value={aportesFiltrados.length} />
         <Metric icon={<CircleDollarSign size={19} />} label="Total aprobado" value={currency.format(totalPagado)} />
-        <Metric icon={<Wallet size={19} />} label="Pendientes de revisión" value={pendientes.length} />
+        <Metric icon={<Wallet size={19} />} label="Pendientes de revisión" value={pendientesRevision.length} />
       </section>
 
       {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
       {mensaje && <p className="border-l-4 border-emerald-600 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="status">{mensaje}</p>}
 
-      <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <div className="border-b border-slate-200 px-5 py-4">
+      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="space-y-4 border-b border-slate-200 px-5 py-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-semibold text-slate-900">Registro de aportes</h2>
+            <div>
+              <h2 className="font-semibold text-slate-900">Registro de aportes</h2>
+              <p className="mt-1 text-xs text-slate-500">{pendientesRevision.length} comprobante{pendientesRevision.length === 1 ? "" : "s"} esperando revisión en todos los grupos</p>
+            </div>
             <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
               estadoTiempoRealVisible === "activo" ? "text-emerald-700"
                 : estadoTiempoRealVisible === "error" ? "text-amber-700" : "text-slate-500"
@@ -221,6 +246,31 @@ const AportesAdmin = () => {
                 : estadoTiempoRealVisible === "error" ? "Tiempo real no disponible"
                   : estadoTiempoRealVisible === "inactivo" ? "Sin grupos para supervisar" : "Conectando en tiempo real..."}
             </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <select value={grupoFiltro} onChange={(event) => {
+              setGrupoFiltro(event.target.value);
+              setPeriodoFiltro("todos");
+            }} aria-label="Filtrar aportes por grupo" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+              <option value="todos">Todos los grupos</option>
+              {grupos.map((grupo) => <option key={grupo.id} value={grupo.id}>{grupo.nombre}</option>)}
+            </select>
+            <select value={periodoFiltro} onChange={(event) => setPeriodoFiltro(event.target.value)} aria-label="Filtrar aportes por periodo" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+              <option value="todos">Todos los periodos</option>
+              {periodosDisponibles.map((periodo) => <option key={periodo} value={periodo}>Periodo {periodo}</option>)}
+            </select>
+            <select value={estadoFiltro} onChange={(event) => setEstadoFiltro(event.target.value)} aria-label="Filtrar aportes por estado" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+              <option value="todos">Todos los estados</option>
+              <option value="pendiente">Pendientes de revisión</option>
+              <option value="pagado">Aprobados</option>
+              <option value="rechazado">Rechazados</option>
+            </select>
+            <select value={antiguedadFiltro} onChange={(event) => setAntiguedadFiltro(event.target.value)} aria-label="Filtrar pendientes por antigüedad" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+              <option value="todos">Cualquier antigüedad</option>
+              <option value={24 * 60 * 60 * 1000}>Pendientes hace más de 24 horas</option>
+              <option value={3 * 24 * 60 * 60 * 1000}>Pendientes hace más de 3 días</option>
+              <option value={7 * 24 * 60 * 60 * 1000}>Pendientes hace más de 7 días</option>
+            </select>
           </div>
         </div>
         {loading ? (
@@ -238,7 +288,7 @@ const AportesAdmin = () => {
                   <th className="px-5 py-3 font-semibold">Aporte</th>
                   <th className="px-5 py-3 font-semibold">Estado</th>
                   <th className="px-5 py-3 font-semibold">Comprobante</th>
-                  <th className="px-5 py-3 font-semibold">Fecha</th>
+                  <th className="px-5 py-3 font-semibold">Fecha de envío / pago</th>
                   {puedeRevisar && <th className="px-5 py-3 font-semibold">Revisión</th>}
                 </tr>
               </thead>
@@ -247,7 +297,7 @@ const AportesAdmin = () => {
                   const estado = estadoAporte(aporte);
                   const esperandoRevision = estado === "pendiente" && aporte.estado_revision === "pendiente";
                   return (
-                    <tr key={aporte.id}>
+                    <tr key={aporte.id} className="transition-colors duration-150 hover:bg-slate-50 motion-reduce:transition-none">
                       <td className="px-5 py-3 font-medium text-slate-900">{aporte.grupo}</td>
                       <td className="px-5 py-3 text-slate-700">{aporte.socio}</td>
                       <td className="px-5 py-3 text-slate-700">
@@ -262,7 +312,7 @@ const AportesAdmin = () => {
                           </button>
                         ) : <span className="text-slate-400">No adjunto</span>}
                       </td>
-                      <td className="px-5 py-3 text-slate-600">{aporte.fecha_pago ? new Date(aporte.fecha_pago).toLocaleDateString("es-EC") : "-"}</td>
+                      <td className="px-5 py-3 text-slate-600">{(aporte.comprobante_en || aporte.fecha_pago) ? new Date(aporte.comprobante_en || aporte.fecha_pago).toLocaleDateString("es-EC") : "Sin fecha"}</td>
                       {puedeRevisar && (
                         <td className="px-5 py-3">
                           {esperandoRevision ? (
@@ -278,7 +328,10 @@ const AportesAdmin = () => {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => resolverAporte(aporte, false)}
+                                onClick={() => {
+                                  setAporteRechazo(aporte);
+                                  setNotaRechazo("");
+                                }}
                                 disabled={procesandoId === aporte.id}
                                 aria-label={`Rechazar aporte de ${aporte.socio}`}
                                 className="inline-flex items-center gap-1 rounded-md bg-red-700 px-2.5 py-1.5 font-semibold text-white hover:bg-red-800 disabled:opacity-50"
@@ -300,12 +353,36 @@ const AportesAdmin = () => {
           </div>
         )}
       </section>
+      {aporteRechazo && (
+        <div className="ui-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" onMouseDown={(event) => {
+          if (event.target === event.currentTarget && !procesandoId) setAporteRechazo(null);
+        }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="rechazar-aporte-titulo" className="ui-dialog-panel w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+            <header className="border-b border-slate-200 px-5 py-4">
+              <p className="text-sm font-semibold text-red-700">Rechazar comprobante</p>
+              <h2 id="rechazar-aporte-titulo" className="mt-1 text-xl font-bold text-slate-900">{aporteRechazo.socio}</h2>
+              <p className="mt-1 text-sm text-slate-600">{aporteRechazo.grupo} · {etiquetaPeriodo(grupos.find((grupo) => grupo.id === aporteRechazo.grupo_id)?.aporte_periodicidad)} {aporteRechazo.semana} · {currency.format(aporteRechazo.monto)}</p>
+            </header>
+            <div className="space-y-2 px-5 py-4">
+              <label htmlFor="nota-rechazo-aporte" className="text-sm font-medium text-slate-700">Motivo que verá el socio</label>
+              <textarea id="nota-rechazo-aporte" value={notaRechazo} onChange={(event) => setNotaRechazo(event.target.value)} maxLength={500} rows={4} required placeholder="Indica qué debe corregir o verificar el socio." className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500" />
+              <p className="text-right text-xs text-slate-500">{notaRechazo.trim().length}/500 caracteres (mínimo 5)</p>
+            </div>
+            <footer className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
+              <button type="button" onClick={() => setAporteRechazo(null)} disabled={Boolean(procesandoId)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancelar</button>
+              <button type="button" onClick={() => resolverAporte(aporteRechazo, false, notaRechazo.trim())} disabled={Boolean(procesandoId) || notaRechazo.trim().length < 5} className="inline-flex items-center gap-2 rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50">
+                <X size={16} /> {procesandoId ? "Guardando..." : "Confirmar rechazo"}
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
     </div>
   );
 };
 
 const Metric = ({ icon, label, value }) => (
-  <div className="flex items-center gap-3 border-y border-slate-200 py-4">
+  <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-4 transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-sm motion-reduce:transform-none motion-reduce:transition-none">
     <span className="text-emerald-800">{icon}</span>
     <div>
       <p className="text-sm text-slate-500">{label}</p>

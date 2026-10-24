@@ -28,6 +28,8 @@ const Billetera = () => {
   const [saving, setSaving] = useState(false);
   const [openingReceipt, setOpeningReceipt] = useState("");
   const [error, setError] = useState("");
+  const [requestToReject, setRequestToReject] = useState(null);
+  const [rejectionNote, setRejectionNote] = useState("");
   const [depositForm, setDepositForm] = useState({ amount: "", reference: "", receipt: null });
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const withdrawableBalance = Math.max(
@@ -134,11 +136,13 @@ const Billetera = () => {
     }
   };
 
-  const resolverMovimiento = async (request, approve) => {
+  const resolverMovimiento = async (request, approve, note = null) => {
     setSaving(true);
     setError("");
     try {
-      await resolverSolicitudBilletera(request.id, approve);
+      await resolverSolicitudBilletera(request.id, approve, note || "");
+      setRequestToReject(null);
+      setRejectionNote("");
       notify({
         title: approve ? "Movimiento aprobado" : "Movimiento rechazado",
         message: approve ? "El saldo del socio se actualizó y el cambio quedó en auditoría." : "La solicitud fue rechazada y quedó registrada en auditoría.",
@@ -196,7 +200,7 @@ const Billetera = () => {
           ) : (
             <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white px-5">
               {adminRequests.map((request) => (
-                <article key={request.id} className="flex flex-wrap items-center justify-between gap-4 py-4">
+                <article key={request.id} className="flex flex-wrap items-center justify-between gap-4 py-4 transition-colors duration-150 hover:bg-slate-50 motion-reduce:transition-none">
                   <div>
                     <p className="font-semibold text-slate-900">{request.nombre} {request.apellido} · {request.tipo === "deposito" ? "Depósito" : "Retiro"}</p>
                     <p className="mt-1 text-sm text-slate-600">{currency.format(request.monto)} · {new Date(request.creada_en).toLocaleString("es-EC")}</p>
@@ -205,13 +209,40 @@ const Billetera = () => {
                   </div>
                   <div className="flex gap-2">
                     <button type="button" disabled={saving} onClick={() => resolverMovimiento(request, true)} className="rounded-lg bg-emerald-800 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Aprobar</button>
-                    <button type="button" disabled={saving} onClick={() => resolverMovimiento(request, false)} className="rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">Rechazar</button>
+                    <button type="button" disabled={saving} onClick={() => {
+                      setRequestToReject(request);
+                      setRejectionNote("");
+                    }} className="rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50">Rechazar</button>
                   </div>
                 </article>
               ))}
             </div>
           )}
         </section>
+        {requestToReject && (
+          <div className="ui-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !saving) setRequestToReject(null);
+          }}>
+            <section role="dialog" aria-modal="true" aria-labelledby="rechazar-billetera-titulo" className="ui-dialog-panel w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+              <header className="border-b border-slate-200 px-5 py-4">
+                <p className="text-sm font-semibold text-red-700">Rechazar solicitud</p>
+                <h2 id="rechazar-billetera-titulo" className="mt-1 text-xl font-bold text-slate-900">{requestToReject.nombre} {requestToReject.apellido}</h2>
+                <p className="mt-1 text-sm text-slate-600">{requestToReject.tipo === "deposito" ? "Depósito" : "Retiro"} · {currency.format(requestToReject.monto)}</p>
+              </header>
+              <div className="space-y-2 px-5 py-4">
+                <label htmlFor="nota-rechazo-billetera" className="text-sm font-medium text-slate-700">Motivo que verá el socio</label>
+                <textarea id="nota-rechazo-billetera" value={rejectionNote} onChange={(event) => setRejectionNote(event.target.value)} maxLength={500} rows={4} required placeholder="Indica qué debe corregir o verificar el socio." className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500" />
+                <p className="text-right text-xs text-slate-500">{rejectionNote.trim().length}/500 caracteres (mínimo 5)</p>
+              </div>
+              <footer className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
+                <button type="button" onClick={() => setRequestToReject(null)} disabled={saving} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancelar</button>
+                <button type="button" onClick={() => resolverMovimiento(requestToReject, false, rejectionNote.trim())} disabled={saving || rejectionNote.trim().length < 5} className="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50">
+                  {saving ? "Guardando..." : "Confirmar rechazo"}
+                </button>
+              </footer>
+            </section>
+          </div>
+        )}
       </div>
     );
   }
@@ -285,7 +316,12 @@ const Billetera = () => {
           <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white px-5">
             {requests.map((request) => (
               <article key={request.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
-                <span className="font-medium capitalize text-slate-800">{request.tipo} · {currency.format(request.monto)}</span>
+                <div>
+                  <p className="font-medium capitalize text-slate-800">{request.tipo} · {currency.format(request.monto)}</p>
+                  {request.estado === "rechazada" && request.nota_revision && (
+                    <p className="mt-1 max-w-2xl text-xs leading-5 text-red-700">Motivo: {request.nota_revision}</p>
+                  )}
+                </div>
                 <span className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${request.estado === "aprobada" ? "bg-emerald-50 text-emerald-800" : request.estado === "rechazada" ? "bg-red-50 text-red-800" : "bg-amber-50 text-amber-800"}`}>{request.estado}</span>
               </article>
             ))}

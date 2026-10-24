@@ -46,7 +46,9 @@ const TreasuryGroupSummary = () => {
   }, [load, user?.id]);
 
   const groupIds = new Set(grupos.map((item) => item.id));
-  const visibleRows = rows.filter((row) => groupIds.has(row.grupo_id));
+  const visibleRows = rows
+    .filter((row) => groupIds.has(row.grupo_id))
+    .sort((a, b) => Number(b.aportes_pendientes_revision || 0) - Number(a.aportes_pendientes_revision || 0));
 
   return (
     <section className="space-y-4" aria-labelledby="resumen-grupos-tesoreria">
@@ -80,7 +82,7 @@ const TreasuryGroupSummary = () => {
           {visibleRows.map((row) => {
             const selected = grupo?.id === row.grupo_id;
             return (
-              <article key={row.grupo_id} className={`rounded-xl border bg-white p-4 ${selected ? "border-blue-400 ring-1 ring-blue-100" : "border-slate-200"}`}>
+              <article key={row.grupo_id} className={`rounded-xl border bg-white p-4 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none ${Number(row.aportes_pendientes_revision) > 0 ? "border-amber-300" : selected ? "border-blue-400 ring-1 ring-blue-100" : "border-slate-200"}`}>
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="font-semibold text-slate-900">{row.grupo_nombre}</h3>
                   <span className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
@@ -105,7 +107,7 @@ const TreasuryGroupSummary = () => {
                     <CheckCircle2 size={16} /> Grupo actual
                   </span>
                 ) : (
-                  <button type="button" onClick={() => seleccionarGrupo(row.grupo_id)} className="mt-4 w-full rounded-lg border border-blue-700 px-3 py-2 text-sm font-semibold text-blue-800 hover:bg-blue-50">
+                  <button type="button" onClick={() => seleccionarGrupo(row.grupo_id)} className="mt-4 w-full rounded-lg border border-blue-700 px-3 py-2 text-sm font-semibold text-blue-800 transition-colors duration-150 hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 motion-reduce:transition-none">
                     Ver grupo
                   </button>
                 )}
