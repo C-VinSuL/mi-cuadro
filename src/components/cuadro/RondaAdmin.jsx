@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useState
 } from "react";
@@ -7,7 +8,6 @@ import {
   CheckCircle2,
   Clock3,
   Trophy,
-  CircleDollarSign,
   LockKeyhole,
   Users
 } from "lucide-react";
@@ -20,7 +20,6 @@ import { etiquetaPeriodo } from "../../services/grupoService";
 const RondaAdmin = () => {
   const {
     grupo,
-    profile,
     cargarGrupo
   } = useAuth();
   const periodoActual = etiquetaPeriodo(grupo?.aporte_periodicidad);
@@ -67,7 +66,7 @@ const puedeAdministrar =
   // CARGAR DATOS
   // ========================================
 
-  const cargarDatos = async () => {
+  const cargarDatos = useCallback(async () => {
     if (!grupo?.id) return;
 
     setLoading(true);
@@ -148,21 +147,15 @@ const puedeAdministrar =
     );
 
     setLoading(false);
-  };
+  }, [grupo]);
 
 
   useEffect(() => {
-    if (
-      grupo?.id &&
-      grupo?.estado === "activo"
-    ) {
-      cargarDatos();
+    if (grupo?.id && grupo.estado === "activo") {
+      const timeoutId = window.setTimeout(cargarDatos, 0);
+      return () => window.clearTimeout(timeoutId);
     }
-  }, [
-    grupo?.id,
-    grupo?.semana_actual,
-    grupo?.estado
-  ]);
+  }, [cargarDatos, grupo?.estado, grupo?.id]);
 
 
   // ========================================

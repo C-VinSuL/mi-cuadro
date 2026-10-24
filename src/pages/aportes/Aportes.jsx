@@ -941,7 +941,7 @@ const AportesSocio = () => {
 
 const Aportes = () => {
   const { profile } = useAuth();
-  return profile?.rol?.toLowerCase() === "administrador"
+  return ["administrador", "tesorero"].includes(profile?.rol?.toLowerCase())
     ? <AportesAdmin />
     : <AportesSocio />;
 };

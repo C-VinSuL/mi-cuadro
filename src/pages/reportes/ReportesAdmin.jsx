@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Download, FileBarChart2, TrendingDown, TrendingUp } from "lucide-react";
+import { Download, FileBarChart2, PiggyBank, TrendingDown, TrendingUp } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
+import { obtenerSaldoFondo } from "../../services/fondoService";
 
 const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
 
@@ -28,6 +29,7 @@ const obtenerTodosLosMovimientos = async (groupIds) => {
 const ReportesAdmin = () => {
   const { grupos } = useAuth();
   const [movimientos, setMovimientos] = useState([]);
+  const [saldosPorGrupo, setSaldosPorGrupo] = useState({});
   const [grupoFiltro, setGrupoFiltro] = useState("todos");
   const [tipoFiltro, setTipoFiltro] = useState("todos");
   const [loading, setLoading] = useState(true);
@@ -40,6 +42,7 @@ const ReportesAdmin = () => {
       if (!grupos.length) {
         if (active) {
           setMovimientos([]);
+          setSaldosPorGrupo({});
           setLoading(false);
         }
         return;
@@ -48,14 +51,22 @@ const ReportesAdmin = () => {
       setLoading(true);
       setError("");
       try {
-        const rows = await obtenerTodosLosMovimientos(grupos.map((grupo) => grupo.id));
+        const groupIds = grupos.map((grupo) => grupo.id);
+        const [rows, saldos] = await Promise.all([
+          obtenerTodosLosMovimientos(groupIds),
+          Promise.all(grupos.map(async (grupo) => [
+            grupo.id,
+            await obtenerSaldoFondo(grupo.id)
+          ]))
+        ]);
         const groupNames = new Map(grupos.map((grupo) => [grupo.id, grupo.nombre]));
         if (active) {
           setMovimientos(rows.map((row) => ({ ...row, grupo: groupNames.get(row.grupo_id) || "Grupo" })));
+          setSaldosPorGrupo(Object.fromEntries(saldos));
         }
       } catch (loadError) {
         console.error("Error generando reportes:", loadError);
-        if (active) setError("No se pudieron cargar los movimientos para el reporte.");
+        if (active) setError("No se pudieron cargar los movimientos y saldos para el reporte.");
       } finally {
         if (active) setLoading(false);
       }
@@ -71,6 +82,10 @@ const ReportesAdmin = () => {
     (grupoFiltro === "todos" || movimiento.grupo_id === grupoFiltro)
     && (tipoFiltro === "todos" || movimiento.tipo === tipoFiltro)
   )), [movimientos, grupoFiltro, tipoFiltro]);
+
+  const disponibilidad = useMemo(() => grupoFiltro === "todos"
+    ? Object.values(saldosPorGrupo).reduce((total, saldo) => total + Number(saldo || 0), 0)
+    : Number(saldosPorGrupo[grupoFiltro] || 0), [grupoFiltro, saldosPorGrupo]);
 
   const resumen = useMemo(() => movimientosFiltrados.reduce((totals, movimiento) => {
     const amount = Number(movimiento.monto || 0);
@@ -128,9 +143,10 @@ const ReportesAdmin = () => {
 
       {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
 
-      <section className="grid gap-4 sm:grid-cols-3" aria-label="Resumen del reporte">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Resumen del reporte">
         <Metric icon={<TrendingUp size={19} />} label="Ingresos" value={currency.format(resumen.ingresos)} />
         <Metric icon={<TrendingDown size={19} />} label="Egresos" value={currency.format(resumen.egresos)} />
+        <Metric icon={<PiggyBank size={19} />} label="Disponibilidad" value={currency.format(disponibilidad)} />
         <Metric icon={<FileBarChart2 size={19} />} label="Movimientos" value={movimientosFiltrados.length} />
       </section>
 

@@ -2,17 +2,68 @@ import { useEffect, useMemo, useState } from "react";
 import { CircleDollarSign, Users, Wallet } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
-import { etiquetaPeriodo } from "../../services/grupoService";
+import { useNotifications } from "../../hooks/useNotifications";
+import { etiquetaPeriodo, listarParticipantesGrupoAdmin, registrarAporteMiembro } from "../../services/grupoService";
 
 const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
 
 const AportesAdmin = () => {
-  const { grupos } = useAuth();
+  const { grupos, cargarFondoComunitario } = useAuth();
+  const { notify } = useNotifications();
   const [aportes, setAportes] = useState([]);
   const [grupoFiltro, setGrupoFiltro] = useState("todos");
   const [estadoFiltro, setEstadoFiltro] = useState("todos");
+  const [grupoRegistroId, setGrupoRegistroId] = useState("");
+  const [participantes, setParticipantes] = useState([]);
+  const [participanteId, setParticipanteId] = useState("");
+  const [monto, setMonto] = useState("");
+  const [cargandoParticipantes, setCargandoParticipantes] = useState(false);
+  const [registrando, setRegistrando] = useState(false);
+  const [registroError, setRegistroError] = useState("");
+  const [actualizacion, setActualizacion] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const grupoRegistroIdActual = grupoRegistroId
+    || grupos.find((grupo) => grupo.estado === "activo")?.id
+    || grupos[0]?.id
+    || "";
+  const grupoRegistro = grupos.find((grupo) => grupo.id === grupoRegistroIdActual);
+  const grupoActivo = grupoRegistro?.estado === "activo" && Number(grupoRegistro.semana_actual) > 0;
+
+  useEffect(() => {
+    let active = true;
+
+    const loadParticipants = async () => {
+      if (!grupoRegistroIdActual) {
+        setParticipantes([]);
+        setParticipanteId("");
+        setMonto("");
+        return;
+      }
+
+      setCargandoParticipantes(true);
+      setRegistroError("");
+      setParticipantes([]);
+      setParticipanteId("");
+      setMonto(Number(grupoRegistro?.aporte_semanal || 0).toFixed(2));
+
+      try {
+        const data = await listarParticipantesGrupoAdmin(grupoRegistroIdActual);
+        if (active) setParticipantes(data || []);
+      } catch (loadError) {
+        console.error("Error cargando participantes para registrar aportes:", loadError);
+        if (active) setRegistroError(loadError.message || "No se pudieron cargar los miembros del grupo.");
+      } finally {
+        if (active) setCargandoParticipantes(false);
+      }
+    };
+
+    loadParticipants();
+    return () => {
+      active = false;
+    };
+  }, [grupoRegistroIdActual, grupoRegistro?.aporte_semanal]);
 
   useEffect(() => {
     let active = true;
@@ -66,7 +117,41 @@ const AportesAdmin = () => {
     return () => {
       active = false;
     };
-  }, [grupos]);
+  }, [grupos, actualizacion]);
+
+  const registrarAporte = async (event) => {
+    event.preventDefault();
+    if (!grupoRegistro || !grupoActivo || !participanteId || registrando) return;
+
+    const montoNumerico = Number(monto);
+    if (!Number.isFinite(montoNumerico) || montoNumerico <= 0) {
+      setRegistroError("Ingresa un monto mayor que cero.");
+      return;
+    }
+
+    setRegistrando(true);
+    setRegistroError("");
+    try {
+      await registrarAporteMiembro({
+        grupoId: grupoRegistro.id,
+        participanteId,
+        monto: montoNumerico
+      });
+      notify({
+        title: "Aporte registrado",
+        message: `El aporte de ${currency.format(montoNumerico)} quedó guardado en Supabase.`,
+        type: "success"
+      });
+      setParticipanteId("");
+      setActualizacion((value) => value + 1);
+      await cargarFondoComunitario(grupoRegistro.id);
+    } catch (submitError) {
+      console.error("Error registrando aporte de un miembro:", submitError);
+      setRegistroError(submitError.message || "No se pudo registrar el aporte.");
+    } finally {
+      setRegistrando(false);
+    }
+  };
 
   const aportesFiltrados = useMemo(() => aportes.filter((aporte) => (
     (grupoFiltro === "todos" || aporte.grupo_id === grupoFiltro)
@@ -105,6 +190,70 @@ const AportesAdmin = () => {
       </section>
 
       {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
+
+      <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+        <div className="mb-5">
+          <h2 className="text-lg font-semibold text-slate-900">Registrar aporte de un miembro</h2>
+          <p className="mt-1 text-sm text-slate-600">Al guardar, el aporte se registra para el periodo actual del grupo.</p>
+        </div>
+        <form onSubmit={registrarAporte} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="text-sm font-medium text-slate-700">
+            Grupo
+            <select
+              value={grupoRegistroIdActual}
+              onChange={(event) => setGrupoRegistroId(event.target.value)}
+              required
+              className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal"
+            >
+              <option value="" disabled>Selecciona un grupo</option>
+              {grupos.map((grupo) => (
+                <option key={grupo.id} value={grupo.id}>{grupo.nombre}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm font-medium text-slate-700">
+            Miembro
+            <select
+              value={participanteId}
+              onChange={(event) => setParticipanteId(event.target.value)}
+              required
+              disabled={!grupoActivo || cargandoParticipantes}
+              className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal disabled:bg-slate-100"
+            >
+              <option value="">{cargandoParticipantes ? "Cargando miembros..." : "Selecciona un miembro"}</option>
+              {participantes.map((participante) => (
+                <option key={participante.id} value={participante.id}>{participante.nombre}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm font-medium text-slate-700">
+            Monto (USD)
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={monto}
+              onChange={(event) => setMonto(event.target.value)}
+              required
+              disabled={!grupoActivo}
+              className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal disabled:bg-slate-100"
+            />
+          </label>
+          <div className="flex items-end">
+            <button
+              type="submit"
+              disabled={!grupoActivo || !participanteId || registrando}
+              className="w-full rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              {registrando ? "Guardando..." : "Registrar aporte"}
+            </button>
+          </div>
+        </form>
+        {!grupoActivo && grupoRegistro && (
+          <p className="mt-4 text-sm text-amber-800" role="status">El grupo debe estar activo para registrar aportes.</p>
+        )}
+        {registroError && <p className="mt-4 text-sm text-red-700" role="alert">{registroError}</p>}
+      </section>
 
       <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-5 py-4">

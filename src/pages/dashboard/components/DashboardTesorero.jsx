@@ -93,8 +93,7 @@ const DashboardTesorero = () => {
     cargarDashboard();
 
   }, [
-    grupo?.id,
-    grupo?.semana_actual
+    grupo
   ]);
 
   // ========================================

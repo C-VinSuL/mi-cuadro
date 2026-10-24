@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useState
 } from "react";
@@ -194,8 +195,7 @@ const Prestamos = () => {
   // CARGAR PRÉSTAMOS
   // =====================================================
 
-  const cargarPrestamos =
-    async () => {
+  const cargarPrestamos = useCallback(async () => {
 
       if (
         !grupo?.id ||
@@ -255,18 +255,13 @@ const Prestamos = () => {
 
       }
 
-    };
+  }, [can, grupo, participant]);
 
 
   useEffect(() => {
-
-    cargarPrestamos();
-
-  }, [
-    grupo?.id,
-    participant?.id,
-    rol
-  ]);
+    const timeoutId = window.setTimeout(cargarPrestamos, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [cargarPrestamos, rol]);
 
 
   // =====================================================

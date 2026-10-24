@@ -357,6 +357,8 @@ const cargarFondoComunitario =
       subscription.unsubscribe();
     };
 
+    // The auth listener must be registered once for the provider lifetime.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
@@ -401,6 +403,8 @@ const cargarFondoComunitario =
 // HOOK
 // =========================
 
+// The context hook is intentionally colocated with the provider for existing imports.
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
 
   return useContext(

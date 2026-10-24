@@ -30,6 +30,16 @@ export const listarParticipantesGrupoAdmin = (grupoId) => ejecutarRpc("listar_pa
   p_grupo_id: grupoId
 });
 
+export const registrarAporteMiembro = async ({ grupoId, participanteId, monto }) => {
+  const { data, error } = await supabase.rpc("registrar_aporte_miembro", {
+    p_grupo_id: grupoId,
+    p_participante_id: participanteId,
+    p_monto: Number(monto)
+  });
+  if (error) throw error;
+  return data;
+};
+
 export const contarParticipantesGrupo = (grupoId) => ejecutarRpc("contar_participantes_grupo_propio", {
   p_grupo_id: grupoId
 });
