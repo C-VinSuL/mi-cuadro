@@ -28,6 +28,7 @@ import Usuarios from "../pages/admin/Usuarios";
 import VerificarDocumentos from "../pages/admin/VerificarDocumentos";
 import Auditoria from "../pages/reportes/Auditoria";
 import Billetera from "../pages/Billetera";
+import Egresos from "../pages/egresos/Egresos";
 
 const AppRoutes = () => {
   const { pathname } = useLocation();
@@ -130,6 +131,19 @@ const AppRoutes = () => {
                 <Aportes />
               </MainLayout>
 
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/egresos"
+        element={
+          <ProtectedRoute>
+            <RoleRoute permission="gestionarEgresos">
+              <MainLayout>
+                <Egresos />
+              </MainLayout>
             </RoleRoute>
           </ProtectedRoute>
         }

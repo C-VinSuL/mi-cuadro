@@ -8,6 +8,7 @@ export const PERMISSIONS = {
     verAportes: true,
     registrarAporte: true,
     gestionarAportes: true,
+    gestionarEgresos: true,
 
     verCuadro: true,
     cerrarRonda: true,
@@ -35,6 +36,7 @@ export const PERMISSIONS = {
     verAportes: true,
     registrarAporte: true,
     gestionarAportes: true,
+    gestionarEgresos: true,
 
     verCuadro: true,
     cerrarRonda: true,
@@ -61,6 +63,7 @@ export const PERMISSIONS = {
     verAportes: false,
     registrarAporte: false,
     gestionarAportes: false,
+    gestionarEgresos: false,
     verCuadro: false,
     cerrarRonda: false,
     verPrestamos: false,
@@ -86,6 +89,7 @@ export const PERMISSIONS = {
     verAportes: true,
     registrarAporte: true,
     gestionarAportes: false,
+    gestionarEgresos: false,
 
     verCuadro: true,
     cerrarRonda: false,

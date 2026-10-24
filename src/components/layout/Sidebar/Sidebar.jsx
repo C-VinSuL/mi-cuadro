@@ -11,6 +11,7 @@ import {
   FileClock,
   PiggyBank,
   CalendarDays,
+  ReceiptText,
   X
 } from "lucide-react";
 
@@ -46,6 +47,12 @@ const menu = [
     icon: Wallet,
     path: "/aportes",
     permission: "verAportes"
+  },
+  {
+    title: "Egresos",
+    icon: ReceiptText,
+    path: "/egresos",
+    permission: "gestionarEgresos"
   },
   {
     title: "Cuadro rotativo",
