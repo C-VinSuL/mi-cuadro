@@ -1,11 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders, rejectUntrustedOrigin } from "../_shared/cors.ts";
 
 const appUrl = Deno.env.get("APP_URL");
-const corsHeaders = {
-  "Access-Control-Allow-Origin": appUrl || "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
 
 const jsonResponse = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
@@ -22,6 +18,8 @@ const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) => (
 }[character] || character));
 
 Deno.serve(async (request) => {
+  const originError = rejectUntrustedOrigin(request);
+  if (originError) return originError;
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return jsonResponse(405, { error: "Método no permitido." });
 

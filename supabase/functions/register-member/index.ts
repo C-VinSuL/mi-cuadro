@@ -1,10 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": Deno.env.get("APP_URL") || "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { corsHeaders, rejectUntrustedOrigin } from "../_shared/cors.ts";
 
 const response = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
@@ -19,6 +14,8 @@ const genericConfirmation = () => response(200, {
 });
 
 Deno.serve(async (request) => {
+  const originError = rejectUntrustedOrigin(request);
+  if (originError) return originError;
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return response(405, { error: "Método no permitido" });
 
@@ -49,18 +46,25 @@ Deno.serve(async (request) => {
     return response(400, { error: "La solicitud no contiene JSON válido." });
   }
 
-  const email = form.email?.trim().toLowerCase();
-  const password = form.password || "";
-  const nombre = form.nombre?.trim() || "";
-  const apellido = form.apellido?.trim() || "";
-  const cedula = form.cedula?.trim() || null;
-  const direccion = form.direccion?.trim() || null;
-  const fechaNacimiento = form.fechaNacimiento || null;
+  const email = typeof form.email === "string" ? form.email.trim().toLowerCase() : "";
+  const password = typeof form.password === "string" ? form.password : "";
+  const nombre = typeof form.nombre === "string" ? form.nombre.trim() : "";
+  const apellido = typeof form.apellido === "string" ? form.apellido.trim() : "";
+  const cedula = typeof form.cedula === "string" && form.cedula.trim() ? form.cedula.trim() : null;
+  const direccion = typeof form.direccion === "string" ? form.direccion.trim() || null : null;
+  const fechaNacimiento = typeof form.fechaNacimiento === "string" ? form.fechaNacimiento : null;
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    || password.length < 8 || !nombre
-    || (cedula !== null && (cedula.length < 6 || cedula.length > 20))) {
-    return response(400, { error: "Completa los datos requeridos con formatos válidos." });
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return response(400, { error: "Escribe un correo electrónico válido." });
+  }
+  if (password.length < 8) {
+    return response(400, { error: "La contraseña debe tener al menos 8 caracteres." });
+  }
+  if (!nombre) {
+    return response(400, { error: "Ingresa tu nombre completo." });
+  }
+  if (cedula !== null && (cedula.length < 6 || cedula.length > 20)) {
+    return response(400, { error: "El número de documento debe tener entre 6 y 20 caracteres." });
   }
   if (fechaNacimiento && (Number.isNaN(Date.parse(fechaNacimiento)) || Date.parse(fechaNacimiento) > Date.now())) {
     return response(400, { error: "La fecha de nacimiento no es válida." });
@@ -75,8 +79,28 @@ Deno.serve(async (request) => {
     options: { data: { nombre, apellido, telefono: form.telefono?.trim() || "" } },
   });
   if (error) {
-    console.error("Supabase Auth rechazó el registro:", error.message);
-    return response(400, { error: "No se pudo crear la cuenta. Revisa los datos e inténtalo nuevamente." });
+    console.error("Supabase Auth rechazó el registro:", {
+      code: error.code,
+      message: error.message,
+    });
+    const registrationErrorMessages: Record<string, string> = {
+      weak_password: "La contraseña no cumple los requisitos de seguridad. Prueba con otra de al menos 8 caracteres que no hayas usado antes.",
+      password_too_short: "La contraseña debe tener al menos 8 caracteres.",
+      email_address_invalid: "El correo electrónico no es válido. Revísalo e inténtalo nuevamente.",
+      over_email_send_rate_limit: "Se enviaron demasiados intentos de registro. Espera unos minutos antes de volver a intentarlo.",
+      over_request_rate_limit: "Se enviaron demasiadas solicitudes. Espera unos minutos antes de volver a intentarlo.",
+      signup_disabled: "El registro está temporalmente deshabilitado. Contacta a administración.",
+      email_provider_disabled: "El registro por correo está temporalmente deshabilitado. Contacta a administración.",
+      user_already_exists: "No se pudo crear la cuenta con esos datos. Si ya tienes una cuenta, inicia sesión o solicita restablecer tu contraseña.",
+      email_exists: "No se pudo crear la cuenta con esos datos. Si ya tienes una cuenta, inicia sesión o solicita restablecer tu contraseña.",
+    };
+    return response(
+      400,
+      {
+        error: registrationErrorMessages[error.code || ""] ||
+          "No se pudo crear la cuenta. Revisa el correo y la contraseña e inténtalo nuevamente.",
+      },
+    );
   }
 
   let user = data.user;

@@ -1,13 +1,12 @@
 import {
   Bell,
   LogOut,
-  Menu,
   ChevronDown,
   X,
   CheckCheck,
   Trash2
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useNavigate } from "react-router-dom";
@@ -16,11 +15,13 @@ import { useAuth } from "../../../context/AuthContext";
 import { supabase } from "../../../services/supabase";
 import { useNotifications } from "../../../hooks/useNotifications";
 
-const Navbar = ({ onMenuClick }) => {
+const Navbar = ({ onMenuClick, menuOpen, menuButtonRef }) => {
 
   const navigate = useNavigate();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationsPosition, setNotificationsPosition] = useState(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [userMenuPosition, setUserMenuPosition] = useState(null);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [welcomeDismissedFor, setWelcomeDismissedFor] = useState(null);
   const [completingWelcome, setCompletingWelcome] = useState(false);
@@ -43,7 +44,11 @@ const Navbar = ({ onMenuClick }) => {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [uploadingIdentityDocument, setUploadingIdentityDocument] = useState(false);
   const notificationsRef = useRef(null);
+  const notificationsButtonRef = useRef(null);
+  const notificationsPanelRef = useRef(null);
   const userMenuRef = useRef(null);
+  const userMenuButtonRef = useRef(null);
+  const userMenuPanelRef = useRef(null);
   const {
     notifications,
     unreadCount,
@@ -67,10 +72,16 @@ const Navbar = ({ onMenuClick }) => {
 
   useEffect(() => {
     const handlePointerDown = (event) => {
-      if (!notificationsRef.current?.contains(event.target)) {
+      if (
+        !notificationsRef.current?.contains(event.target)
+        && !notificationsPanelRef.current?.contains(event.target)
+      ) {
         setNotificationsOpen(false);
       }
-      if (!userMenuRef.current?.contains(event.target)) {
+      if (
+        !userMenuRef.current?.contains(event.target)
+        && !userMenuPanelRef.current?.contains(event.target)
+      ) {
         setUserMenuOpen(false);
       }
     };
@@ -90,6 +101,55 @@ const Navbar = ({ onMenuClick }) => {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
+
+  useLayoutEffect(() => {
+    if (!notificationsOpen) return undefined;
+
+    const updatePosition = () => {
+      const anchor = notificationsButtonRef.current?.getBoundingClientRect();
+      if (!anchor) return;
+      const width = Math.min(352, window.innerWidth - 24);
+      const left = Math.max(12, Math.min(anchor.right - width, window.innerWidth - width - 12));
+      setNotificationsPosition({
+        top: anchor.bottom + 8,
+        left,
+        width,
+        maxHeight: `calc(100dvh - ${anchor.bottom + 20}px)`
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [notificationsOpen]);
+
+  useLayoutEffect(() => {
+    if (!userMenuOpen) return undefined;
+
+    const updatePosition = () => {
+      const anchor = userMenuButtonRef.current?.getBoundingClientRect();
+      if (!anchor) return;
+      const width = Math.min(256, window.innerWidth - 24);
+      const left = Math.max(12, Math.min(anchor.right - width, window.innerWidth - width - 12));
+      setUserMenuPosition({
+        top: anchor.bottom + 8,
+        left,
+        width
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [userMenuOpen]);
 
   const guardarPerfil = async (event) => {
     event.preventDefault();
@@ -336,35 +396,27 @@ const Navbar = ({ onMenuClick }) => {
 
       {/* IZQUIERDA */}
 
-      <div className="flex items-center gap-4">
-
-        {/* BOTÓN MOBILE */}
+      <div className="flex items-center gap-4 pl-14 lg:gap-3 lg:pl-0">
 
         <button
+          type="button"
           onClick={onMenuClick}
-          className="
-            lg:hidden
-
-            w-11
-            h-11
-
-            flex
-            items-center
-            justify-center
-
-            rounded-xl
-
-            bg-emerald-50
-            text-emerald-800
-
-            hover:bg-emerald-100
-            transition
-          "
-          aria-label="Abrir menú"
+          ref={menuButtonRef}
+          className={`hidden size-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 motion-reduce:transition-none lg:flex xl:hidden ${
+            menuOpen
+              ? "bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+              : "bg-white text-emerald-800 hover:bg-emerald-50"
+          }`}
+          aria-label={menuOpen ? "Ocultar menú lateral" : "Mostrar menú lateral"}
+          aria-expanded={menuOpen}
+          aria-controls="desktop-navigation"
         >
-          <Menu size={23} />
+          <span className="relative flex size-6 items-center justify-center" aria-hidden="true">
+            <span className={`absolute h-0.5 w-5 rounded-full bg-current transition-all duration-300 ease-in-out motion-reduce:transition-none ${menuOpen ? "rotate-45" : "-translate-y-1.5"}`} />
+            <span className={`absolute h-0.5 w-5 rounded-full bg-current transition-all duration-300 ease-in-out motion-reduce:transition-none ${menuOpen ? "scale-x-0 opacity-0" : "scale-x-100 opacity-100"}`} />
+            <span className={`absolute h-0.5 w-5 rounded-full bg-current transition-all duration-300 ease-in-out motion-reduce:transition-none ${menuOpen ? "-rotate-45" : "translate-y-1.5"}`} />
+          </span>
         </button>
-
 
         {/* SALUDO */}
 
@@ -423,6 +475,7 @@ const Navbar = ({ onMenuClick }) => {
         <div className="relative" ref={notificationsRef}>
           <button
             type="button"
+            ref={notificationsButtonRef}
             aria-label={`Notificaciones${unreadCount ? `, ${unreadCount} sin leer` : ""}`}
             aria-expanded={notificationsOpen}
             onClick={() => {
@@ -439,9 +492,13 @@ const Navbar = ({ onMenuClick }) => {
             )}
           </button>
 
-          {notificationsOpen && (
-            <div className="absolute right-0 top-14 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-              <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          {notificationsOpen && notificationsPosition && createPortal(
+            <div
+              ref={notificationsPanelRef}
+              style={notificationsPosition}
+              className="navbar-glass-pop fixed z-[120] flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-emerald-950/20"
+            >
+              <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
                 <div>
                   <h2 className="text-sm font-semibold text-slate-900">Notificaciones</h2>
                   <p className="text-xs text-slate-500">{unreadCount} sin leer · {notifications.length} recientes</p>
@@ -458,11 +515,11 @@ const Navbar = ({ onMenuClick }) => {
                   </button>
                 </div>
               </div>
-              <div className="max-h-[min(65vh,28rem)] overflow-y-auto">
+              <div className="min-h-0 flex-1 overflow-y-auto sm:max-h-[min(65vh,28rem)] sm:flex-none">
                 {notifications.length === 0 ? (
                   <p className="px-4 py-10 text-center text-sm text-slate-500">No tienes notificaciones todavía.</p>
                 ) : notifications.map((item) => (
-                  <article key={item.id} className={`border-b border-slate-100 px-4 py-3 last:border-b-0 ${item.read ? "bg-white" : "bg-emerald-50/60"}`}>
+                  <article key={item.id} className={`border-b border-slate-100 px-4 py-3 last:border-b-0 ${item.read ? "bg-white" : "bg-emerald-50"}`}>
                     <div className="flex items-start gap-2">
                       <span className={`mt-1.5 size-2 shrink-0 rounded-full ${item.type === "error" ? "bg-red-500" : item.type === "success" ? "bg-emerald-600" : "bg-blue-500"}`} />
                       <div className="min-w-0 flex-1">
@@ -498,7 +555,8 @@ const Navbar = ({ onMenuClick }) => {
                   </article>
                 ))}
               </div>
-            </div>
+            </div>,
+            document.body
           )}
         </div>
 
@@ -508,7 +566,8 @@ const Navbar = ({ onMenuClick }) => {
         <div className="relative" ref={userMenuRef}>
         <button
           type="button"
-          aria-label="Abrir menú de perfil"
+          ref={userMenuButtonRef}
+          aria-label={userMenuOpen ? "Cerrar menú de perfil" : "Abrir menú de perfil"}
           aria-expanded={userMenuOpen}
           onClick={() => {
             setUserMenuOpen((open) => !open);
@@ -579,78 +638,57 @@ const Navbar = ({ onMenuClick }) => {
 
           <ChevronDown
             size={15}
-            className="
-                hidden
-                sm:block
-              text-slate-400
-            "
+            className={`shrink-0 text-slate-400 transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`}
           />
 
         </button>
 
-        {userMenuOpen && (
-          <div className="absolute right-0 top-14 z-50 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-            <div className="border-b border-slate-100 px-4 py-3">
+        {userMenuOpen && userMenuPosition && createPortal(
+          <div
+            ref={userMenuPanelRef}
+            style={userMenuPosition}
+            className="navbar-glass-pop fixed z-[120] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-emerald-950/20"
+          >
+            <div className="border-b border-slate-200 bg-white px-4 py-3">
               <p className="truncate text-sm font-semibold text-slate-900">{profile?.nombre} {profile?.apellido}</p>
               <p className="mt-0.5 text-xs capitalize text-slate-500">{profile?.rol || "Socio"}</p>
             </div>
             <button
               type="button"
-              onClick={abrirEditorPerfil}
+              onClick={() => {
+                setUserMenuOpen(false);
+                abrirEditorPerfil();
+              }}
               className="w-full px-4 py-3 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               Editar perfil
               <span className="mt-0.5 block text-xs font-normal text-slate-500">Datos, avatar y redes sociales</span>
             </button>
-          </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex w-full items-center gap-2 border-t border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-500"
+            >
+              <LogOut size={17} aria-hidden="true" />
+              Cerrar sesión
+            </button>
+          </div>,
+          document.body
         )}
         </div>
-
-
-        {/* SALIR */}
-
-        <button
-          onClick={handleLogout}
-          className="
-            flex
-            items-center
-            gap-2
-
-            px-3
-            sm:px-4
-
-            py-2.5
-
-            rounded-xl
-
-            text-red-600
-
-            hover:bg-red-50
-
-            transition
-          "
-        >
-
-          <LogOut size={18} />
-
-          <span className="hidden xl:block text-sm font-medium">
-            Cerrar sesión
-          </span>
-
-        </button>
 
       </div>
 
       {welcomeOpen && createPortal(
-        <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-slate-950/60 p-4">
-          <section role="dialog" aria-modal="true" aria-labelledby="welcome-title" className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
+        <div className="ui-dialog-backdrop fixed inset-0 z-[1100] flex items-center justify-center bg-slate-950/60 p-4">
+          <section role="dialog" aria-modal="true" aria-labelledby="welcome-title" className="ui-dialog-panel w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
             <div className="mx-auto w-full max-w-xs overflow-hidden rounded-xl bg-[#023a2d]">
               <img src="/flashmonkey-logo.png" alt="FlashMonkey" className="block h-auto w-full" />
             </div>
             <p className="mt-5 text-center text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Bienvenido a FlashMonkey</p>
             <h2 id="welcome-title" className="mt-2 text-center text-2xl font-bold text-slate-900">¡Qué bueno tenerte aquí!</h2>
             <p className="mt-3 text-center text-sm leading-6 text-slate-600">
-              El primer paso es completar y verificar tus datos. Desde <strong>Editar perfil</strong> confirma tu teléfono, cédula y dirección, y carga una imagen o PDF de tu documento de identidad para que administración o tesorería lo revise.
+              El primer paso es completar y verificar tus datos. Desde <strong>Editar perfil</strong> confirma tu teléfono, cédula y dirección, y carga una imagen o PDF de tu documento de identidad para que el administrador lo revise.
             </p>
             <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
               <p className="font-semibold">Garantía para participar en grupos</p>
@@ -666,10 +704,10 @@ const Navbar = ({ onMenuClick }) => {
       )}
 
       {profileEditorOpen && createPortal(
-        <div className="fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-950/40 p-4 sm:items-center" onMouseDown={(event) => {
+        <div className="ui-dialog-backdrop fixed inset-0 z-[1000] flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-950/40 p-4 sm:items-center" onMouseDown={(event) => {
           if (event.target === event.currentTarget) setProfileEditorOpen(false);
         }}>
-          <section role="dialog" aria-modal="true" aria-labelledby="profile-dialog-title" className="my-auto max-h-[calc(100vh-2rem)] max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-xl bg-white p-5 shadow-2xl sm:p-7">
+          <section role="dialog" aria-modal="true" aria-labelledby="profile-dialog-title" className="ui-dialog-panel my-auto max-h-[calc(100vh-2rem)] max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-xl bg-white p-5 shadow-2xl sm:p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase text-emerald-700">Cuenta</p>

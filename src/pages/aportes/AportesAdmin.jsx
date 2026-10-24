@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { CircleDollarSign, Users, Wallet } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Check, CircleDollarSign, ExternalLink, RefreshCw, Users, Wallet, X } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../hooks/useNotifications";
@@ -7,9 +7,20 @@ import { etiquetaPeriodo, listarParticipantesGrupoAdmin, registrarAporteMiembro 
 
 const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
 
+const estadoAporte = (aporte) => {
+  if (aporte.estado_revision === "pendiente") return "pendiente";
+  if (aporte.estado_revision === "rechazado") return "rechazado";
+  if (aporte.estado_revision === "aprobado" || aporte.estado?.toLowerCase() === "pagado") return "pagado";
+  return aporte.estado?.toLowerCase() || "pendiente";
+};
+
 const AportesAdmin = () => {
+<<<<<<< HEAD
   const { grupos, cargarFondoComunitario } = useAuth();
   const { notify } = useNotifications();
+=======
+  const { grupos, profile } = useAuth();
+>>>>>>> f36515fe1c43946865cb827ea05c761bc7b28dd0
   const [aportes, setAportes] = useState([]);
   const [grupoFiltro, setGrupoFiltro] = useState("todos");
   const [estadoFiltro, setEstadoFiltro] = useState("todos");
@@ -23,6 +34,44 @@ const AportesAdmin = () => {
   const [actualizacion, setActualizacion] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [mensaje, setMensaje] = useState("");
+  const [procesandoId, setProcesandoId] = useState(null);
+  const [estadoTiempoReal, setEstadoTiempoReal] = useState("conectando");
+  const puedeRevisar = ["administrador", "tesorero"].includes(profile?.rol?.toLowerCase());
+  const estadoTiempoRealVisible = !profile?.id || grupos.length === 0 ? "inactivo" : estadoTiempoReal;
+
+  const cargarAportes = useCallback(async ({ mostrarCarga = true } = {}) => {
+    if (!grupos.length) {
+      setAportes([]);
+      setLoading(false);
+      return;
+    }
+
+    if (mostrarCarga) setLoading(true);
+    setError("");
+    const groupIds = grupos.map((grupo) => grupo.id);
+    const [participantsResponse, contributionsResponse] = await Promise.all([
+      supabase.from("participantes").select("id, grupo_id, nombre").in("grupo_id", groupIds),
+      supabase
+        .from("aportes")
+        .select("id, grupo_id, participante_id, semana, monto, comision_app, estado, fecha_pago, comprobante_path, estado_revision, revisado_en, nota_revision")
+        .in("grupo_id", groupIds)
+        .order("semana", { ascending: false })
+    ]);
+
+    if (participantsResponse.error || contributionsResponse.error) {
+      throw participantsResponse.error || contributionsResponse.error;
+    }
+
+    const participantNames = new Map((participantsResponse.data || []).map((item) => [item.id, item.nombre]));
+    const groupNames = new Map(grupos.map((item) => [item.id, item.nombre]));
+    setAportes((contributionsResponse.data || []).map((item) => ({
+      ...item,
+      socio: participantNames.get(item.participante_id) || "Socio sin identificar",
+      grupo: groupNames.get(item.grupo_id) || "Grupo"
+    })));
+    if (mostrarCarga) setLoading(false);
+  }, [grupos]);
 
   const grupoRegistroIdActual = grupoRegistroId
     || grupos.find((grupo) => grupo.estado === "activo")?.id
@@ -67,56 +116,19 @@ const AportesAdmin = () => {
 
   useEffect(() => {
     let active = true;
-
-    const loadContributions = async () => {
-      if (!grupos.length) {
+    Promise.resolve()
+      .then(() => cargarAportes())
+      .catch((loadError) => {
+        console.error("Error cargando aportes administrativos:", loadError);
         if (active) {
-          setAportes([]);
+          setError("No se pudieron cargar los aportes de los grupos.");
           setLoading(false);
         }
-        return;
-      }
-
-      setLoading(true);
-      setError("");
-      const groupIds = grupos.map((grupo) => grupo.id);
-      const [participantsResponse, contributionsResponse] = await Promise.all([
-        supabase.from("participantes").select("id, grupo_id, nombre").in("grupo_id", groupIds),
-        supabase
-          .from("aportes")
-          .select("id, grupo_id, participante_id, semana, monto, comision_app, estado, fecha_pago")
-          .in("grupo_id", groupIds)
-          .order("semana", { ascending: false })
-      ]);
-
-      if (!active) return;
-      if (participantsResponse.error || contributionsResponse.error) {
-        setError("No se pudieron cargar los aportes de los grupos.");
-        setLoading(false);
-        return;
-      }
-
-      const participantNames = new Map((participantsResponse.data || []).map((item) => [item.id, item.nombre]));
-      const groupNames = new Map(grupos.map((item) => [item.id, item.nombre]));
-      setAportes((contributionsResponse.data || []).map((item) => ({
-        ...item,
-        socio: participantNames.get(item.participante_id) || "Socio sin identificar",
-        grupo: groupNames.get(item.grupo_id) || "Grupo"
-      })));
-      setLoading(false);
-    };
-
-    loadContributions().catch((loadError) => {
-      console.error("Error cargando aportes administrativos:", loadError);
-      if (active) {
-        setError("No se pudieron cargar los aportes de los grupos.");
-        setLoading(false);
-      }
-    });
-
+      });
     return () => {
       active = false;
     };
+<<<<<<< HEAD
   }, [grupos, actualizacion]);
 
   const registrarAporte = async (event) => {
@@ -152,15 +164,96 @@ const AportesAdmin = () => {
       setRegistrando(false);
     }
   };
+=======
+  }, [cargarAportes]);
+
+  useEffect(() => {
+    if (!profile?.id || grupos.length === 0) {
+      return undefined;
+    }
+
+    const groupIds = new Set(grupos.map((grupo) => grupo.id));
+    const channel = supabase
+      .channel(`aportes-admin-${profile.id}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "aportes"
+      }, (payload) => {
+        const changedGroupId = payload.new?.grupo_id || payload.old?.grupo_id;
+        if (changedGroupId && !groupIds.has(changedGroupId)) return;
+
+        cargarAportes({ mostrarCarga: false }).catch((refreshError) => {
+          console.error("Error actualizando aportes en tiempo real:", refreshError);
+          setError("No se pudo actualizar el registro en tiempo real. Usa Actualizar para volver a intentarlo.");
+        });
+      })
+      .subscribe((status, subscriptionError) => {
+        if (status === "SUBSCRIBED") {
+          setEstadoTiempoReal("activo");
+        } else if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
+          if (subscriptionError) console.error("Error en la conexión de tiempo real de aportes:", subscriptionError);
+          setEstadoTiempoReal("error");
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [cargarAportes, grupos, profile?.id]);
+>>>>>>> f36515fe1c43946865cb827ea05c761bc7b28dd0
 
   const aportesFiltrados = useMemo(() => aportes.filter((aporte) => (
     (grupoFiltro === "todos" || aporte.grupo_id === grupoFiltro)
-    && (estadoFiltro === "todos" || aporte.estado?.toLowerCase() === estadoFiltro)
+    && (estadoFiltro === "todos" || estadoAporte(aporte) === estadoFiltro)
   )), [aportes, grupoFiltro, estadoFiltro]);
 
-  const pagados = aportesFiltrados.filter((aporte) => aporte.estado?.toLowerCase() === "pagado");
-  const pendientes = aportesFiltrados.filter((aporte) => aporte.estado?.toLowerCase() !== "pagado");
+  const pagados = aportesFiltrados.filter((aporte) => estadoAporte(aporte) === "pagado");
+  const pendientes = aportesFiltrados.filter((aporte) => estadoAporte(aporte) === "pendiente");
   const totalPagado = pagados.reduce((total, aporte) => total + Number(aporte.monto || 0), 0);
+
+  const abrirComprobante = async (aporte) => {
+    setError("");
+    const ventana = window.open("about:blank", "_blank");
+    if (!ventana) {
+      setError("Permite las ventanas emergentes para abrir el comprobante.");
+      return;
+    }
+    ventana.opener = null;
+
+    try {
+      const { data, error: signedUrlError } = await supabase.storage
+        .from("contribution-receipts")
+        .createSignedUrl(aporte.comprobante_path, 60);
+      if (signedUrlError) throw signedUrlError;
+      ventana.location.href = data.signedUrl;
+    } catch (signedUrlError) {
+      ventana.close();
+      setError("No se pudo abrir el comprobante. Verifica tu sesión y el segundo factor de autenticación.");
+      console.error("Error generando URL del comprobante:", signedUrlError);
+    }
+  };
+
+  const resolverAporte = async (aporte, aprobar) => {
+    setProcesandoId(aporte.id);
+    setError("");
+    setMensaje("");
+    try {
+      const { error: reviewError } = await supabase.rpc("resolver_aporte_comprobante", {
+        p_aporte_id: aporte.id,
+        p_aprobar: aprobar,
+        p_nota: null
+      });
+      if (reviewError) throw reviewError;
+      setMensaje(aprobar ? "Comprobante aprobado y aporte acreditado." : "Comprobante rechazado; el socio podrá enviar uno nuevo.");
+      await cargarAportes();
+    } catch (reviewError) {
+      console.error("Error revisando comprobante de aporte:", reviewError);
+      setError(reviewError.message || "No se pudo guardar la decisión.");
+    } finally {
+      setProcesandoId(null);
+    }
+  };
 
   return (
     <div className="space-y-7">
@@ -171,25 +264,39 @@ const AportesAdmin = () => {
           <p className="mt-2 text-sm text-slate-600">Consulta los aportes registrados por los socios en todos los grupos.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => cargarAportes().catch((loadError) => {
+              console.error("Error actualizando aportes administrativos:", loadError);
+              setError("No se pudieron actualizar los aportes. Intenta nuevamente.");
+              setLoading(false);
+            })}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            <RefreshCw size={16} /> Actualizar
+          </button>
           <select value={grupoFiltro} onChange={(event) => setGrupoFiltro(event.target.value)} aria-label="Filtrar aportes por grupo" className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
             <option value="todos">Todos los grupos</option>
             {grupos.map((grupo) => <option key={grupo.id} value={grupo.id}>{grupo.nombre}</option>)}
           </select>
           <select value={estadoFiltro} onChange={(event) => setEstadoFiltro(event.target.value)} aria-label="Filtrar aportes por estado" className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
             <option value="todos">Todos los estados</option>
-            <option value="pagado">Pagados</option>
-            <option value="pendiente">Pendientes</option>
+            <option value="pendiente">Pendientes de revisión</option>
+            <option value="pagado">Aprobados</option>
+            <option value="rechazado">Rechazados</option>
           </select>
         </div>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-3" aria-label="Resumen de aportes">
-        <Metric icon={<Users size={19} />} label="Registros revisados" value={aportesFiltrados.length} />
-        <Metric icon={<CircleDollarSign size={19} />} label="Total pagado" value={currency.format(totalPagado)} />
-        <Metric icon={<Wallet size={19} />} label="Pendientes" value={pendientes.length} />
+        <Metric icon={<Users size={19} />} label="Registros" value={aportesFiltrados.length} />
+        <Metric icon={<CircleDollarSign size={19} />} label="Total aprobado" value={currency.format(totalPagado)} />
+        <Metric icon={<Wallet size={19} />} label="Pendientes de revisión" value={pendientes.length} />
       </section>
 
       {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
+      {mensaje && <p className="border-l-4 border-emerald-600 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="status">{mensaje}</p>}
 
       <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
         <div className="mb-5">
@@ -257,7 +364,21 @@ const AportesAdmin = () => {
 
       <section className="overflow-hidden rounded-lg border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-5 py-4">
-          <h2 className="font-semibold text-slate-900">Registro de aportes</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-semibold text-slate-900">Registro de aportes</h2>
+            <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${
+              estadoTiempoRealVisible === "activo" ? "text-emerald-700"
+                : estadoTiempoRealVisible === "error" ? "text-amber-700" : "text-slate-500"
+            }`}>
+              <span className={`size-2 rounded-full ${
+                estadoTiempoRealVisible === "activo" ? "bg-emerald-500"
+                  : estadoTiempoRealVisible === "error" ? "bg-amber-500" : "bg-slate-400"
+              }`} />
+              {estadoTiempoRealVisible === "activo" ? "Actualización en tiempo real activa"
+                : estadoTiempoRealVisible === "error" ? "Tiempo real no disponible"
+                  : estadoTiempoRealVisible === "inactivo" ? "Sin grupos para supervisar" : "Conectando en tiempo real..."}
+            </span>
+          </div>
         </div>
         {loading ? (
           <p className="px-5 py-8 text-sm text-slate-500" role="status">Cargando aportes...</p>
@@ -265,7 +386,7 @@ const AportesAdmin = () => {
           <p className="px-5 py-8 text-sm text-slate-500">No hay aportes para estos filtros.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
+            <table className="w-full min-w-[900px] text-left text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Grupo</th>
@@ -273,22 +394,64 @@ const AportesAdmin = () => {
                   <th className="px-5 py-3 font-semibold">Periodo</th>
                   <th className="px-5 py-3 font-semibold">Aporte</th>
                   <th className="px-5 py-3 font-semibold">Estado</th>
-                  <th className="px-5 py-3 font-semibold">Fecha de pago</th>
+                  <th className="px-5 py-3 font-semibold">Comprobante</th>
+                  <th className="px-5 py-3 font-semibold">Fecha</th>
+                  {puedeRevisar && <th className="px-5 py-3 font-semibold">Revisión</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {aportesFiltrados.map((aporte) => (
-                  <tr key={aporte.id}>
-                    <td className="px-5 py-3 font-medium text-slate-900">{aporte.grupo}</td>
-                    <td className="px-5 py-3 text-slate-700">{aporte.socio}</td>
-                    <td className="px-5 py-3 text-slate-700">
-                      {etiquetaPeriodo(grupos.find((grupo) => grupo.id === aporte.grupo_id)?.aporte_periodicidad)} {aporte.semana}
-                    </td>
-                    <td className="px-5 py-3 font-semibold text-slate-900">{currency.format(aporte.monto)}</td>
-                    <td className="px-5 py-3 capitalize text-slate-700">{aporte.estado || "Sin estado"}</td>
-                    <td className="px-5 py-3 text-slate-600">{aporte.fecha_pago ? new Date(aporte.fecha_pago).toLocaleDateString("es-EC") : "-"}</td>
-                  </tr>
-                ))}
+                {aportesFiltrados.map((aporte) => {
+                  const estado = estadoAporte(aporte);
+                  const esperandoRevision = estado === "pendiente" && aporte.estado_revision === "pendiente";
+                  return (
+                    <tr key={aporte.id}>
+                      <td className="px-5 py-3 font-medium text-slate-900">{aporte.grupo}</td>
+                      <td className="px-5 py-3 text-slate-700">{aporte.socio}</td>
+                      <td className="px-5 py-3 text-slate-700">
+                        {etiquetaPeriodo(grupos.find((grupo) => grupo.id === aporte.grupo_id)?.aporte_periodicidad)} {aporte.semana}
+                      </td>
+                      <td className="px-5 py-3 font-semibold text-slate-900">{currency.format(aporte.monto)}</td>
+                      <td className="px-5 py-3 capitalize text-slate-700">{estado === "pagado" ? "Aprobado" : estado === "pendiente" ? (esperandoRevision ? "En revisión" : "Pendiente") : estado}</td>
+                      <td className="px-5 py-3">
+                        {aporte.comprobante_path ? (
+                          <button type="button" onClick={() => abrirComprobante(aporte)} className="inline-flex items-center gap-1 font-semibold text-emerald-800 hover:underline">
+                            Abrir <ExternalLink size={15} />
+                          </button>
+                        ) : <span className="text-slate-400">No adjunto</span>}
+                      </td>
+                      <td className="px-5 py-3 text-slate-600">{aporte.fecha_pago ? new Date(aporte.fecha_pago).toLocaleDateString("es-EC") : "-"}</td>
+                      {puedeRevisar && (
+                        <td className="px-5 py-3">
+                          {esperandoRevision ? (
+                            <div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => resolverAporte(aporte, true)}
+                                disabled={procesandoId === aporte.id || !aporte.comprobante_path}
+                                aria-label={`Aprobar aporte de ${aporte.socio}`}
+                                className="inline-flex items-center gap-1 rounded-md bg-emerald-700 px-2.5 py-1.5 font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
+                              >
+                                <Check size={15} /> Aprobar
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => resolverAporte(aporte, false)}
+                                disabled={procesandoId === aporte.id}
+                                aria-label={`Rechazar aporte de ${aporte.socio}`}
+                                className="inline-flex items-center gap-1 rounded-md bg-red-700 px-2.5 py-1.5 font-semibold text-white hover:bg-red-800 disabled:opacity-50"
+                              >
+                                <X size={15} /> Rechazar
+                              </button>
+                            </div>
+                          ) : aporte.revisado_en ? (
+                            <span className="text-slate-500">{new Date(aporte.revisado_en).toLocaleDateString("es-EC")}</span>
+                          ) : <span className="text-slate-400">-</span>}
+                          {aporte.nota_revision && estado === "rechazado" && <p className="mt-1 max-w-48 text-xs text-red-700">{aporte.nota_revision}</p>}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

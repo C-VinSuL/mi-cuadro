@@ -34,8 +34,16 @@ const Register = () => {
 
     const [nombre, ...apellidoParts] = form.nombreCompleto.trim().split(/\s+/);
     const apellido = apellidoParts.join(" ");
-    if (!nombre) {
+    if (form.nombreCompleto.trim().length < 2 || !nombre) {
       setMensaje("Ingresa tu nombre completo.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
+      setMensaje("Escribe un correo electrónico válido.");
+      return;
+    }
+    if (form.password.length < 8) {
+      setMensaje("La contraseña debe tener al menos 8 caracteres.");
       return;
     }
 
@@ -79,7 +87,7 @@ const Register = () => {
 
   return (
     <main className="auth-shell flex min-h-screen items-center justify-center px-4 py-6 sm:px-6 sm:py-10">
-      <section className="grid w-full max-w-4xl overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-2xl shadow-emerald-950/10 md:h-[700px] md:grid-cols-[0.9fr_1.1fr]">
+      <section className="grid w-full max-w-4xl overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-2xl shadow-emerald-950/10 md:min-h-[700px] md:grid-cols-[0.9fr_1.1fr]">
         <aside className="flex flex-col items-center justify-center bg-[#023a2d] px-6 py-8 text-center sm:py-10 md:px-8 md:py-12">
           <img src="/flashmonkey-logo.png" alt="FlashMonkey" className="block h-auto w-full max-w-[310px]" />
           <p className="mt-5 max-w-xs text-sm text-emerald-100 md:mt-8 md:text-base md:leading-7">
@@ -88,7 +96,7 @@ const Register = () => {
           <div className="mt-8 hidden h-1 w-14 rounded-full bg-emerald-400 md:block" />
         </aside>
 
-        <div className="px-6 py-7 sm:px-10 sm:py-10 md:flex md:h-full md:min-h-0 md:flex-col md:px-12 md:py-12">
+        <div className="px-6 py-7 sm:px-10 sm:py-10 md:flex md:flex-col md:px-12 md:py-12">
           <header className="mb-6 md:mb-4">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Únete a FlashMonkey</p>
             <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Crear cuenta</h1>
@@ -121,7 +129,8 @@ const Register = () => {
 
         <form
           onSubmit={handleSubmit}
-          className="space-y-4 md:flex md:min-h-0 md:flex-1 md:flex-col md:gap-y-4 md:space-y-0"
+          noValidate
+          className="space-y-4"
         >
 
           <div>
@@ -134,6 +143,7 @@ const Register = () => {
               value={form.nombreCompleto}
               onChange={handleChange}
               required
+              minLength={2}
               autoComplete="name"
               className="mt-1.5 w-full rounded-xl border border-slate-300 bg-slate-50/60 px-4 py-3 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-600/10"
             />
@@ -198,9 +208,15 @@ const Register = () => {
 
           </div>
 
+          {mensaje && (
+            <p className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm leading-5 text-red-800" role="alert">
+              {mensaje}
+            </p>
+          )}
+
           <button
             disabled={loading}
-            className="w-full rounded-xl bg-emerald-800 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-700/20 disabled:cursor-wait disabled:opacity-60"
+            className="w-full shrink-0 rounded-xl bg-emerald-800 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-700/20 disabled:cursor-wait disabled:opacity-60"
           >
             {loading
               ? "Creando cuenta..."
@@ -209,12 +225,6 @@ const Register = () => {
           </button>
 
         </form>
-
-        {mensaje && (
-          <p className="mt-4 text-sm text-red-700" role="alert">
-            {mensaje}
-          </p>
-        )}
 
         <p className="mt-6 flex flex-wrap items-center justify-center gap-1 border-t border-slate-100 pt-5 text-sm text-slate-500 md:mt-auto">
           ¿Ya tienes una cuenta?

@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useState
@@ -7,16 +8,22 @@ import {
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  Check,
+  Download,
   History as HistoryIcon,
   PiggyBank,
+  Printer,
+  RefreshCw,
   TrendingDown,
   TrendingUp,
-  Wallet
+  Wallet,
+  X
 } from "lucide-react";
 
 import {
   useAuth
 } from "../../context/AuthContext";
+import { supabase } from "../../services/supabase";
 
 import {
   obtenerMovimientosFondo,
@@ -26,12 +33,15 @@ import ReportesAdmin from "./ReportesAdmin";
 
 const HistorialSocio = () => {
   const {
-    grupo
+    grupo,
+    profile
   } = useAuth();
+  const esTesorero = profile?.rol?.toLowerCase() === "tesorero";
 
   const [movimientos, setMovimientos] =
     useState([]);
 
+  const [conciliaciones, setConciliaciones] = useState({});
   const [saldo, setSaldo] =
     useState(0);
 
@@ -40,65 +50,85 @@ const HistorialSocio = () => {
 
   const [error, setError] =
     useState("");
+  const [tipoFiltro, setTipoFiltro] = useState("todos");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
+  const [movimientoSeleccionado, setMovimientoSeleccionado] = useState(null);
+  const [observacion, setObservacion] = useState("");
+  const [conciliando, setConciliando] = useState(false);
+  const grupoId = grupo?.id;
 
   // ========================================
   // CARGAR DATOS
   // ========================================
 
+  const cargarHistorial = useCallback(async ({ mostrarCarga = true } = {}) => {
+    if (!grupoId) {
+      setMovimientos([]);
+      setConciliaciones({});
+      setLoading(false);
+      return;
+    }
+
+    if (mostrarCarga) setLoading(true);
+    setError("");
+    try {
+      const [movimientosData, saldoData, conciliacionesResponse] = await Promise.all([
+        obtenerMovimientosFondo(grupoId),
+        obtenerSaldoFondo(grupoId),
+        esTesorero
+          ? supabase
+            .from("conciliaciones_fondo")
+            .select("movimiento_id, conciliado_por, conciliado_en, observacion")
+            .eq("grupo_id", grupoId)
+          : Promise.resolve({ data: [], error: null })
+      ]);
+      if (conciliacionesResponse.error) throw conciliacionesResponse.error;
+
+      setMovimientos(movimientosData);
+      setSaldo(Number(saldoData || 0));
+      setConciliaciones(Object.fromEntries(
+        (conciliacionesResponse.data || []).map((item) => [item.movimiento_id, item])
+      ));
+    } catch (loadError) {
+      console.error("Error cargando historial:", loadError);
+      setError("No se pudo cargar el historial financiero.");
+    } finally {
+      setLoading(false);
+    }
+  }, [esTesorero, grupoId]);
+
   useEffect(() => {
-    const cargarHistorial =
-      async () => {
-        if (!grupo?.id) {
-          setLoading(false);
-          return;
-        }
+    const timeoutId = window.setTimeout(() => cargarHistorial(), 0);
+    if (!grupoId || !esTesorero) {
+      return () => window.clearTimeout(timeoutId);
+    }
 
-        try {
-          setLoading(true);
-          setError("");
+    const channel = supabase
+      .channel(`historial-tesoreria-${grupoId}`)
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "movimientos_fondo",
+        filter: `grupo_id=eq.${grupoId}`
+      }, () => {
+        cargarHistorial({ mostrarCarga: false });
+      })
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "conciliaciones_fondo",
+        filter: `grupo_id=eq.${grupoId}`
+      }, () => {
+        cargarHistorial({ mostrarCarga: false });
+      })
+      .subscribe();
 
-          const [
-            movimientosData,
-            saldoData
-          ] = await Promise.all([
-            obtenerMovimientosFondo(
-              grupo.id
-            ),
-            obtenerSaldoFondo(
-              grupo.id
-            )
-          ]);
-
-          setMovimientos(
-            movimientosData
-          );
-
-          setSaldo(
-            Number(
-              saldoData || 0
-            )
-          );
-
-        } catch (error) {
-          console.error(
-            "Error cargando historial:",
-            error
-          );
-
-          setError(
-            "No se pudo cargar el historial financiero."
-          );
-
-        } finally {
-          setLoading(false);
-        }
-      };
-
-    cargarHistorial();
-
-  }, [
-    grupo?.id
-  ]);
+    return () => {
+      window.clearTimeout(timeoutId);
+      supabase.removeChannel(channel);
+    };
+  }, [cargarHistorial, esTesorero, grupoId]);
 
   // ========================================
   // CÁLCULOS
@@ -153,6 +183,89 @@ const HistorialSocio = () => {
     }, [
       movimientos
     ]);
+
+  const movimientosFiltrados = useMemo(() => movimientos.filter((movimiento) => {
+    if (tipoFiltro !== "todos" && movimiento.tipo !== tipoFiltro) return false;
+    const fecha = new Date(movimiento.created_at);
+    if (desde && fecha < new Date(`${desde}T00:00:00`)) return false;
+    if (hasta && fecha >= new Date(`${hasta}T00:00:00`).getTime() + 86400000) return false;
+    return true;
+  }), [desde, hasta, movimientos, tipoFiltro]);
+  const movimientosConciliados = movimientos.filter((movimiento) => conciliaciones[String(movimiento.id)]).length;
+  const movimientosPendientesConciliacion = movimientos.length - movimientosConciliados;
+
+  const conciliarMovimiento = async () => {
+    if (!movimientoSeleccionado || conciliando) return;
+    setConciliando(true);
+    setError("");
+    try {
+      const { error: reconcileError } = await supabase.rpc("conciliar_movimiento_fondo", {
+        p_movimiento_id: String(movimientoSeleccionado.id),
+        p_observacion: observacion.trim() || null
+      });
+      if (reconcileError) throw reconcileError;
+      setMovimientoSeleccionado(null);
+      setObservacion("");
+      await cargarHistorial({ mostrarCarga: false });
+    } catch (reconcileError) {
+      console.error("Error conciliando movimiento financiero:", reconcileError);
+      setError(reconcileError.message || "No se pudo registrar la conciliación.");
+    } finally {
+      setConciliando(false);
+    }
+  };
+
+  const exportarExcel = async () => {
+    try {
+      const { default: ExcelJS } = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "FlashMonkey";
+      workbook.subject = "Reporte financiero";
+      const worksheet = workbook.addWorksheet("Movimientos", {
+        views: [{ state: "frozen", ySplit: 1 }],
+        autoFilter: "A1:G1"
+      });
+      worksheet.columns = [
+        { header: "Fecha y hora", key: "fecha", width: 22 },
+        { header: "Grupo", key: "grupo", width: 24 },
+        { header: "Tipo", key: "tipo", width: 14 },
+        { header: "Concepto", key: "concepto", width: 26 },
+        { header: "Descripción", key: "descripcion", width: 42 },
+        { header: "Monto", key: "monto", width: 18 },
+        { header: "Conciliación", key: "conciliacion", width: 18 }
+      ];
+      movimientosFiltrados.forEach((movimiento) => {
+        worksheet.addRow({
+          fecha: new Date(movimiento.created_at),
+          grupo: grupo.nombre,
+          tipo: movimiento.tipo,
+          concepto: textoConcepto(movimiento.concepto),
+          descripcion: movimiento.descripcion || "",
+          monto: Number(movimiento.monto || 0),
+          conciliacion: conciliaciones[String(movimiento.id)] ? "Conciliado" : "Pendiente"
+        });
+      });
+      worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      worksheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF065F46" } };
+      worksheet.getColumn(1).numFmt = "dd/mm/yyyy hh:mm";
+      worksheet.getColumn(6).numFmt = '"$"#,##0.00';
+      worksheet.eachRow((row) => row.eachCell((cell) => {
+        cell.alignment = { vertical: "middle", wrapText: true };
+      }));
+      const buffer = await workbook.xlsx.writeBuffer();
+      const fileUrl = URL.createObjectURL(new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      }));
+      const link = document.createElement("a");
+      link.href = fileUrl;
+      link.download = `reporte-financiero-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(fileUrl);
+    } catch (exportError) {
+      console.error("Error exportando reporte financiero:", exportError);
+      setError("No se pudo generar el archivo Excel.");
+    }
+  };
 
   // ========================================
   // HELPERS
@@ -256,23 +369,6 @@ const HistorialSocio = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div
-        className="
-          rounded-2xl
-          border
-          border-red-200
-          bg-red-50
-          p-5
-          text-red-700
-        "
-      >
-        {error}
-      </div>
-    );
-  }
-
   // ========================================
   // UI
   // ========================================
@@ -318,18 +414,15 @@ const HistorialSocio = () => {
 
       </div>
 
+      {error && (
+        <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+          {error}
+        </p>
+      )}
 
       {/* RESUMEN */}
 
-      <section
-        className="
-          grid
-          grid-cols-1
-          gap-5
-          sm:grid-cols-2
-          xl:grid-cols-4
-        "
-      >
+      <section className={`grid grid-cols-1 gap-5 sm:grid-cols-2 ${esTesorero ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
 
         {/* SALDO */}
 
@@ -538,8 +631,52 @@ const HistorialSocio = () => {
 
         </div>
 
+        {esTesorero && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+              <Check size={22} />
+            </div>
+            <p className="mt-5 text-sm text-slate-500">Conciliados / pendientes</p>
+            <p className="mt-1 text-2xl font-bold text-slate-900">{movimientosConciliados} / {movimientosPendientesConciliacion}</p>
+            <p className="mt-1 text-xs text-slate-400">Verificación manual registrada</p>
+          </div>
+        )}
+
       </section>
 
+      {esTesorero && (
+        <section className="flex flex-wrap items-end justify-between gap-3 print:hidden">
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="text-sm font-medium text-slate-700">
+              Tipo de movimiento
+              <select value={tipoFiltro} onChange={(event) => setTipoFiltro(event.target.value)} className="mt-1 block rounded-lg border border-slate-300 bg-white px-3 py-2">
+                <option value="todos">Todos</option>
+                <option value="ingreso">Ingresos</option>
+                <option value="egreso">Egresos</option>
+              </select>
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Desde
+              <input type="date" value={desde} onChange={(event) => setDesde(event.target.value)} className="mt-1 block rounded-lg border border-slate-300 px-3 py-2" />
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Hasta
+              <input type="date" value={hasta} onChange={(event) => setHasta(event.target.value)} className="mt-1 block rounded-lg border border-slate-300 px-3 py-2" />
+            </label>
+          </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => cargarHistorial()} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">
+              <RefreshCw size={15} /> Actualizar
+            </button>
+            <button type="button" onClick={exportarExcel} disabled={movimientosFiltrados.length === 0} className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+              <Download size={15} /> Exportar Excel
+            </button>
+            <button type="button" onClick={() => window.print()} disabled={movimientosFiltrados.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">
+              <Printer size={15} /> Guardar PDF
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* LIBRO CONTABLE */}
 
@@ -595,8 +732,9 @@ const HistorialSocio = () => {
                   text-slate-500
                 "
               >
-                Registro cronológico de
-                ingresos y egresos.
+                {esTesorero
+                  ? `${movimientosFiltrados.length} de ${movimientos.length} movimientos · conciliación manual y trazable.`
+                  : "Registro cronológico de ingresos y egresos."}
               </p>
 
             </div>
@@ -606,7 +744,7 @@ const HistorialSocio = () => {
         </div>
 
 
-        {movimientos.length === 0 ? (
+        {movimientosFiltrados.length === 0 ? (
 
           <div
             className="
@@ -630,7 +768,7 @@ const HistorialSocio = () => {
                 text-slate-700
               "
             >
-              Aún no existen movimientos
+              {movimientos.length === 0 ? "Aún no existen movimientos" : "No hay movimientos para estos filtros"}
             </p>
 
             <p
@@ -707,6 +845,11 @@ const HistorialSocio = () => {
                   >
                     Monto
                   </th>
+                  {esTesorero && (
+                    <th className="p-4 text-left text-sm font-semibold text-slate-600 print:hidden">
+                      Conciliación
+                    </th>
+                  )}
 
                 </tr>
 
@@ -715,12 +858,13 @@ const HistorialSocio = () => {
 
               <tbody>
 
-                {movimientos.map(
+                {movimientosFiltrados.map(
                   (movimiento) => {
 
                     const esIngreso =
                       movimiento.tipo ===
                       "ingreso";
+                    const conciliacion = conciliaciones[String(movimiento.id)];
 
                     return (
 
@@ -863,6 +1007,31 @@ const HistorialSocio = () => {
                             movimiento.monto
                           ).toFixed(2)}
                         </td>
+                        {esTesorero && (
+                          <td className="p-4 print:hidden">
+                            {conciliacion ? (
+                              <div>
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">
+                                  <Check size={13} /> Conciliado
+                                </span>
+                                {conciliacion.observacion && (
+                                  <p className="mt-1 max-w-56 text-xs text-slate-500">{conciliacion.observacion}</p>
+                                )}
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setMovimientoSeleccionado(movimiento);
+                                  setObservacion("");
+                                }}
+                                className="rounded-lg border border-emerald-300 px-2.5 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-50"
+                              >
+                                Marcar conciliado
+                              </button>
+                            )}
+                          </td>
+                        )}
 
                       </tr>
 
@@ -880,6 +1049,40 @@ const HistorialSocio = () => {
         )}
 
       </section>
+
+      {movimientoSeleccionado && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 print:hidden" onMouseDown={(event) => {
+          if (event.target === event.currentTarget && !conciliando) setMovimientoSeleccionado(null);
+        }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="conciliar-movimiento-titulo" className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+            <header className="flex items-start justify-between gap-3 border-b border-slate-200 px-5 py-4">
+              <div>
+                <h2 id="conciliar-movimiento-titulo" className="font-bold text-slate-900">Confirmar conciliación</h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  {textoConcepto(movimientoSeleccionado.concepto)} · {formatearFecha(movimientoSeleccionado.created_at)} · ${Number(movimientoSeleccionado.monto).toFixed(2)}
+                </p>
+              </div>
+              <button type="button" onClick={() => setMovimientoSeleccionado(null)} disabled={conciliando} aria-label="Cerrar" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50">
+                <X size={18} />
+              </button>
+            </header>
+            <div className="space-y-4 px-5 py-4">
+              <p className="text-sm leading-6 text-slate-600">Al confirmar, el movimiento quedará marcado como conciliado. El importe y los datos contables originales no se modifican y esta acción queda en auditoría.</p>
+              <label className="block text-sm font-medium text-slate-700">
+                Observación (opcional)
+                <textarea value={observacion} onChange={(event) => setObservacion(event.target.value)} maxLength={500} rows={3} placeholder="Ej.: verificado con el comprobante bancario del día..." className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal" />
+                <span className="mt-1 block text-right text-xs text-slate-500">{observacion.length}/500</span>
+              </label>
+            </div>
+            <footer className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
+              <button type="button" onClick={() => setMovimientoSeleccionado(null)} disabled={conciliando} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Cancelar</button>
+              <button type="button" onClick={conciliarMovimiento} disabled={conciliando} className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+                <Check size={16} /> {conciliando ? "Guardando..." : "Confirmar"}
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
 
     </div>
   );

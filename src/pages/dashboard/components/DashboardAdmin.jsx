@@ -1067,18 +1067,16 @@ const DashboardAdmin = () => {
           </Link>
 
 
-          <Link
-            to="/prestamos"
+          <div
+            aria-disabled="true"
             className="
-              group
+              relative
               rounded-2xl
               border
               border-slate-200
               bg-white
               p-5
-              transition
-              hover:-translate-y-1
-              hover:shadow-md
+              opacity-80
             "
           >
             <HandCoins
@@ -1087,15 +1085,12 @@ const DashboardAdmin = () => {
               "
             />
 
-            <p
-              className="
-                mt-4
-                font-semibold
-                text-slate-900
-              "
-            >
-              Préstamos
-            </p>
+            <div className="mt-4 flex items-center justify-between gap-2">
+              <p className="font-semibold text-slate-900">Préstamos</p>
+              <span className="rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-700">
+                Próximamente
+              </span>
+            </div>
 
             <p
               className="
@@ -1104,19 +1099,9 @@ const DashboardAdmin = () => {
                 text-slate-500
               "
             >
-              Gestionar solicitudes del fondo.
+              Esta función estará disponible más adelante.
             </p>
-
-            <ArrowRight
-              className="
-                mt-5
-                text-slate-400
-                transition
-                group-hover:translate-x-1
-              "
-              size={18}
-            />
-          </Link>
+          </div>
 
         </div>
 

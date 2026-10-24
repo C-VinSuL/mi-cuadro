@@ -1,18 +1,128 @@
 # FlashMonkey
 
-Aplicación de gestión de grupos, socios, aportes, préstamos y cuadros rotativos.
+FlashMonkey es una aplicación web para organizar grupos de ahorro y cuadros
+rotativos. Ayuda a administrar socios, aportes, comprobantes, turnos de pago y
+movimientos financieros desde una interfaz con permisos según el rol.
+
+## Funcionalidades
+
+- **Cuentas y acceso:** registro e inicio de sesión con correo, recuperación de
+  contraseña y opción de acceso con Google cuando el proveedor está configurado.
+- **Verificación en dos pasos:** configuración de MFA con una aplicación
+  autenticadora y flujos de restablecimiento administrados.
+- **Grupos:** creación y configuración de grupos, invitaciones, solicitudes de
+  ingreso, participantes y selección del grupo activo.
+- **Cuadro rotativo:** visualización del orden de participación y de los pagos
+  programados según el estado y configuración del grupo.
+- **Aportes:** consulta de periodos, registro de pagos y carga de comprobantes.
+  Administración y tesorería pueden revisar comprobantes; las actualizaciones
+  en tiempo real dependen de que Realtime esté habilitado en Supabase.
+- **Billetera:** consulta de saldo y movimientos propios, solicitud de depósitos
+  y retiros, carga de comprobantes y revisión por administración o tesorería.
+- **Tesorería:** resumen de grupos, pendientes de revisión, alertas operativas,
+  historial financiero, conciliación manual y reportes exportables.
+- **Administración:** gestión de grupos, cuentas, roles, documentos, solicitudes,
+  configuración financiera y revisión de auditoría.
+- **Notificaciones:** avisos de actividad y seguimiento de solicitudes dentro
+  de la aplicación.
+- **Reportes:** consulta de movimientos, filtros y exportación a Excel o PDF
+  según el rol.
+- **Préstamos:** sección reservada para una etapa posterior; las operaciones de
+  préstamos no están habilitadas actualmente.
+
+La disponibilidad de cada pantalla y operación depende del rol asignado y de
+las políticas configuradas en el backend.
+
+## Tecnologías
+
+- React y Vite
+- Supabase Auth, PostgreSQL, Storage, Realtime y Edge Functions
+- Tailwind CSS
+- ExcelJS para exportar reportes
 
 ## Requisitos
 
-- Node.js compatible con Vite 8.
-- Un proyecto Supabase con las tablas `perfiles`, `grupos`, `participantes`, `aportes`, `entregas` y las funciones RPC que ya consume la aplicación.
-- Los perfiles se deben crear desde un proceso de servidor confiable. El rol no debe aceptarse desde los datos enviados por el formulario público de registro.
+- Node.js compatible con la versión de Vite indicada en `package.json`.
+- npm.
+- Un proyecto de Supabase configurado para FlashMonkey.
+- Acceso autorizado a las credenciales de desarrollo del proyecto.
 
-## Desarrollo local
+## Instalación para desarrollo
 
-Define `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en `.env`, instala dependencias e inicia Vite:
+1. Clona el repositorio y abre su carpeta:
+
+   ```sh
+   git clone <URL_DEL_REPOSITORIO>
+   cd mi-cuadro
+   ```
+
+2. Instala las dependencias:
+
+   ```sh
+   npm install
+   ```
+
+3. Crea un archivo `.env` en la raíz a partir de `.env.example` y completa las
+   variables públicas del cliente:
+
+   ```dotenv
+   VITE_SUPABASE_URL=
+   VITE_SUPABASE_ANON_KEY=
+   ```
+
+   Obtén estos valores de la configuración del proyecto Supabase al que tengas
+   autorización. La URL y la clave publicable (`anon`/publishable) se incluyen
+   en el navegador; no son sustituto de las políticas RLS. **Nunca** pongas en
+   variables `VITE_*` contraseñas, claves privadas o la clave `service_role`.
+
+4. Inicia el servidor local:
+
+   ```sh
+   npm run dev
+   ```
+
+   Vite mostrará la dirección local, normalmente `http://localhost:5173`.
+
+## Backend de Supabase
+
+FlashMonkey necesita tablas, políticas de acceso, funciones de base de datos,
+almacenamiento y funciones Edge configuradas en Supabase. Las migraciones de
+`supabase/migrations` son cambios incrementales que presuponen el esquema base
+de la aplicación; **no constituyen por sí solas una instalación inicial de una
+base de datos vacía**.
+
+Antes de modificar una base:
+
+1. Usa un proyecto de pruebas y una copia de seguridad.
+2. Confirma el proyecto enlazado y compara el historial local/remoto:
+
+   ```sh
+   npx supabase login
+   npx supabase link --project-ref <PROJECT_REF>
+   npx supabase migration list
+   ```
+
+3. Revisa cada migración pendiente y sus efectos. Aplica cambios solo después de
+   confirmar que el proyecto y el historial son los correctos:
+
+   ```sh
+   npx supabase db push
+   ```
+
+`db push` puede aplicar todas las migraciones pendientes del proyecto enlazado.
+No borres migraciones ya versionadas, no las marques como aplicadas sin
+comprobar la base y no uses `migration repair` como solución automática a un
+desajuste. Para una base vacía, primero se necesita preparar y validar una
+migración base compatible con el esquema de la aplicación.
+
+### Funciones Edge y proveedores
+
+Las funciones de `supabase/functions` proporcionan operaciones de servidor
+para registro, invitaciones, correo y administración. Después de preparar el
+backend, despliega las funciones que usa tu entorno:
 
 ```sh
+<<<<<<< HEAD
 npm install
 npm run dev
 ```
@@ -106,120 +216,49 @@ Despliega las funciones después de aplicar la migración:
 
 ```sh
 npx supabase functions deploy register-member --no-verify-jwt
+=======
+npx supabase functions deploy register-member
+>>>>>>> f36515fe1c43946865cb827ea05c761bc7b28dd0
 npx supabase functions deploy group-invitations
 npx supabase functions deploy send-welcome-email
+npx supabase functions deploy admin-reset-mfa
+npx supabase functions deploy admin-delete-user
+npx supabase functions deploy admin-set-user-status
 ```
 
-Si el registro informó que la cuenta se creó pero no pudo guardar el perfil,
-despliega nuevamente `register-member` con el comando anterior y vuelve a enviar
-el formulario con el mismo correo y contraseña. La función comprueba la
-contraseña antes de reparar un registro existente, sin crear otra cuenta.
+Algunas funciones dependen de proveedores externos y de secretos de servidor.
+Configura esos valores en **Supabase Edge Function Secrets** o en el mecanismo
+seguro de secretos del entorno, nunca en este README, el código del navegador,
+el historial de Git o mensajes. Consulta la configuración de cada proveedor
+antes de habilitar correo o OAuth.
 
-Configura `APP_URL` con el origen de la aplicación (por ejemplo,
-`https://mi-dominio.example`), `BREVO_API_KEY` con una clave API de Brevo y
-`INVITATION_FROM` con un remitente de un dominio autenticado en Brevo:
+Para probar OAuth, Auth, MFA, Storage y Realtime, configura en Supabase los
+dominios de desarrollo y producción que realmente uses. Limita los orígenes y
+URLs de redirección a esos dominios.
+
+## Comandos útiles
 
 ```sh
-npx supabase secrets set APP_URL=https://mi-dominio.example
-npx supabase secrets set BREVO_API_KEY=xkeysib-xxxxxxxxx
-npx supabase secrets set 'INVITATION_FROM=FlashMonkey <invitaciones@mi-dominio.example>'
-npx supabase functions deploy group-invitations
+npm run dev       # Desarrollo local
+npm run lint      # Revisión de estilo y errores estáticos
+npm run build     # Compilación de producción
+npm run preview   # Vista previa de la compilación
 ```
 
-Obtén la clave API desde la sección **SMTP & API > API Keys** de Brevo.
-No la pongas en `.env`, en el frontend ni en GitHub: `group-invitations` la
-lee únicamente desde los secretos de Edge Functions. Si ya habías configurado
-Resend, la función ahora usa Brevo y deja de leer `RESEND_API_KEY`.
+## Despliegue del frontend
 
-Si Brevo rechaza la clave API o devuelve HTTP 401, crea una clave nueva y
-actualiza el secreto en el proyecto Supabase vinculado:
+El proyecto usa Vite: compila con `npm run build` y publica el contenido de
+`dist`. Configura `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en el entorno
+de compilación del proveedor de hosting. Revisa `vercel.json` si despliegas en
+Vercel. Configura también las URLs permitidas de Supabase Auth para el dominio
+publicado.
 
-```sh
-npx supabase secrets set BREVO_API_KEY=pega_aqui_la_clave_nueva
-```
+No compartas archivos `.env`, copias de bases de datos ni capturas que muestren
+tokens, cookies, datos personales o información financiera real.
 
-No guardes ni compartas la clave. Si sospechas que fue expuesta, revócala en
-Brevo. Actualizar un secreto de Edge Functions no requiere reinstalar Deno ni
-cambiar `APP_URL`; vuelve a intentar el envío después de que Supabase aplique
-el secreto. Si Brevo rechaza el remitente, autentica el dominio en Brevo y
-confirma que `INVITATION_FROM` use una dirección de ese dominio.
+## Documentación relacionada
 
-Para probar desde desarrollo local, configura temporalmente `APP_URL` con el
-origen local exacto, por ejemplo `http://localhost:5173`. El enlace del correo
-abrirá ese origen, por lo que solo servirá para pruebas en esa misma máquina.
-En producción, reemplázalo por el dominio HTTPS publicado y autorizado en la
-configuración de Auth/CORS de Supabase.
-
-Si Brevo rechaza el mensaje, revisa **Edge Functions > Logs** en Supabase y el
-registro de transacciones de Brevo. Comprueba que `BREVO_API_KEY` siga vigente
-y que `INVITATION_FROM` use un remitente de un dominio autenticado. No pegues
-la clave API en GitHub, en el código ni en mensajes de soporte.
-
-### Inicio de sesión con Google y correo de bienvenida
-
-1. En Google Cloud Console, crea un cliente OAuth de tipo **Aplicación web**.
-   Agrega como URI de redirección autorizada
-   `https://TU_PROJECT_REF.supabase.co/auth/v1/callback`.
-2. En Supabase, abre **Authentication > Providers > Google**, habilítalo e
-   ingresa el identificador y secreto del cliente OAuth de Google.
-3. En **Authentication > URL Configuration**, agrega el dominio de la
-   aplicación y `http://localhost:5173` a los redirect URLs permitidos.
-4. Aplica la migración `202610110001_welcome_email.sql` y despliega
-   `send-welcome-email`. La función usa `BREVO_API_KEY`, `APP_URL` e
-   `INVITATION_FROM`, los mismos secretos seguros documentados arriba para
-   Brevo.
-5. Prueba el registro con correo y con Google. El mensaje profesional de
-   FlashMonkey se envía una sola vez a cada cuenta nueva, en el primer acceso
-   con sesión iniciada; los usuarios existentes no reciben un correo
-   retroactivo. Si el envío falla, la función libera la reserva para volver a
-   intentarlo en el siguiente acceso.
-
-El botón de Google está disponible tanto en **Iniciar sesión** como en
-**Crear cuenta**. Las cuentas nuevas creadas con Google reciben un perfil de
-socio y completan sus datos personales desde el flujo de bienvenida de la
-aplicación.
-
-Supabase proporciona las variables `SUPABASE_URL`, `SUPABASE_ANON_KEY` y
-`SUPABASE_SERVICE_ROLE_KEY` a las funciones Edge. Nunca publiques la clave
-`service_role` en el frontend ni en el repositorio. Configura también el envío
-de confirmaciones de cuenta de Supabase Auth mediante SMTP y habilita TOTP/MFA
-en la configuración de Auth del proyecto.
-
-La invitación es de un solo uso y vence en 72 horas. El socio inicia sesión con
-el correo invitado, acepta el enlace y espera la aprobación final de
-administración. El correo de invitación lo envía Brevo mediante su API; las
-confirmaciones de cuenta siguen usando el proveedor SMTP configurado para
-Supabase Auth. Para enviar también las confirmaciones con Brevo, configura sus
-datos SMTP en **Authentication > SMTP Settings** de Supabase; la clave API de
-Brevo no reemplaza las credenciales SMTP.
-
-## Grupos, periodicidad y sorteo
-
-El administrador crea grupos con una capacidad, un aporte y una periodicidad
-semanal, quincenal o mensual. Un socio solicita una invitación desde el
-directorio; administración la aprueba y el socio acepta el enlace recibido por
-correo. Luego administración o tesorería aprueba el ingreso definitivo. Al
-iniciar, el cuadro debe estar completo y la función de base de datos asigna
-posiciones aleatorias y activa el primer periodo en una sola transacción. La
-periodicidad se usa para etiquetar las rondas; las fechas y recordatorios
-automáticos de vencimiento aún no están implementados.
-
-Mientras una cuenta de administrador o tesorero está conectada, la aplicación consulta solicitudes pendientes de todos sus grupos cada 20 segundos. Una solicitud nueva genera un aviso en el centro de notificaciones, con acceso directo a la lista para aprobar o rechazarla.
-
-El administrador puede eliminar grupos solo cuando no tengan aportes, entregas,
-préstamos ni movimientos de fondo. La eliminación conserva un evento de
-auditoría y las cuentas de los socios. Las escrituras en grupos, membresías y
-tablas financieras requieren una sesión con MFA verificado.
-
-Los datos privados (cédula, dirección y fecha de nacimiento) no son públicos.
-Tesorería registra la verificación documental y solo administración puede
-asignar roles elevados. Esta revisión es manual y no sustituye un proveedor
-KYC. Los reportes de auditoría se pueden exportar como CSV o imprimir/guardar
-como PDF desde el navegador.
-
-## Validación
-
-```sh
-npm run build
-npm run lint
-```
+- [SEGURIDAD.md](./SEGURIDAD.md): prácticas para proteger credenciales y
+  configurar el entorno.
+- [supabase/migrations](./supabase/migrations): cambios versionados del esquema
+  y las funciones de base de datos.

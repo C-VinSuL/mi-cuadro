@@ -66,8 +66,27 @@ const Billetera = () => {
 
   useEffect(() => {
     const timeoutId = window.setTimeout(loadWallet, 0);
-    return () => window.clearTimeout(timeoutId);
-  }, [loadWallet, user?.id]);
+    if (!esRevisor || !user?.id) {
+      return () => window.clearTimeout(timeoutId);
+    }
+
+    const channel = supabase
+      .channel(`solicitudes-billetera-revisor-${user.id}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "notificaciones",
+        filter: `usuario_id=eq.${user.id}`
+      }, (payload) => {
+        if (payload.new?.ruta_accion === "/admin/billetera") loadWallet();
+      })
+      .subscribe();
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      supabase.removeChannel(channel);
+    };
+  }, [esRevisor, loadWallet, user?.id]);
 
   const enviarDeposito = async (event) => {
     event.preventDefault();

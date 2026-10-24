@@ -1,10 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": Deno.env.get("APP_URL") || "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { corsHeaders, rejectUntrustedOrigin } from "../_shared/cors.ts";
 
 const jsonResponse = (status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
@@ -26,6 +21,8 @@ const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) => (
 }[character] || character));
 
 Deno.serve(async (request) => {
+  const originError = rejectUntrustedOrigin(request);
+  if (originError) return originError;
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return jsonResponse(405, { error: "Método no permitido" });
 
@@ -205,7 +202,9 @@ Deno.serve(async (request) => {
       p_perfil_id: authData.user.id,
       p_token_hash: await sha256(body.token),
       p_direccion_ip: forwarded || null,
-      p_agente_usuario: request.headers.get("user-agent") || "",
+      p_agente_usuario: request.headers.get("x-browser-user-agent")
+        || request.headers.get("user-agent")
+        || "",
     });
     if (error) return jsonResponse(400, { error: error.message });
     return jsonResponse(200, { accepted: true });

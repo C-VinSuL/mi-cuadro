@@ -47,7 +47,9 @@ export const getDashboardAdminData = async (grupo) => {
         semana,
         monto,
         comision_app,
-        estado
+        estado,
+        estado_revision,
+        comprobante_path
       `)
       .eq("grupo_id", grupo.id)
       .eq("semana", semanaActual),
@@ -142,6 +144,7 @@ export const getAdminActivityOverview = async (grupos = []) => {
       movements: [],
       activities: []
     };
+
   }
 
   const [participantsResponse, contributionsResponse, deliveriesResponse, loansResponse, movementsResponse] = await Promise.all([
@@ -281,4 +284,32 @@ export const getAdminActiveCuadrosData = async (grupos = []) => {
     contributions: contributionsResponse.data || [],
     deliveries: deliveriesResponse.data || []
   };
+};
+
+export const getTreasuryPendingSummary = async (groupIds = []) => {
+  const [receiptsResponse, walletResponse] = await Promise.all([
+    groupIds.length
+      ? supabase
+        .from("aportes")
+        .select("id", { count: "exact", head: true })
+        .in("grupo_id", groupIds)
+        .eq("estado_revision", "pendiente")
+        .not("comprobante_path", "is", null)
+      : Promise.resolve({ count: 0, error: null }),
+    supabase.rpc("listar_solicitudes_billetera_admin")
+  ]);
+
+  if (receiptsResponse.error) throw receiptsResponse.error;
+  if (walletResponse.error) throw walletResponse.error;
+
+  return {
+    receipts: receiptsResponse.count || 0,
+    walletRequests: walletResponse.data?.length || 0
+  };
+};
+
+export const getTreasuryGroupSummary = async () => {
+  const { data, error } = await supabase.rpc("resumen_tesoreria_grupos");
+  if (error) throw error;
+  return data || [];
 };

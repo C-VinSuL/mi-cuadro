@@ -11,8 +11,11 @@ import {
   FileClock,
   PiggyBank,
   CalendarDays,
+<<<<<<< HEAD
   ReceiptText,
   X
+=======
+>>>>>>> f36515fe1c43946865cb827ea05c761bc7b28dd0
 } from "lucide-react";
 
 import { useEffect, useState } from "react";
@@ -67,6 +70,12 @@ const menu = [
     permission: "verPrestamos"
   },
   {
+    title: "Solicitudes de billetera",
+    icon: Wallet,
+    path: "/admin/billetera",
+    permission: "gestionarBilletera"
+  },
+  {
     title: "Historial",
     icon: History,
     path: "/historial",
@@ -91,12 +100,6 @@ const menu = [
     permission: "verificarDocumentos"
   },
   {
-    title: "Solicitudes de billetera",
-    icon: Wallet,
-    path: "/admin/billetera",
-    permission: "gestionarBilletera"
-  },
-  {
     title: "Configuración",
     icon: Settings,
     path: "/configuracion",
@@ -107,7 +110,9 @@ const menu = [
 
 const Sidebar = ({
   mobile = false,
-  onClose
+  onClose,
+  navigationRef,
+  desktopCollapsed = false
 }) => {
 
   const { can, rol } =  usePermissions();
@@ -178,7 +183,11 @@ const Sidebar = ({
         "/cuadro": "Revisar cuadro",
         "/historial": "Reportes"
       };
-      return { ...item, title: adminTitles[item.path] || item.title };
+      const roleTitles = {
+        ...adminTitles,
+        ...(rol === "tesorero" ? { "/grupo": "Grupos" } : {})
+      };
+      return { ...item, title: roleTitles[item.path] || item.title };
     });
 
 
@@ -186,33 +195,35 @@ const Sidebar = ({
   <aside
     className={`
       h-screen
+      h-dvh
+      min-h-0
       bg-[#064E3B]
       text-white
       flex
       flex-col
-      overflow-y-auto
-
+      overflow-hidden
+      ${mobile ? "mobile-menu-panel" : "transition-transform duration-300 ease-in-out motion-reduce:transition-none"}
       ${
         mobile
           ? "w-full"
-          : "fixed inset-y-0 left-0 w-[290px]"
+          : `fixed inset-y-0 left-0 w-[290px] ${desktopCollapsed ? "-translate-x-full xl:translate-x-0" : "translate-x-0"}`
       }
     `}
+    id={mobile ? "mobile-navigation" : "desktop-navigation"}
+    ref={mobile ? navigationRef : undefined}
+    role={mobile ? "dialog" : undefined}
+    aria-modal={mobile ? true : undefined}
+    aria-label={mobile ? "Menú de navegación" : undefined}
   >
 
       {/* LOGO */}
 
       <div
-        className="
-          px-5
-          py-5
-          bg-[#023a2d]
-
-          border-b
-          border-white/10
-        "
+        className={`shrink-0 border-b border-white/10 bg-[#023a2d] ${
+          mobile ? "px-4 py-4 sm:px-5 sm:py-5" : "px-5 py-5"
+        }`}
+        style={mobile ? { paddingTop: "max(1rem, env(safe-area-inset-top))" } : undefined}
       >
-
         <div
           className="
             flex
@@ -220,40 +231,17 @@ const Sidebar = ({
             justify-between
           "
         >
-
-          <div className="flex min-w-0 flex-1 items-center">
+          <div className={`flex min-w-0 flex-1 items-center ${
+            mobile ? "justify-end" : ""
+          }`}>
             <img
               src="/flashmonkey-logo.png"
               alt="FlashMonkey, caja comunal"
-              className="h-auto w-full max-w-[220px] object-contain object-left"
+              className={mobile
+                ? "h-[104px] w-auto max-w-[calc(100vw-104px)] object-contain object-right"
+                : "h-auto w-full max-w-[220px] object-contain object-left"}
             />
-
           </div>
-
-
-          {/* CERRAR MOBILE */}
-
-          {mobile && (
-
-            <button
-              onClick={onClose}
-              className="
-                w-10
-                h-10
-
-                flex
-                items-center
-                justify-center
-
-                rounded-xl
-
-                hover:bg-white/10
-              "
-            >
-              <X size={21} />
-            </button>
-
-          )}
 
         </div>
 
@@ -418,6 +406,7 @@ const Sidebar = ({
       <nav
         className="
           flex-1
+          min-h-0
 
           px-4
           pt-6
@@ -425,6 +414,7 @@ const Sidebar = ({
           space-y-1
 
           overflow-y-auto
+          overscroll-contain
         "
       >
 

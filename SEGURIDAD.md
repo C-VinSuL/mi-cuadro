@@ -1,45 +1,63 @@
-# Matriz de seguridad OWASP
+# Seguridad de FlashMonkey
 
-## Alcance y estado de la revisión
+Este documento ofrece recomendaciones para desarrollar, configurar y operar
+FlashMonkey de forma segura. No contiene credenciales ni sustituye la
+configuración de seguridad del proyecto Supabase o del proveedor de hosting.
 
-Esta matriz es una evaluación preliminar del código y las migraciones presentes
-en este repositorio al 5 de octubre de 2026. No se tuvo acceso al proyecto
-desplegado de Supabase, a sus políticas RLS activas ni a sus registros. Por
-tanto, los riesgos que dependen de esa configuración se marcan como pendientes
-de comprobación y no como vulnerabilidades confirmadas.
+## Protección de credenciales
 
-La presencia de una consulta en el frontend no demuestra por sí sola que un
-usuario pueda acceder a datos ajenos: la autorización debe verificarse en la
-base de datos y en las políticas efectivamente desplegadas.
+- No guardes contraseñas, tokens, claves privadas, archivos de servicio ni
+  credenciales de proveedores en el repositorio.
+- Mantén `.env` local fuera de Git; el archivo está excluido por `.gitignore`.
+- Usa únicamente variables `VITE_*` para valores que pueden ser públicos en el
+  navegador, como la URL de Supabase y su clave publicable.
+- La clave `service_role`, claves de correo y otros secretos deben permanecer
+  en el almacén seguro del servidor o de Supabase Edge Functions. Nunca deben
+  exponerse al cliente.
+- Si un secreto se publica accidentalmente, revócalo y rótalo inmediatamente.
+  Eliminarlo de un archivo no lo borra de versiones anteriores del repositorio.
+- Antes de compartir capturas o registros, oculta tokens, cookies, correos,
+  nombres, documentos e información financiera.
 
-| Riesgo | ¿Aplica? / estado | Dónde | Cómo podría explotarse (escenario por verificar) | Solución o siguiente paso | Prioridad | Responsable |
-|---|---|---|---|---|---|---|
-| **A01 Control de acceso roto** | Pendiente de comprobar en Supabase. La migración activa RLS para `solicitudes_grupo`, pero no se pudo confirmar la configuración desplegada para las demás tablas. | Consultas a grupos, participantes y perfiles en `src/context/AuthContext.jsx`; migración `supabase/migrations/202609300001_group_membership_and_draw.sql`. | Si una política permite acceso más amplio del debido, un socio podría intentar leer o modificar filas de otro grupo mediante una petición directa a Supabase. | Revisar las políticas RLS desplegadas para perfiles, grupos, participantes, aportes, préstamos, cuotas y movimientos. Probar lecturas y escrituras entre dos usuarios de prueba de grupos distintos. | Alta, hasta verificar | Equipo |
-| **A02 Configuración de seguridad incorrecta** | Hallazgo de higiene corregido en el repositorio: `.env` dejó de estar versionado y se agregó una plantilla sin valores. No se confirmó una clave privilegiada en la revisión. El cambio no elimina el archivo del historial de Git. | `.gitignore`, `.env.example`; commit `6d6f253`. | Si se hubiera incluido una clave privilegiada en el historial o en otra configuración publicada, alguien con acceso podría usarla para operaciones no autorizadas. | Mantener secretos fuera de Git. Revisar el historial y la configuración de despliegue; revocar/rotar cualquier clave privilegiada que se descubra. La clave publicable de Supabase está diseñada para el cliente, pero requiere políticas seguras. | Media | Equipo |
-| **A03 Cadena de suministro** | Pendiente: no se ejecutó una auditoría de dependencias como parte de esta revisión. | `package.json`, `package-lock.json`. | Una dependencia vulnerable podría permitir ataques según la versión, la ruta de ejecución y el contexto de despliegue. | Ejecutar `npm audit`, revisar los avisos aplicables y actualizar dependencias con pruebas de regresión. | Media | Equipo |
-| **A04 Fallas criptográficas** | No se confirmó una falla criptográfica. El proyecto utiliza Supabase Auth; no se verificaron ajustes de TLS, almacenamiento de credenciales ni configuración del proveedor desplegado. | `src/pages/auth/`, `src/context/AuthContext.jsx`, configuración de Supabase. | Una configuración débil o el almacenamiento propio e inseguro de contraseñas podría exponer credenciales o sesiones. | Mantener la autenticación en Supabase Auth, usar HTTPS y no almacenar contraseñas propias. Verificar la configuración del proyecto desplegado y no exponer claves privilegiadas. | Media | Equipo |
-| **A05 Inyección** | No se confirmó una inyección. Se observan operaciones con el cliente Supabase; no se verificó toda entrada ni toda ruta de renderizado. | Formularios y consultas de `src/`; por ejemplo `src/pages/aportes/Aportes.jsx`. | Una entrada podría causar efectos no deseados si se incorpora a SQL dinámico, comandos o HTML sin tratamiento seguro. | Validar entradas también en el servidor/base de datos; evitar SQL dinámico no parametrizado y renderizado HTML inseguro. Revisar cualquier uso de `innerHTML` o `dangerouslySetInnerHTML`. | Media | Equipo |
-| **A06 Diseño inseguro** | Superficie de riesgo observada, impacto pendiente de comprobar: el formulario de aportes envía campos de negocio desde el cliente. No se verificaron todas las restricciones ni reglas del esquema desplegado. | `src/pages/aportes/Aportes.jsx`; reglas de aportes, préstamos y grupos en Supabase. | Un usuario podría alterar monto, participante, grupo, semana o estado en una petición si la base de datos confía en los valores del cliente. | Validar permisos, importes, pertenencia y transiciones de estado en RPC/servidor; usar restricciones de base de datos y probar entradas manipuladas con una cuenta de prueba. | Alta, hasta verificar | Equipo |
-| **A07 Fallas de identificación y autenticación** | Se observan flujos de acceso con Supabase Auth; no se confirmó una falla. No se verificaron límites de intentos, MFA ni ajustes de sesión desplegados. | `src/pages/auth/Login.jsx`, `src/pages/auth/Register.jsx`, `src/pages/auth/ForgotPassword.jsx`, `src/context/AuthContext.jsx`. | Un control insuficiente de intentos o sesiones podría facilitar abuso de cuentas, dependiendo de la configuración efectiva. | Revisar ajustes de Auth en Supabase, recuperación de cuentas, límites de intentos y protección de rutas; probar los flujos sin revelar si una cuenta existe cuando corresponda. | Media | Equipo |
-| **A08 Fallas de integridad de software y datos** | Mitigación parcial observada: algunas RPC administrativas comprueban el rol en la base de datos. No se verificaron todas las operaciones ni si el rol puede modificarse indebidamente. | `supabase/migrations/202609300007_admin_group_management_and_full_group_purge.sql`; `supabase/migrations/202609300008_admin_group_configuration.sql`. | Si una operación confía en un rol o estado enviado por el cliente, un usuario podría intentar elevar permisos o alterar datos fuera de su función. | Mantener la autorización dentro de RPC/RLS, proteger los cambios de rol y verificar cada operación sensible con una sesión no privilegiada. | Alta, hasta revisar todas las operaciones | Equipo |
-| **A09 Registro y alertas** | Pendiente: no se confirmó un mecanismo centralizado de auditoría para cambios sensibles ni se revisaron los registros de Supabase. | Operaciones de aportes, préstamos, grupos y cambios de roles; configuración de registros en Supabase. | Una modificación o eliminación indebida podría ser difícil de investigar si no quedan registros con actor, acción y fecha. | Definir retención y acceso a registros; auditar operaciones sensibles con actor, recurso, acción y fecha, evitando guardar secretos o datos innecesarios. | Media | Equipo |
-| **A10 Manejo inadecuado de condiciones excepcionales** | Pendiente de comprobación integral. Hay operaciones implementadas mediante RPC, pero no se revisó cada flujo de varios pasos ni su manejo de errores. | RPC de `supabase/migrations/`; servicios en `src/services/`. | Un fallo parcial podría dejar estados inconsistentes o mostrar una operación como exitosa cuando no lo fue. | Agrupar cambios relacionados en operaciones transaccionales de base de datos, comprobar errores en cada paso y probar fallos y reintentos. | Media | Equipo |
+## Autorización y datos
 
-## Validación prioritaria de A01 y A06
+- La interfaz no es una frontera de seguridad. Valida permisos en el backend y
+  aplica políticas de acceso a las tablas, archivos y funciones.
+- Mantén habilitadas y revisadas las políticas de Row Level Security (RLS) para
+  los datos expuestos al cliente.
+- Limita cada rol a las operaciones que necesita. Las acciones financieras y
+  administrativas deben validarse en el servidor y quedar auditables cuando
+  corresponda.
+- No uses datos reales para pruebas de acceso, migraciones o cambios de
+  permisos; crea cuentas y grupos ficticios en un proyecto separado.
+- Protege los comprobantes y documentos personales con almacenamiento privado
+  y acceso autorizado.
 
-Realizar estas pruebas solo en un entorno de prueba con datos ficticios y
-usuarios de prueba, usando las sesiones normales de Supabase Auth. No usar la
-clave `service_role` desde el navegador ni compartirla.
+## Configuración de entornos
 
-1. Crear dos usuarios que pertenezcan a grupos distintos.
-2. Con el usuario A, intentar consultar y modificar directamente registros del
-   grupo del usuario B en las tablas protegidas.
-3. Repetir con aportes y préstamos, intentando cambiar identificadores,
-   importes y estados enviados por el cliente.
-4. Confirmar que el resultado sea denegación o cero filas, y que ninguna
-   modificación se haya aplicado.
-5. Repetir las pruebas con los roles que correspondan y registrar el resultado
-   sin incluir datos personales ni credenciales.
+- Separa desarrollo, pruebas y producción; verifica cuidadosamente el proyecto
+  Supabase seleccionado antes de aplicar cambios.
+- Revisa el historial remoto y local de migraciones antes de ejecutar `db push`.
+  Las migraciones del repositorio son incrementales y pueden modificar datos o
+  permisos; respáldalos y pruébalos primero.
+- Limita los dominios de Auth, OAuth, CORS y redirección a los orígenes
+  necesarios. Usa HTTPS en producción.
+- Configura las variables de entorno y secretos desde el panel seguro del
+  proveedor correspondiente; evita pegarlos en comandos que queden guardados en
+  el historial de terminal.
+- Mantén dependencias y herramientas actualizadas. Revisa los resultados de
+  `npm audit` y analiza cualquier actualización antes de desplegarla.
 
-Hasta completar estas pruebas, A01 y A06 son riesgos pendientes de validación,
-no vulnerabilidades confirmadas.
+## Si sospechas una exposición
+
+1. Revoca o rota la credencial afectada en el proveedor que la emitió.
+2. Revisa los registros de acceso y las acciones recientes del servicio.
+3. Identifica en qué entornos se usó y actualiza sus secretos.
+4. Elimina la credencial del repositorio y, si estuvo en el historial, sigue el
+   procedimiento del proveedor Git para sanearlo; la rotación sigue siendo
+   obligatoria.
+5. Notifica a las personas responsables del proyecto por un canal privado.
+
+Para reportar un problema de seguridad, contacta a las personas mantenedoras de
+forma privada. No publiques credenciales, datos personales ni instrucciones
+para explotar sistemas en un issue público.

@@ -83,6 +83,13 @@ const NotificationProvider = ({ children }) => {
             updateNotifications(user.id, (current) => current.some((item) => item.id === notification.id)
               ? current
               : [notification, ...current]);
+            toast.custom((toastItem) => (
+              <NotificationToast
+                notification={notification}
+                visible={toastItem.visible}
+                onDismiss={() => toast.dismiss(toastItem.id)}
+              />
+            ), { duration: TOAST_DURATION, id: `notification-${notification.id}` });
           } else if (payload.eventType === "UPDATE") {
             const notification = toNotification(payload.new);
             updateNotifications(user.id, (current) => current.map((item) => (
@@ -104,7 +111,8 @@ const NotificationProvider = ({ children }) => {
     message,
     type = "info",
     actionPath,
-    actionLabel
+    actionLabel,
+    recipientId
   }) => {
     const toastId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const notification = {
@@ -125,12 +133,13 @@ const NotificationProvider = ({ children }) => {
       />
     ), { duration: TOAST_DURATION, id: toastId });
 
-    if (!user?.id) return null;
+    const notificationUserId = recipientId || user?.id;
+    if (!notificationUserId) return null;
 
     const { data, error } = await supabase
       .from("notificaciones")
       .insert({
-        usuario_id: user.id,
+        usuario_id: notificationUserId,
         titulo: title,
         mensaje: message,
         tipo: type,
@@ -147,11 +156,11 @@ const NotificationProvider = ({ children }) => {
     }
 
     const savedNotification = toNotification(data);
-    updateNotifications(user.id, (current) => current.some((item) => item.id === savedNotification.id)
+    updateNotifications(notificationUserId, (current) => current.some((item) => item.id === savedNotification.id)
       ? current
       : [savedNotification, ...current]);
     return savedNotification.id;
-  }, [user, updateNotifications]);
+  }, [user?.id, updateNotifications]);
 
   const markRead = useCallback(async (notificationId) => {
     if (!user?.id) return;

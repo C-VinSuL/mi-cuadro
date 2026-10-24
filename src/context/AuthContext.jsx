@@ -50,7 +50,8 @@ export const AuthProvider = ({ children }) => {
         rol,
         avatar_url,
         biografia,
-        bienvenida_completada
+        bienvenida_completada,
+        activo
       `)
       .eq("id", userId)
       .single();
@@ -251,6 +252,23 @@ export const AuthProvider = ({ children }) => {
     const currentProfile = await cargarPerfil(
       currentUser.id
     );
+
+    if (currentProfile && !currentProfile.activo) {
+      console.warn("La sesión pertenece a una cuenta desactivada; se cerrará.");
+      const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+      if (signOutError) {
+        console.error("No se pudo cerrar la sesión de la cuenta desactivada:", signOutError);
+      }
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setParticipant(null);
+      setParticipantes([]);
+      setGrupo(null);
+      setGrupos([]);
+      setFondoComunitario(0);
+      return;
+    }
 
     await cargarParticipante(
       currentUser.id,
