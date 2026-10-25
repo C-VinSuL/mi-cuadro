@@ -170,10 +170,10 @@ queda protegida contra retiros y solo puede utilizarse para cubrir un aporte
 que siga impago después de su vencimiento. Los nuevos aportes no cobran la
 comisión fija anterior de USD 1 ni una comisión del 20%; los registros
 históricos no se modifican.
-La migración `202610220001_register_member_contribution.sql` agrega el registro
+La migración `202610220002_register_member_contribution.sql` agrega el registro
 administrativo protegido de aportes para el periodo actual de un grupo activo,
 con validación de rol, MFA, pertenencia del socio y duplicados.
-La migración `202610220002_treasury_expenses.sql` agrega el registro y consulta
+La migración `202610220004_treasury_expenses.sql` agrega el registro y consulta
 protegidos de egresos para administración y tesorería, con suma acumulada y
 permisos de lectura/escritura validados mediante MFA.
 
