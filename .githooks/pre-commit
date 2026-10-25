@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
+if command -v powershell.exe >/dev/null 2>&1; then
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$HOOK_DIR/check-secrets.ps1"
+else
+  pwsh -NoProfile -ExecutionPolicy Bypass -File "$HOOK_DIR/check-secrets.ps1"
+fi
