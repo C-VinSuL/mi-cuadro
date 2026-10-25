@@ -4,6 +4,7 @@ import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
 import { obtenerSaldoFondo } from "../../services/fondoService";
+import { logOperationalError } from "../../utils/logOperationalError";
 
 const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
 
@@ -78,7 +79,7 @@ const ReportesAdmin = () => {
           setSaldosPorGrupo(Object.fromEntries(saldos));
         }
       } catch (loadError) {
-        console.error("Error generando reportes:", loadError);
+        logOperationalError("Error generando reportes:", loadError);
         if (active) setError("No se pudieron cargar los movimientos y saldos para el reporte.");
       } finally {
         if (active) setLoading(false);
@@ -152,7 +153,7 @@ const ReportesAdmin = () => {
       link.click();
       URL.revokeObjectURL(fileUrl);
     } catch (exportError) {
-      console.error("Error exportando reporte financiero:", exportError);
+      logOperationalError("Error exportando reporte financiero:", exportError);
       setError("No se pudo generar el archivo Excel.");
     }
   };

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { CheckCircle2, CircleAlert, MailCheck } from "lucide-react";
 import { aceptarInvitacionGrupo } from "../../services/grupoService";
 import { useAuth } from "../../context/AuthContext";
+import { logOperationalError } from "../../utils/logOperationalError";
 
 const AcceptGroupInvite = () => {
   const [searchParams] = useSearchParams();
@@ -19,8 +20,8 @@ const AcceptGroupInvite = () => {
       await aceptarInvitacionGrupo(token);
       setStatus("success");
     } catch (invokeError) {
-      console.error("Error aceptando invitación:", invokeError);
-      setError(invokeError.message || "No se pudo aceptar la invitación.");
+      logOperationalError("Error aceptando invitación:", invokeError);
+      setError("No se pudo aceptar la invitación. Verifica que el enlace siga vigente e inténtalo nuevamente.");
       setStatus("error");
     }
   };

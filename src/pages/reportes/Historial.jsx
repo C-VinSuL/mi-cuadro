@@ -32,6 +32,7 @@ import {
   obtenerSaldoFondo
 } from "../../services/fondoService";
 import ReportesAdmin from "./ReportesAdmin";
+import { logOperationalError } from "../../utils/logOperationalError";
 
 const HistorialSocio = () => {
   const {
@@ -93,7 +94,7 @@ const HistorialSocio = () => {
         (conciliacionesResponse.data || []).map((item) => [item.movimiento_id, item])
       ));
     } catch (loadError) {
-      console.error("Error cargando historial:", loadError);
+      logOperationalError("Error cargando historial financiero:", loadError);
       setError("No se pudo cargar el historial financiero.");
     } finally {
       setLoading(false);
@@ -212,8 +213,8 @@ const HistorialSocio = () => {
       setObservacion("");
       await cargarHistorial({ mostrarCarga: false });
     } catch (reconcileError) {
-      console.error("Error conciliando movimiento financiero:", reconcileError);
-      setError(reconcileError.message || "No se pudo registrar la conciliación.");
+      logOperationalError("Error conciliando movimiento financiero:", reconcileError);
+      setError("No se pudo registrar la conciliación. Inténtalo nuevamente.");
     } finally {
       setConciliando(false);
     }
@@ -266,7 +267,7 @@ const HistorialSocio = () => {
       link.click();
       URL.revokeObjectURL(fileUrl);
     } catch (exportError) {
-      console.error("Error exportando reporte financiero:", exportError);
+      logOperationalError("Error exportando reporte financiero:", exportError);
       setError("No se pudo generar el archivo Excel.");
     }
   };

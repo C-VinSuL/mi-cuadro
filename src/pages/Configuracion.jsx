@@ -32,6 +32,7 @@ import {
   actualizarConfiguracionGrupo
 } from "../services/configuracionService";
 import ConfiguracionGarantia from "./ConfiguracionGarantia";
+import { logOperationalError } from "../utils/logOperationalError";
 
 
 const Configuracion = () => {
@@ -412,14 +413,10 @@ const Configuracion = () => {
 
       } catch (error) {
 
-        console.error(
-          "Error actualizando configuración:",
-          error
-        );
+        logOperationalError("Error actualizando configuración:", error);
 
 
         setMensaje(
-          error.message ||
           "No se pudo guardar la configuración."
         );
 

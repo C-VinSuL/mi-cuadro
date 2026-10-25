@@ -27,16 +27,28 @@ export const AuthProvider = ({ children }) => {
 
   const [loading, setLoading] = useState(true);
   const authRequest = useRef(0);
+  const identity = useRef(null);
 
+  const isCurrentRequest = (requestId, userId = identity.current) =>
+    requestId === authRequest.current && userId === identity.current;
+
+  const clearIdentityData = () => {
+    setProfile(null);
+    setParticipant(null);
+    setParticipantes([]);
+    setGrupo(null);
+    setGrupos([]);
+    setFondoComunitario(0);
+  };
 
   // =========================
   // CARGAR PERFIL
   // =========================
 
-  const cargarPerfil = async (userId) => {
+  const cargarPerfil = async (userId, requestId = authRequest.current) => {
 
     if (!userId) {
-      setProfile(null);
+      if (isCurrentRequest(requestId, null)) setProfile(null);
       return null;
     }
 
@@ -56,6 +68,8 @@ export const AuthProvider = ({ children }) => {
       .eq("id", userId)
       .single();
 
+    if (!isCurrentRequest(requestId, userId)) return null;
+
     if (error) {
       console.error("Error cargando perfil:", error);
       setProfile(null);
@@ -73,11 +87,13 @@ export const AuthProvider = ({ children }) => {
 
   const cargarGrupo = async (
     grupoId,
-    puedeVerFondo = PERMISSIONS[profile?.rol?.toLowerCase()]?.verFondoComunitario === true
+    puedeVerFondo = PERMISSIONS[profile?.rol?.toLowerCase()]?.verFondoComunitario === true,
+    requestId = authRequest.current
   ) => {
+    const requestIdentity = identity.current;
 
     if (!grupoId) {
-      setGrupo(null);
+      if (isCurrentRequest(requestId, requestIdentity)) setGrupo(null);
       return;
     }
 
@@ -86,6 +102,8 @@ export const AuthProvider = ({ children }) => {
       .select("*")
       .eq("id", grupoId)
       .single();
+
+    if (!isCurrentRequest(requestId, requestIdentity)) return;
 
     if (error) {
       console.error("Error cargando grupo:", error);
@@ -100,7 +118,7 @@ export const AuthProvider = ({ children }) => {
     ]);
     setGrupo(data);
     if (puedeVerFondo) {
-      await cargarFondoComunitario(data.id, puedeVerFondo);
+      await cargarFondoComunitario(data.id, puedeVerFondo, requestId);
     } else {
       setFondoComunitario(0);
     }
@@ -113,15 +131,12 @@ export const AuthProvider = ({ children }) => {
 
   const cargarParticipante = async (
     userId,
-    rol = profile?.rol
+    rol = profile?.rol,
+    requestId = authRequest.current
   ) => {
 
     if (!userId) {
-      setParticipant(null);
-      setParticipantes([]);
-      setGrupo(null);
-      setGrupos([]);
-      setFondoComunitario(0);
+      if (isCurrentRequest(requestId, null)) clearIdentityData();
       return;
     }
 
@@ -139,6 +154,8 @@ export const AuthProvider = ({ children }) => {
         `)
         .eq("perfil_id", userId)
         .order("grupo_id", { ascending: true });
+
+      if (!isCurrentRequest(requestId, userId)) return;
 
       if (error) {
         console.error(
@@ -175,6 +192,8 @@ export const AuthProvider = ({ children }) => {
     }
 
     const { data: groupsData, error: groupsError } = await groupsQuery;
+    if (!isCurrentRequest(requestId, userId)) return;
+
     if (groupsError) {
       console.error("Error cargando grupos:", groupsError);
     }
@@ -186,8 +205,11 @@ export const AuthProvider = ({ children }) => {
         .select("*")
         .in("id", groupIds)
         .order("nombre", { ascending: true });
+      if (!isCurrentRequest(requestId, userId)) return;
       availableGroups = membershipGroups || [];
     }
+    if (!isCurrentRequest(requestId, userId)) return;
+
     const savedGroupId = window.localStorage.getItem(`mi-cuadro-grupo-${userId}`);
     const selectedGroup = availableGroups.find((item) => item.id === savedGroupId)
       || availableGroups[0]
@@ -200,7 +222,7 @@ export const AuthProvider = ({ children }) => {
 
     const puedeVerFondo = PERMISSIONS[rol?.toLowerCase()]?.verFondoComunitario === true;
     if (selectedGroup && puedeVerFondo) {
-      await cargarFondoComunitario(selectedGroup.id, puedeVerFondo);
+      await cargarFondoComunitario(selectedGroup.id, puedeVerFondo, requestId);
     } else {
       setFondoComunitario(0);
     }
@@ -228,51 +250,43 @@ export const AuthProvider = ({ children }) => {
   // CARGAR USUARIO
   // =========================
 
-  const cargarDatosUsuario = async (session) => {
+  const cargarDatosUsuario = async (session, requestId) => {
+    const currentUser = session?.user ?? null;
+    if (!isCurrentRequest(requestId, currentUser?.id ?? null)) return;
 
     setSession(session);
-
-    const currentUser =
-      session?.user ?? null;
 
     setUser(currentUser);
 
     if (!currentUser) {
-
-      setProfile(null);
-      setParticipant(null);
-      setParticipantes([]);
-      setGrupo(null);
-      setGrupos([]);
-      setFondoComunitario(0);
-
+      clearIdentityData();
       return;
     }
 
     const currentProfile = await cargarPerfil(
-      currentUser.id
+      currentUser.id,
+      requestId
     );
+    if (!isCurrentRequest(requestId, currentUser.id)) return;
 
     if (currentProfile && !currentProfile.activo) {
       console.warn("La sesión pertenece a una cuenta desactivada; se cerrará.");
       const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
+      if (!isCurrentRequest(requestId, currentUser.id)) return;
       if (signOutError) {
         console.error("No se pudo cerrar la sesión de la cuenta desactivada:", signOutError);
       }
+      identity.current = null;
       setSession(null);
       setUser(null);
-      setProfile(null);
-      setParticipant(null);
-      setParticipantes([]);
-      setGrupo(null);
-      setGrupos([]);
-      setFondoComunitario(0);
+      clearIdentityData();
       return;
     }
 
     await cargarParticipante(
       currentUser.id,
-      currentProfile?.rol
+      currentProfile?.rol,
+      requestId
     );
   };
 
@@ -284,8 +298,12 @@ export const AuthProvider = ({ children }) => {
 const cargarFondoComunitario =
   async (
     grupoId,
-    puedeVerFondo = PERMISSIONS[profile?.rol?.toLowerCase()]?.verFondoComunitario === true
+    puedeVerFondo = PERMISSIONS[profile?.rol?.toLowerCase()]?.verFondoComunitario === true,
+    requestId = authRequest.current
   ) => {
+    const requestIdentity = identity.current;
+
+    if (!isCurrentRequest(requestId, requestIdentity)) return 0;
 
     if (!grupoId || !puedeVerFondo) {
 
@@ -303,6 +321,7 @@ const cargarFondoComunitario =
           grupoId
         );
 
+      if (!isCurrentRequest(requestId, requestIdentity)) return 0;
 
       setFondoComunitario(
         saldo
@@ -312,6 +331,8 @@ const cargarFondoComunitario =
       return saldo;
 
     } catch (error) {
+
+      if (!isCurrentRequest(requestId, requestIdentity)) return 0;
 
       console.error(
         "Error cargando fondo comunitario:",
@@ -337,20 +358,24 @@ const cargarFondoComunitario =
     } =
       supabase.auth.onAuthStateChange(
         (event, nextSession) => {
+          const nextIdentity = nextSession?.user?.id ?? null;
+
           const requestId = ++authRequest.current;
+          if (identity.current !== nextIdentity) {
+            identity.current = nextIdentity;
+            clearIdentityData();
+          }
 
           setSession(nextSession);
           setUser(nextSession?.user ?? null);
-
-          if (event === "TOKEN_REFRESHED") {
-            return;
-          }
 
           setLoading(true);
 
           // Supabase recomienda salir del callback antes de hacer otras consultas.
           setTimeout(async () => {
             try {
+              if (!isCurrentRequest(requestId, nextIdentity)) return;
+
               if (["SIGNED_IN", "INITIAL_SESSION"].includes(event) && nextSession?.user) {
                 try {
                   const { error } = await supabase.functions.invoke("send-welcome-email");
@@ -360,7 +385,8 @@ const cargarFondoComunitario =
                 }
               }
 
-              await cargarDatosUsuario(nextSession);
+              if (!isCurrentRequest(requestId, nextIdentity)) return;
+              await cargarDatosUsuario(nextSession, requestId);
             } finally {
               if (requestId === authRequest.current) {
                 setLoading(false);

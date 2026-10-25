@@ -3,6 +3,7 @@ import { Check, Layers3, LoaderCircle, Mail, Plus, RefreshCw, Trash2, UserRoundC
 import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useNotifications } from "../../hooks/useNotifications";
+import { logOperationalError } from "../../utils/logOperationalError";
 import {
   crearGrupo,
   resolverSolicitudGrupo,
@@ -60,8 +61,8 @@ const GroupAccessPanel = ({ onMembershipChange }) => {
     try {
       setGruposDisponibles(await listarGruposDisponibles());
     } catch (loadError) {
-      console.error("Error cargando grupos disponibles:", loadError);
-      setError(loadError.message || "No se pudo cargar el directorio de grupos.");
+      logOperationalError("Error cargando grupos disponibles:", loadError);
+      setError("No se pudo cargar el directorio de grupos. Inténtalo nuevamente.");
     } finally {
       setCargandoDirectorio(false);
     }
@@ -72,8 +73,8 @@ const GroupAccessPanel = ({ onMembershipChange }) => {
     try {
       setSolicitudesInvitacion(await listarSolicitudesInvitacion());
     } catch (loadError) {
-      console.error("Error cargando solicitudes de invitación:", loadError);
-      setError(loadError.message || "No se pudieron cargar las solicitudes de invitación.");
+      logOperationalError("Error cargando solicitudes de invitación:", loadError);
+      setError("No se pudieron cargar las solicitudes de invitación. Inténtalo nuevamente.");
     }
   }, [puedeGestionarGrupos]);
 
@@ -119,7 +120,8 @@ const GroupAccessPanel = ({ onMembershipChange }) => {
         type: "success"
       });
     } catch (requestError) {
-      setError(requestError.message || "No se pudo enviar la solicitud.");
+      logOperationalError("Error enviando solicitud de ingreso:", requestError);
+      setError("No se pudo enviar la solicitud. Inténtalo nuevamente.");
     } finally {
       setEnviando(false);
     }
@@ -141,10 +143,11 @@ const GroupAccessPanel = ({ onMembershipChange }) => {
       notify({ title: "Grupo creado", message: "Ya puedes compartir el código de acceso.", type: "success" });
     } catch (createError) {
       const detail = createError.message || "";
+      logOperationalError("Error creando grupo:", createError);
       setError(
         createError.code === "PGRST202" || /Could not find the function.*crear_grupo|schema cache/i.test(detail)
           ? "Supabase no reconoce crear_grupo. Aplica las migraciones 001, 002 y 003 en orden, o la 003 si las dos primeras ya están aplicadas; luego vuelve a cargar la app."
-          : detail || "No se pudo crear el grupo."
+          : "No se pudo crear el grupo. Verifica los datos e inténtalo nuevamente."
       );
     } finally {
       setEnviando(false);
@@ -159,7 +162,8 @@ const GroupAccessPanel = ({ onMembershipChange }) => {
       await actualizarSolicitudesInvitacion();
       notify({ title: "Invitación enviada", message: "El socio recibió el enlace de invitación por correo.", type: "success" });
     } catch (sendError) {
-      setError(sendError.message || "No se pudo enviar la invitación.");
+      logOperationalError("Error enviando invitación:", sendError);
+      setError("No se pudo enviar la invitación. Inténtalo nuevamente.");
     } finally {
       setEnviando(false);
     }
@@ -173,7 +177,8 @@ const GroupAccessPanel = ({ onMembershipChange }) => {
       await actualizarSolicitudesInvitacion();
       notify({ title: "Solicitud rechazada", message: "Se registró la decisión en la auditoría.", type: "success" });
     } catch (rejectError) {
-      setError(rejectError.message || "No se pudo rechazar la solicitud.");
+      logOperationalError("Error rechazando solicitud:", rejectError);
+      setError("No se pudo rechazar la solicitud. Inténtalo nuevamente.");
     } finally {
       setEnviando(false);
     }
@@ -197,7 +202,8 @@ const GroupAccessPanel = ({ onMembershipChange }) => {
         type: "success"
       });
     } catch (reviewError) {
-      setError(reviewError.message || "No se pudo procesar la solicitud.");
+      logOperationalError("Error procesando solicitud de grupo:", reviewError);
+      setError("No se pudo procesar la solicitud. Inténtalo nuevamente.");
     } finally {
       setEnviando(false);
     }
@@ -210,7 +216,8 @@ const GroupAccessPanel = ({ onMembershipChange }) => {
     try {
       await cargarParticipante(user.id, profile.rol);
     } catch (refreshError) {
-      setError(refreshError.message || "No se pudieron actualizar tus grupos.");
+      logOperationalError("Error actualizando grupos:", refreshError);
+      setError("No se pudieron actualizar tus grupos. Inténtalo nuevamente.");
     } finally {
       setEnviando(false);
     }
@@ -234,7 +241,8 @@ const GroupAccessPanel = ({ onMembershipChange }) => {
       ]);
       notify({ title: "Grupo eliminado", message: "Se eliminó el grupo sin actividad financiera. Las cuentas de los socios siguen intactas.", type: "success" });
     } catch (deleteError) {
-      setError(deleteError.message || "No se pudo eliminar el grupo.");
+      logOperationalError("Error eliminando grupo:", deleteError);
+      setError("No se pudo eliminar el grupo. Verifica que no tenga actividad financiera.");
     } finally {
       setEliminando(false);
     }

@@ -16,6 +16,7 @@ import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../hooks/usePermissions";
 import { etiquetaPeriodo } from "../../services/grupoService";
+import { logOperationalError } from "../../utils/logOperationalError";
 
 const RondaAdmin = () => {
   const {
@@ -310,13 +311,9 @@ const puedeAdministrar =
 
 
     if (error) {
-      console.error(
-        "Error cerrando ronda:",
-        error
-      );
+      logOperationalError("Error cerrando ronda:", error);
 
       setMensaje(
-        error.message ||
         "No se pudo cerrar la ronda."
       );
 

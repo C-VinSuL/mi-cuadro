@@ -6,6 +6,7 @@ import { createUniqueId } from "../utils/uniqueId";
 import { useAuth } from "./AuthContext";
 import { obtenerSolicitudesGrupo } from "../services/grupoService";
 import { supabase } from "../services/supabase";
+import { logOperationalError } from "../utils/logOperationalError";
 
 const TOAST_DURATION = 5000;
 
@@ -320,8 +321,8 @@ const NotificationProvider = ({ children }) => {
       setGroupRequestsError("");
       return requests;
     } catch (error) {
-      console.error("Error actualizando solicitudes de grupo:", error);
-      setGroupRequestsError(error.message || "No se pudieron consultar las solicitudes pendientes.");
+      logOperationalError("Error actualizando solicitudes de grupo:", error);
+      setGroupRequestsError("No se pudieron consultar las solicitudes pendientes. Inténtalo nuevamente.");
       return null;
     }
   }, [user, profile, grupos]);

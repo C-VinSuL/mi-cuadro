@@ -7,6 +7,62 @@ import { MotionConfig } from "motion/react";
 import "./index.css";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
+// This entrypoint intentionally defines its startup fallback locally.
+// eslint-disable-next-line react-refresh/only-export-components
+const StartupFailure = () => (
+  <main
+    role="alert"
+    style={{
+      minHeight: "100dvh",
+      display: "grid",
+      placeItems: "center",
+      padding: "24px",
+      background: "#f8fafc",
+      color: "#0f172a",
+      fontFamily: "system-ui, sans-serif",
+    }}
+  >
+    <section
+      style={{
+        boxSizing: "border-box",
+        width: "min(100%, 560px)",
+        padding: "32px",
+        border: "1px solid #e2e8f0",
+        borderRadius: "16px",
+        background: "#fff",
+        boxShadow: "0 12px 32px rgb(15 23 42 / 8%)",
+        lineHeight: 1.6,
+      }}
+    >
+      <h1 style={{ margin: "0 0 12px", fontSize: "1.5rem" }}>
+        No se pudo iniciar la aplicación
+      </h1>
+      <p>
+        Ocurrió un problema al preparar la aplicación. Inténtalo de nuevo más
+        tarde o contacta con el equipo de soporte si el problema continúa.
+      </p>
+    </section>
+  </main>
+);
+
+class StartupErrorBoundary extends React.Component {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error) {
+    console.error("Falló la inicialización de la aplicación.", {
+      name: error?.name,
+    });
+  }
+
+  render() {
+    return this.state.hasError ? <StartupFailure /> : this.props.children;
+  }
+}
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 
@@ -78,16 +134,23 @@ if (!supabaseUrl || !supabaseKey) {
 
     root.render(
       <React.StrictMode>
-        <MotionConfig reducedMotion="user">
-          <BrowserRouter>
-            <AuthProvider>
-              <NotificationProvider>
-                <App />
-              </NotificationProvider>
-            </AuthProvider>
-          </BrowserRouter>
-        </MotionConfig>
+        <StartupErrorBoundary>
+          <MotionConfig reducedMotion="user">
+            <BrowserRouter>
+              <AuthProvider>
+                <NotificationProvider>
+                  <App />
+                </NotificationProvider>
+              </AuthProvider>
+            </BrowserRouter>
+          </MotionConfig>
+        </StartupErrorBoundary>
       </React.StrictMode>,
     );
+  }).catch((error) => {
+    console.error("No se pudieron cargar los módulos de inicio de la aplicación.", {
+      name: error?.name,
+    });
+    root.render(<StartupFailure />);
   });
 }

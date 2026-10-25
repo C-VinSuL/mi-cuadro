@@ -24,6 +24,7 @@ import { useNotifications } from "../../hooks/useNotifications";
 import AportesAdmin from "./AportesAdmin";
 import { etiquetaPeriodo, etiquetaPeriodoMinuscula } from "../../services/grupoService";
 import { createUniqueId } from "../../utils/uniqueId";
+import { logOperationalError } from "../../utils/logOperationalError";
 
 const obtenerAportesSocio = async (participantId) => {
   const { data, error } = await supabase
@@ -35,6 +36,15 @@ const obtenerAportesSocio = async (participantId) => {
   if (error) throw error;
   return data || [];
 };
+
+const aporteAprobado = (aporte) => (
+  aporte.estado_revision === "aprobado"
+  || (
+    aporte.estado_revision !== "pendiente"
+    && aporte.estado_revision !== "rechazado"
+    && aporte.estado?.toLowerCase() === "pagado"
+  )
+);
 
 
 const AportesSocio = () => {
@@ -81,6 +91,9 @@ const AportesSocio = () => {
   const grupoActivo = grupo?.estado === "activo";
   const periodoActual = etiquetaPeriodo(grupo?.aporte_periodicidad);
   const periodoActualMinuscula = etiquetaPeriodoMinuscula(grupo?.aporte_periodicidad);
+  const totalAportado = aportes
+    .filter(aporteAprobado)
+    .reduce((total, aporte) => total + Number(aporte.monto || 0), 0);
 
 
   // =========================
@@ -99,10 +112,8 @@ const AportesSocio = () => {
     try {
       setAportes(await obtenerAportesSocio(participant.id));
     } catch (error) {
-      console.error(
-        "Error cargando aportes:",
-        error
-      );
+      logOperationalError("Error cargando aportes:", error);
+      setMensaje("No se pudieron cargar tus aportes. Verifica tu conexión e inténtalo nuevamente.");
     } finally {
       setLoading(false);
     }
@@ -124,7 +135,10 @@ const AportesSocio = () => {
         const data = await obtenerAportesSocio(participantId);
         if (active) setAportes(data);
       } catch (error) {
-        console.error("Error cargando aportes:", error);
+        logOperationalError("Error cargando aportes:", error);
+        if (active) {
+          setMensaje("No se pudieron cargar tus aportes. Verifica tu conexión e inténtalo nuevamente.");
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -217,7 +231,7 @@ const AportesSocio = () => {
             .from("contribution-receipts")
             .remove([comprobanteAnterior]);
           if (cleanupError) {
-            console.error("No se pudo limpiar el comprobante rechazado reemplazado:", cleanupError);
+            logOperationalError("No se pudo limpiar el comprobante rechazado reemplazado:", cleanupError);
           }
         }
 
@@ -232,14 +246,14 @@ const AportesSocio = () => {
 
         await cargarAportes();
       } catch (error) {
-        console.error("Error registrando aporte:", error);
-        setMensaje(error.message || "No se pudo registrar el aporte.");
+        logOperationalError("Error registrando aporte:", error);
+        setMensaje("No se pudo registrar el aporte. Verifica los datos e inténtalo nuevamente.");
         if (objectPath) {
           const { error: cleanupError } = await supabase.storage
             .from("contribution-receipts")
             .remove([objectPath]);
           if (cleanupError) {
-            console.error("No se pudo limpiar el comprobante sin solicitud:", cleanupError);
+            logOperationalError("No se pudo limpiar el comprobante sin solicitud:", cleanupError);
           }
         }
       } finally {
@@ -610,7 +624,7 @@ const AportesSocio = () => {
               mt-1
             "
           >
-            {aportes.filter((aporte) => aporte.estado?.toLowerCase() === "pagado").length}
+            {aportes.filter(aporteAprobado).length}
           </p>
         </div>
 
@@ -649,19 +663,7 @@ const AportesSocio = () => {
             "
           >
             $
-            {aportes
-              .reduce(
-                (
-                  total,
-                  aporte
-                ) =>
-                  total +
-                  Number(
-                    aporte.monto
-                  ),
-                0
-              )
-              .toFixed(2)}
+            {totalAportado.toFixed(2)}
           </p>
         </div>
 

@@ -4,6 +4,7 @@ import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import { useNotifications } from "../../hooks/useNotifications";
 import { listarDocumentosPendientes, verificarDocumento } from "../../services/adminService";
 import { supabase } from "../../services/supabase";
+import { logOperationalError } from "../../utils/logOperationalError";
 
 const VerificarDocumentos = () => {
   const { notify } = useNotifications();
@@ -19,8 +20,8 @@ const VerificarDocumentos = () => {
     try {
       setProfiles(await listarDocumentosPendientes());
     } catch (loadError) {
-      console.error("Error consultando documentos pendientes:", loadError);
-      setError(loadError.message || "No se pudieron cargar los documentos pendientes.");
+      logOperationalError("Error consultando documentos pendientes:", loadError);
+      setError("No se pudieron cargar los documentos pendientes. Inténtalo nuevamente.");
     } finally {
       setLoading(false);
     }
@@ -40,14 +41,20 @@ const VerificarDocumentos = () => {
       setProfiles((current) => current.filter((item) => item.id !== profile.id));
       notify({ title: "Documento verificado", message: "La verificación quedó registrada para revisión de roles.", type: "success" });
     } catch (verifyError) {
-      console.error("Error verificando documento:", verifyError);
-      setError(verifyError.message || "No se pudo registrar la verificación.");
+      logOperationalError("Error verificando documento:", verifyError);
+      setError("No se pudo registrar la verificación. Inténtalo nuevamente.");
     } finally {
       setSavingId("");
     }
   };
 
   const abrirDocumento = async (profile) => {
+    const documentWindow = window.open("about:blank", "_blank");
+    if (!documentWindow) {
+      setError("Permite las ventanas emergentes para abrir el documento.");
+      return;
+    }
+    documentWindow.opener = null;
     setOpeningDocumentId(profile.id);
     setError("");
     try {
@@ -55,10 +62,11 @@ const VerificarDocumentos = () => {
         .from("identity-documents")
         .createSignedUrl(profile.documento_identidad_path, 60);
       if (urlError) throw urlError;
-      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+      documentWindow.location.href = data.signedUrl;
     } catch (documentError) {
-      console.error("Error abriendo documento privado:", documentError);
-      setError(documentError.message || "No se pudo abrir el documento.");
+      documentWindow.close();
+      logOperationalError("Error abriendo documento privado:", documentError);
+      setError("No se pudo abrir el documento privado. Verifica tu acceso e inténtalo nuevamente.");
     } finally {
       setOpeningDocumentId("");
     }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Ban, CheckCircle2, ChevronLeft, ChevronRight, KeyRound, RotateCcw, Search, ShieldCheck, Trash2, UserRoundCog, X } from "lucide-react";
 import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import { useNotifications } from "../../hooks/useNotifications";
+import { logOperationalError } from "../../utils/logOperationalError";
 import { cambiarEstadoUsuarioAdministrador, cambiarRolPerfil, eliminarUsuarioAdministrador, listarPerfilesAdministrador, solicitarRestablecimientoMfaAdministrador } from "../../services/adminService";
 
 const ROLES = ["socio", "tesorero", "auditor", "administrador"];
@@ -38,8 +39,8 @@ const Usuarios = () => {
       setOffset(desplazamiento);
       setActiveQuery(busqueda);
     } catch (loadError) {
-      console.error("Error cargando socios y perfiles:", loadError);
-      setError(loadError.message || "No se pudo cargar el listado de socios.");
+      logOperationalError("Error cargando socios y perfiles:", loadError);
+      setError("No se pudo cargar el listado de socios. Inténtalo nuevamente.");
     } finally {
       setLoading(false);
     }
@@ -74,9 +75,9 @@ const Usuarios = () => {
       setProfiles((current) => current.map((item) => item.id === profile.id ? { ...item, rol: role } : item));
       notify({ title: "Rol actualizado", message: `Se asignó el rol ${role}.`, type: "success" });
     } catch (roleError) {
-      console.error("Error cambiando rol:", roleError);
-      setError(roleError.message || "No se pudo actualizar el rol.");
-      notify({ title: "No se pudo cambiar el rol", message: roleError.message || "Revisa la verificación documental.", type: "error" });
+      logOperationalError("Error cambiando rol:", roleError);
+      setError("No se pudo actualizar el rol. Verifica los requisitos de autorización.");
+      notify({ title: "No se pudo cambiar el rol", message: "Verifica los requisitos de autorización e inténtalo nuevamente.", type: "error" });
     } finally {
       setSavingId("");
     }
@@ -103,8 +104,8 @@ const Usuarios = () => {
         type: "success"
       });
     } catch (statusError) {
-      console.error("Error cambiando el estado de la cuenta:", statusError);
-      const message = statusError.message || "No se pudo cambiar el estado de la cuenta.";
+      logOperationalError("Error cambiando el estado de la cuenta:", statusError);
+      const message = "No se pudo cambiar el estado de la cuenta. Inténtalo nuevamente.";
       setError(message);
       notify({ title: "No se pudo cambiar el estado de la cuenta", message, type: "error" });
     } finally {
@@ -148,8 +149,8 @@ const Usuarios = () => {
         throw new Error("No se pudo completar el restablecimiento.");
       }
     } catch (resetError) {
-      console.error("Error restableciendo segundo factor:", resetError);
-      const message = resetError.message || "No se pudo restablecer el segundo factor.";
+      logOperationalError("Error restableciendo segundo factor:", resetError);
+      const message = "No se pudo restablecer el segundo factor. Verifica la sesión e inténtalo nuevamente.";
       setError(message);
       notify({ title: "No se pudo restablecer el segundo factor", message, type: "error" });
     } finally {
@@ -205,8 +206,8 @@ const Usuarios = () => {
         await cargarPerfiles(activeQuery, Math.max(offset - PAGE_SIZE, 0));
       }
     } catch (deleteError) {
-      console.error("Error eliminando cuenta de usuario:", deleteError);
-      const message = deleteError.message || "No se pudo eliminar el usuario.";
+      logOperationalError("Error eliminando cuenta de usuario:", deleteError);
+      const message = "No se pudo eliminar el usuario. Verifica los datos e inténtalo nuevamente.";
       setError(message);
       notify({ title: "No se pudo eliminar el usuario", message, type: "error" });
     } finally {

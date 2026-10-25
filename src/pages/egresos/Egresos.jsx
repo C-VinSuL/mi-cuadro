@@ -7,6 +7,7 @@ import {
   obtenerTotalEgresos,
   registrarEgreso
 } from "../../services/egresosService";
+import { logOperationalError } from "../../utils/logOperationalError";
 
 const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
 const categories = ["Suministros", "Eventos", "Servicios", "Transporte", "Otros"];
@@ -55,8 +56,8 @@ const Egresos = () => {
       setEgresos(rows);
       setTotal(amount);
     } catch (fetchError) {
-      console.error("Error cargando egresos de tesorería:", fetchError);
-      setLoadError(fetchError.message || "No se pudieron cargar los egresos.");
+      logOperationalError("Error cargando egresos de tesorería:", fetchError);
+      setLoadError("No se pudieron cargar los egresos. Verifica tu conexión e inténtalo nuevamente.");
     } finally {
       setLoading(false);
     }
@@ -106,8 +107,8 @@ const Egresos = () => {
       });
       await cargarEgresos();
     } catch (submitError) {
-      console.error("Error registrando egreso:", submitError);
-      setError(submitError.message || "No se pudo guardar el gasto.");
+      logOperationalError("Error registrando egreso:", submitError);
+      setError("No se pudo guardar el gasto. Verifica los datos e inténtalo nuevamente.");
     } finally {
       setSaving(false);
     }

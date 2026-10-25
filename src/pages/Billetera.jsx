@@ -5,6 +5,7 @@ import { createUniqueId } from "../utils/uniqueId";
 import { supabase } from "../services/supabase";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../hooks/useNotifications";
+import { logOperationalError } from "../utils/logOperationalError";
 import {
   listarMovimientosBilletera,
   listarSolicitudesBilleteraAdmin,
@@ -62,8 +63,8 @@ const Billetera = () => {
         setAdminRequests([]);
       }
     } catch (loadError) {
-      console.error("Error cargando la billetera:", loadError);
-      setError(loadError.message || "No se pudo cargar la billetera.");
+      logOperationalError("Error cargando la billetera:", loadError);
+      setError("No se pudo cargar la billetera. Verifica tu conexión e inténtalo nuevamente.");
     } finally {
       setLoading(false);
     }
@@ -114,8 +115,8 @@ const Billetera = () => {
       notify({ title: "Depósito enviado a revisión", message: "El saldo se actualizará después de que administración o tesorería confirme el comprobante.", type: "success" });
       await loadWallet();
     } catch (submitError) {
-      console.error("Error solicitando depósito:", submitError);
-      setError(submitError.message || "No se pudo enviar el depósito.");
+      logOperationalError("Error solicitando depósito:", submitError);
+      setError("No se pudo enviar el depósito. Verifica los datos e inténtalo nuevamente.");
     } finally {
       setSaving(false);
     }
@@ -131,8 +132,8 @@ const Billetera = () => {
       notify({ title: "Retiro solicitado", message: "El retiro quedará pendiente hasta su aprobación.", type: "success" });
       await loadWallet();
     } catch (submitError) {
-      console.error("Error solicitando retiro:", submitError);
-      setError(submitError.message || "No se pudo solicitar el retiro.");
+      logOperationalError("Error solicitando retiro:", submitError);
+      setError("No se pudo solicitar el retiro. Verifica los datos e inténtalo nuevamente.");
     } finally {
       setSaving(false);
     }
@@ -162,8 +163,8 @@ const Billetera = () => {
       });
       await loadWallet();
     } catch (reviewError) {
-      console.error("Error resolviendo movimiento de billetera:", reviewError);
-      setError(reviewError.message || "No se pudo resolver el movimiento.");
+      logOperationalError("Error resolviendo movimiento de billetera:", reviewError);
+      setError("No se pudo resolver el movimiento. Inténtalo nuevamente.");
     } finally {
       setSaving(false);
     }
@@ -171,16 +172,23 @@ const Billetera = () => {
 
   const abrirComprobante = async (request) => {
     if (!request.comprobante_path) return;
+    const receiptWindow = window.open("about:blank", "_blank");
+    if (!receiptWindow) {
+      setError("Permite las ventanas emergentes para abrir el comprobante.");
+      return;
+    }
+    receiptWindow.opener = null;
     setOpeningReceipt(request.id);
     setError("");
     try {
       const { data, error: urlError } = await supabase.storage.from("wallet-receipts")
         .createSignedUrl(request.comprobante_path, 60);
       if (urlError) throw urlError;
-      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+      receiptWindow.location.href = data.signedUrl;
     } catch (receiptError) {
-      console.error("Error abriendo comprobante:", receiptError);
-      setError(receiptError.message || "No se pudo abrir el comprobante privado.");
+      receiptWindow.close();
+      logOperationalError("Error abriendo comprobante:", receiptError);
+      setError("No se pudo abrir el comprobante privado. Verifica tu acceso e inténtalo nuevamente.");
     } finally {
       setOpeningReceipt("");
     }

@@ -4,6 +4,7 @@ import {
   actualizarGarantiaMinimaBilletera,
   obtenerGarantiaMinimaBilleteraAdmin
 } from "../services/walletService";
+import { logOperationalError } from "../utils/logOperationalError";
 
 const ConfiguracionGarantia = () => {
   const [monto, setMonto] = useState("");
@@ -20,10 +21,10 @@ const ConfiguracionGarantia = () => {
         const currentAmount = await obtenerGarantiaMinimaBilleteraAdmin();
         if (active) setMonto(String(currentAmount));
       } catch (loadError) {
-        console.error("Error cargando la garantía mínima:", loadError);
+        logOperationalError("Error cargando la garantía mínima:", loadError);
         if (active) {
           setLoadFailed(true);
-          setError(loadError.message || "No se pudo cargar la garantía mínima.");
+          setError("No se pudo cargar la garantía mínima. Inténtalo nuevamente.");
         }
       } finally {
         if (active) setLoading(false);
@@ -54,8 +55,8 @@ const ConfiguracionGarantia = () => {
       setMonto(amount.toFixed(2));
       setMessage("El mínimo de garantía se actualizó para todos los socios.");
     } catch (saveError) {
-      console.error("Error guardando la garantía mínima:", saveError);
-      setError(saveError.message || "No se pudo guardar la garantía mínima.");
+      logOperationalError("Error guardando la garantía mínima:", saveError);
+      setError("No se pudo guardar la garantía mínima. Inténtalo nuevamente.");
     } finally {
       setSaving(false);
     }

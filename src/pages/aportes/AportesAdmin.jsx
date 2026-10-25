@@ -7,6 +7,7 @@ import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../hooks/useNotifications";
 import { etiquetaPeriodo, listarParticipantesGrupoAdmin, registrarAporteMiembro } from "../../services/grupoService";
+import { logOperationalError } from "../../utils/logOperationalError";
 
 const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
 
@@ -105,8 +106,8 @@ const AportesAdmin = () => {
         const data = await listarParticipantesGrupoAdmin(grupoRegistroIdActual);
         if (active) setParticipantes(data || []);
       } catch (loadError) {
-        console.error("Error cargando participantes para registrar aportes:", loadError);
-        if (active) setRegistroError(loadError.message || "No se pudieron cargar los miembros del grupo.");
+        logOperationalError("Error cargando participantes para registrar aportes:", loadError);
+        if (active) setRegistroError("No se pudieron cargar los miembros del grupo. Inténtalo nuevamente.");
       } finally {
         if (active) setCargandoParticipantes(false);
       }
@@ -123,7 +124,7 @@ const AportesAdmin = () => {
     Promise.resolve()
       .then(() => cargarAportes())
       .catch((loadError) => {
-        console.error("Error cargando aportes administrativos:", loadError);
+        logOperationalError("Error cargando aportes administrativos:", loadError);
         if (active) {
           setError("No se pudieron cargar los aportes de los grupos.");
           setLoading(false);
@@ -161,8 +162,8 @@ const AportesAdmin = () => {
       setActualizacion((value) => value + 1);
       await cargarFondoComunitario(grupoRegistro.id);
     } catch (submitError) {
-      console.error("Error registrando aporte de un miembro:", submitError);
-      setRegistroError(submitError.message || "No se pudo registrar el aporte.");
+      logOperationalError("Error registrando aporte de un miembro:", submitError);
+      setRegistroError("No se pudo registrar el aporte. Verifica los datos e inténtalo nuevamente.");
     } finally {
       setRegistrando(false);
     }
@@ -184,7 +185,7 @@ const AportesAdmin = () => {
         if (changedGroupId && !groupIds.has(changedGroupId)) return;
 
         cargarAportes({ mostrarCarga: false }).catch((refreshError) => {
-          console.error("Error actualizando aportes en tiempo real:", refreshError);
+          logOperationalError("Error actualizando aportes en tiempo real:", refreshError);
           setError("No se pudo actualizar el registro en tiempo real. Usa Actualizar para volver a intentarlo.");
         });
       })
@@ -192,7 +193,7 @@ const AportesAdmin = () => {
         if (status === "SUBSCRIBED") {
           setEstadoTiempoReal("activo");
         } else if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
-          if (subscriptionError) console.error("Error en la conexión de tiempo real de aportes:", subscriptionError);
+          if (subscriptionError) logOperationalError("Error en la conexión de tiempo real de aportes:", subscriptionError);
           setEstadoTiempoReal("error");
         }
       });
@@ -243,7 +244,7 @@ const AportesAdmin = () => {
     } catch (signedUrlError) {
       ventana.close();
       setError("No se pudo abrir el comprobante. Verifica tu sesión y el segundo factor de autenticación.");
-      console.error("Error generando URL del comprobante:", signedUrlError);
+      logOperationalError("Error generando URL del comprobante:", signedUrlError);
     }
   };
 
@@ -263,8 +264,8 @@ const AportesAdmin = () => {
       setNotaRechazo("");
       await cargarAportes();
     } catch (reviewError) {
-      console.error("Error revisando comprobante de aporte:", reviewError);
-      setError(reviewError.message || "No se pudo guardar la decisión.");
+      logOperationalError("Error revisando comprobante de aporte:", reviewError);
+      setError("No se pudo guardar la decisión. Inténtalo nuevamente.");
     } finally {
       setProcesandoId(null);
     }
@@ -286,7 +287,7 @@ const AportesAdmin = () => {
           <button
             type="button"
             onClick={() => cargarAportes().catch((loadError) => {
-              console.error("Error actualizando aportes administrativos:", loadError);
+              logOperationalError("Error actualizando aportes administrativos:", loadError);
               setError("No se pudieron actualizar los aportes. Intenta nuevamente.");
               setLoading(false);
             })}

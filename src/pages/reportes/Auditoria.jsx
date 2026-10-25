@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Download, Eye, FileDown, Printer, ShieldCheck, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { listarAuditoria } from "../../services/adminService";
+import { logOperationalError } from "../../utils/logOperationalError";
 
 const EVENT_LABELS = {
   aporte_comprobante_aprobado: "Comprobante de aporte aprobado",
@@ -167,8 +168,8 @@ const Auditoria = () => {
       );
       setEvents(rows || []);
     } catch (loadError) {
-      console.error("Error cargando registro de auditoría:", loadError);
-      setError(loadError.message || "No se pudo cargar la auditoría.");
+      logOperationalError("Error cargando registro de auditoría:", loadError);
+      setError("No se pudo cargar la auditoría. Verifica tu conexión e inténtalo nuevamente.");
     } finally {
       setLoading(false);
     }
@@ -277,7 +278,7 @@ const Auditoria = () => {
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (exportError) {
-      console.error("Error exportando auditoría a Excel:", exportError);
+      logOperationalError("Error exportando auditoría a Excel:", exportError);
       setError("No se pudo generar el archivo Excel. Inténtalo de nuevo.");
     }
   };

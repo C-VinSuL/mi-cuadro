@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../hooks/useNotifications";
+import { logOperationalError } from "../../utils/logOperationalError";
 
 const MfaSetup = () => {
   const location = useLocation();
@@ -90,9 +91,9 @@ const MfaSetup = () => {
         setQrCode(result.qrCode || "");
         setSecret(result.secret || "");
       } catch (setupError) {
-        console.error("Error preparando MFA:", setupError);
+        logOperationalError("Error preparando MFA:", setupError);
         if (active) {
-          setError(setupError.message || "No se pudo preparar la autenticación MFA.");
+          setError("No se pudo preparar la autenticación MFA. Verifica tu sesión e inténtalo nuevamente.");
           setLoading(false);
         }
       } finally {
@@ -132,7 +133,7 @@ const MfaSetup = () => {
         throw new Error("No se pudo confirmar el envío de la solicitud.");
       }
     } catch (requestError) {
-      console.error("Error solicitando restablecimiento de MFA:", requestError);
+      logOperationalError("Error solicitando restablecimiento de MFA:", requestError);
       setMfaResetRequestStatus("error");
     } finally {
       setRequestingMfaReset(false);
@@ -173,8 +174,8 @@ const MfaSetup = () => {
       });
       navigate(location.state?.from?.pathname || "/", { replace: true });
     } catch (verifyError) {
-      console.error("Error verificando código MFA:", verifyError);
-      setError(verifyError.message || "El código no es válido. Revisa tu aplicación de autenticación e inténtalo otra vez.");
+      logOperationalError("Error verificando código MFA:", verifyError);
+      setError("El código no es válido o la sesión expiró. Revisa tu aplicación de autenticación e inténtalo otra vez.");
     } finally {
       setSubmitting(false);
     }

@@ -16,6 +16,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { supabase } from "../../../services/supabase";
 import { useNotifications } from "../../../hooks/useNotifications";
 import { createUniqueId } from "../../../utils/uniqueId";
+import { logOperationalError } from "../../../utils/logOperationalError";
 
 const Navbar = ({ onOpenMobileMenu }) => {
 
@@ -251,9 +252,9 @@ const Navbar = ({ onOpenMobileMenu }) => {
         linkedin: socials.linkedin || ""
       });
     } catch (loadError) {
-      console.error("Error cargando datos personales privados:", loadError);
+      logOperationalError("Error cargando datos personales privados:", loadError);
       setProfileForm(initialForm);
-      notify({ title: "No se pudieron cargar los datos privados", message: loadError.message || "Verifica la conexión e inténtalo nuevamente.", type: "error" });
+      notify({ title: "No se pudieron cargar los datos privados", message: "Verifica tu conexión e inténtalo nuevamente.", type: "error" });
     }
     setProfileEditorOpen(true);
     setUserMenuOpen(false);
@@ -293,10 +294,10 @@ const Navbar = ({ onOpenMobileMenu }) => {
         type: "success"
       });
     } catch (uploadError) {
-      console.error("Error cargando documento de identidad:", uploadError);
+      logOperationalError("Error cargando documento de identidad:", uploadError);
       notify({
         title: "No se pudo cargar el documento",
-        message: uploadError.message || "Verifica tu conexión e inténtalo nuevamente.",
+        message: "Verifica tu conexión e inténtalo nuevamente.",
         type: "error"
       });
     } finally {
@@ -331,8 +332,8 @@ const Navbar = ({ onOpenMobileMenu }) => {
       const { data } = supabase.storage.from("profile-avatars").getPublicUrl(objectPath);
       setProfileForm((current) => ({ ...current, avatarUrl: data.publicUrl }));
     } catch (uploadError) {
-      console.error("Error cargando avatar:", uploadError);
-      notify({ title: "No se pudo cargar la imagen", message: uploadError.message || "Verifica tu conexión e inténtalo nuevamente.", type: "error" });
+      logOperationalError("Error cargando avatar:", uploadError);
+      notify({ title: "No se pudo cargar la imagen", message: "Verifica tu conexión e inténtalo nuevamente.", type: "error" });
     } finally {
       setUploadingAvatar(false);
       event.target.value = "";

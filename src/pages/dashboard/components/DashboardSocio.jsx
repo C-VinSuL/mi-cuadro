@@ -149,16 +149,25 @@ const DashboardSocio = () => {
   // ========================================
 
   useEffect(() => {
+    let active = true;
+
     const cargarDatos = async () => {
       if (
         !grupo?.id ||
         !participant?.id
       ) {
+        setAporteActual(null);
+        setEntrega(null);
+        setBeneficiarioActual(null);
+        setError("");
         setLoading(false);
         return;
       }
 
       try {
+        setAporteActual(null);
+        setEntrega(null);
+        setBeneficiarioActual(null);
         setLoading(true);
         setError("");
 
@@ -241,6 +250,8 @@ const DashboardSocio = () => {
           throw beneficiarioResponse.error;
         }
 
+        if (!active) return;
+
         setAporteActual(
           aporteResponse.data
         );
@@ -254,6 +265,8 @@ const DashboardSocio = () => {
         );
 
       } catch (error) {
+        if (!active) return;
+
         console.error(
           "Error dashboard socio:",
           error
@@ -263,12 +276,15 @@ const DashboardSocio = () => {
           "No se pudo cargar tu información."
         );
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     cargarDatos();
 
+    return () => {
+      active = false;
+    };
   }, [
     grupo?.id,
     grupo?.estado,

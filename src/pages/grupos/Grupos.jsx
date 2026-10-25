@@ -12,6 +12,7 @@ import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../hooks/usePermissions";
 import GroupAccessPanel from "../../components/cuadro/GroupAccessPanel";
 import { contarParticipantesGrupo, etiquetaAporte, iniciarCuadro, listarParticipantesGrupoAdmin } from "../../services/grupoService";
+import { logOperationalError } from "../../utils/logOperationalError";
 
 const Grupos = () => {
   const { grupo, cargarGrupo } = useAuth();
@@ -43,8 +44,8 @@ const Grupos = () => {
       }
       setMensaje("");
     } catch (error) {
-      console.error("Error cargando participantes:", error);
-      setMensaje(error.message || "No se pudo actualizar el resumen de socios.");
+      logOperationalError("Error cargando participantes:", error);
+      setMensaje("No se pudo actualizar el resumen de socios. Inténtalo nuevamente.");
       setParticipantes([]);
       setCantidadAprobados(0);
     } finally {
@@ -99,8 +100,8 @@ const Grupos = () => {
       await cargarGrupo(grupo.id);
       setConfirmandoInicio(false);
     } catch (error) {
-      console.error("Error aprobando el inicio del cuadro:", error);
-      setMensaje(error.message || "No se pudo sortear e iniciar el cuadro.");
+      logOperationalError("Error aprobando el inicio del cuadro:", error);
+      setMensaje("No se pudo sortear e iniciar el cuadro. Verifica los cupos e inténtalo nuevamente.");
     } finally {
       setIniciando(false);
     }
