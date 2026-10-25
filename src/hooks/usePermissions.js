@@ -1,16 +1,15 @@
 import { useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { PERMISSIONS } from "../config/permissions";
+import {
+  getPermissionsForRole,
+  normalizeRole
+} from "../config/permissions";
 
 export const usePermissions = () => {
   const { profile } = useAuth();
 
-  const rol =
-    profile?.rol?.toLowerCase() || "socio";
-
-  const permissions =
-    PERMISSIONS[rol] ||
-    PERMISSIONS.socio;
+  const rol = normalizeRole(profile?.rol);
+  const permissions = getPermissionsForRole(rol);
 
   const can = useCallback((permission) => {
     return Boolean(

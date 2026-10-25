@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { supabase } from "./supabase.js";
 
 export const registrarEgreso = async ({ grupoId, concepto, categoria, monto, fecha }) => {
   const { data, error } = await supabase

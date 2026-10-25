@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { usePermissions } from "../hooks/usePermissions";
 import LoadingScreen from "../components/ui/Loader/LoadingScreen";
+import { evaluateRoleRoute } from "./accessGuards";
 
 const RoleRoute = ({
   permission,
@@ -11,29 +12,19 @@ const RoleRoute = ({
   const { loading, profile } = useAuth();
   const { can } = usePermissions();
 
-  // Esperar a que Supabase cargue sesión y perfil
-  if (loading) {
-    return <LoadingScreen message="Cargando tu espacio..." />;
+  const routeState = evaluateRoleRoute({
+    loading,
+    profile,
+    permission,
+    canPermission: can,
+  });
+
+  if (routeState.type === "loading") {
+    return <LoadingScreen message={routeState.message} />;
   }
 
-  // Si no existe perfil, volver al login
-  if (!profile) {
-    return (
-      <Navigate
-        to="/login"
-        replace
-      />
-    );
-  }
-
-  // Si no tiene el permiso solicitado
-  if (!can(permission)) {
-    return (
-      <Navigate
-        to="/"
-        replace
-      />
-    );
+  if (routeState.type === "redirect") {
+    return <Navigate to={routeState.to} replace={routeState.replace} />;
   }
 
   return children;

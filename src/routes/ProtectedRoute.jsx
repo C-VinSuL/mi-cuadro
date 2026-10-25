@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import LoadingScreen from "../components/ui/Loader/LoadingScreen";
 import { supabase } from "../services/supabase";
+import { evaluateProtectedRoute } from "./accessGuards";
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -30,20 +31,19 @@ const ProtectedRoute = ({ children }) => {
     };
   }, [user?.id]);
 
-  if (loading) {
-    return <LoadingScreen message="Verificando tu sesión..." />;
+  const routeState = evaluateProtectedRoute({
+    loading,
+    user,
+    mfaState,
+    location,
+  });
+
+  if (routeState.type === "loading") {
+    return <LoadingScreen message={routeState.message} />;
   }
 
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (mfaState.userId !== user.id || mfaState.loading) {
-    return <LoadingScreen message="Verificando la seguridad de tu cuenta..." />;
-  }
-
-  if (!mfaState.verified) {
-    return <Navigate to="/seguridad/mfa" replace state={{ from: location }} />;
+  if (routeState.type === "redirect") {
+    return <Navigate to={routeState.to} replace={routeState.replace} state={routeState.state} />;
   }
 
   return children;

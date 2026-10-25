@@ -112,3 +112,42 @@ export const PERMISSIONS = {
     verListaParticipantesGrupo: false
   }
 };
+
+export const normalizeRole = (role) => {
+  if (typeof role !== "string") {
+    return "socio";
+  }
+
+  const normalizedRole = role.trim().toLowerCase();
+  return normalizedRole || "socio";
+};
+
+export const getPermissionsForRole = (role = "socio") => {
+  const normalizedRole = normalizeRole(role);
+  return PERMISSIONS[normalizedRole] || PERMISSIONS.socio;
+};
+
+export const canAccessPermission = (role, permission) => {
+  if (!permission) {
+    return false;
+  }
+
+  return Boolean(getPermissionsForRole(role)?.[permission]);
+};
+
+export const FINANCIAL_OPERATION_ACCESS = {
+  consultarSaldo: ["administrador", "tesorero", "socio"],
+  registrarAporte: ["administrador", "tesorero", "socio"],
+  gestionarEgresos: ["administrador", "tesorero"],
+  gestionarBilletera: ["administrador", "tesorero"],
+  verHistorialFinanciero: ["administrador", "tesorero"]
+};
+
+export const canAccessFinancialOperation = (role, operation) => {
+  const allowedRoles = FINANCIAL_OPERATION_ACCESS[operation];
+  if (!allowedRoles) {
+    return false;
+  }
+
+  return allowedRoles.includes(normalizeRole(role));
+};

@@ -9,6 +9,13 @@ import {
 import { supabase } from "../services/supabase";
 import { obtenerSaldoFondo} from "../services/fondoService";
 import { PERMISSIONS } from "../config/permissions";
+import {
+  shouldResetIdentity,
+  shouldSendWelcomeEmail,
+  shouldClearSessionForInactiveProfile,
+  getSessionIdentity,
+  getSessionUser,
+} from "./authSession";
 
 const AuthContext = createContext();
 
@@ -358,16 +365,16 @@ const cargarFondoComunitario =
     } =
       supabase.auth.onAuthStateChange(
         (event, nextSession) => {
-          const nextIdentity = nextSession?.user?.id ?? null;
+          const nextIdentity = getSessionIdentity(nextSession);
 
           const requestId = ++authRequest.current;
-          if (identity.current !== nextIdentity) {
+          if (shouldResetIdentity(identity.current, nextSession)) {
             identity.current = nextIdentity;
             clearIdentityData();
           }
 
           setSession(nextSession);
-          setUser(nextSession?.user ?? null);
+          setUser(getSessionUser(nextSession));
 
           setLoading(true);
 
@@ -376,7 +383,7 @@ const cargarFondoComunitario =
             try {
               if (!isCurrentRequest(requestId, nextIdentity)) return;
 
-              if (["SIGNED_IN", "INITIAL_SESSION"].includes(event) && nextSession?.user) {
+              if (shouldSendWelcomeEmail(event, nextSession)) {
                 try {
                   const { error } = await supabase.functions.invoke("send-welcome-email");
                   if (error) throw error;

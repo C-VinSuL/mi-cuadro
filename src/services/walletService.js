@@ -1,4 +1,4 @@
-import { supabase } from "./supabase";
+import { supabase } from "./supabase.js";
 
 const callRpc = async (name, params = {}) => {
   const { data, error } = await supabase.rpc(name, params);
