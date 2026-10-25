@@ -1,162 +1,144 @@
-import { useEffect, useRef, useState } from "react";
-
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { MessageCircle, X } from "lucide-react";
 import Sidebar from "./Sidebar/Sidebar";
 import Navbar from "./Navbar/Navbar";
+import MobileBottomNavigation from "./MobileBottomNavigation";
+import MobileAssistant from "./MobileAssistant";
 
 const MainLayout = ({ children }) => {
-  const [menuOpen, setMenuOpen] = useState(() => (
-    window.innerWidth >= 1024 && window.innerWidth < 1280
-  ));
-  const menuButtonRef = useRef(null);
-  const navigationRef = useRef(null);
-  const menuWasOpen = useRef(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileAssistantOpen, setMobileAssistantOpen] = useState(false);
+  const [desktopAssistantOpen, setDesktopAssistantOpen] = useState(false);
 
   useEffect(() => {
-    if (!menuOpen || window.innerWidth >= 1024) return undefined;
+    if (!mobileMenuOpen && !mobileAssistantOpen) return undefined;
 
     const previousOverflow = document.body.style.overflow;
-    const handleKeyDown = (event) => {
+    document.body.style.overflow = "hidden";
+    const closeOnEscape = (event) => {
       if (event.key === "Escape") {
-        setMenuOpen(false);
-        return;
-      }
-      if (event.key !== "Tab") return;
-
-      const focusableElements = navigationRef.current
-        ?.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
-      if (!focusableElements?.length) {
-        event.preventDefault();
-        return;
-      }
-
-      const firstElement = focusableElements[0];
-      const lastElement = focusableElements[focusableElements.length - 1];
-      const focusIsOutsideMenu = !navigationRef.current?.contains(document.activeElement);
-
-      if (event.shiftKey && (document.activeElement === firstElement || focusIsOutsideMenu)) {
-        event.preventDefault();
-        lastElement.focus();
-      } else if (!event.shiftKey && (document.activeElement === lastElement || focusIsOutsideMenu)) {
-        event.preventDefault();
-        firstElement.focus();
+        setMobileMenuOpen(false);
+        setMobileAssistantOpen(false);
       }
     };
-    document.body.style.overflow = "hidden";
-    document.addEventListener("keydown", handleKeyDown);
-    navigationRef.current
-      ?.querySelector('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')
-      ?.focus();
+    window.addEventListener("keydown", closeOnEscape);
 
     return () => {
       document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [menuOpen]);
-
-  useEffect(() => {
-    let previousMode = window.innerWidth < 1024
-      ? "mobile"
-      : window.innerWidth < 1280
-        ? "tablet"
-        : "desktop";
-
-    const handleResize = () => {
-      const currentMode = window.innerWidth < 1024
-        ? "mobile"
-        : window.innerWidth < 1280
-          ? "tablet"
-          : "desktop";
-
-      if (currentMode !== previousMode) {
-        setMenuOpen(currentMode === "tablet");
-        previousMode = currentMode;
-      }
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  useEffect(() => {
-    if (menuOpen) {
-      menuWasOpen.current = true;
-    } else if (menuWasOpen.current) {
-      menuWasOpen.current = false;
-      if (window.innerWidth < 1280) menuButtonRef.current?.focus();
-    }
-  }, [menuOpen]);
+  }, [mobileMenuOpen, mobileAssistantOpen]);
 
   return (
     <div className="min-h-dvh min-w-0 bg-[#F4F7F5]">
-
-      {/* SIDEBAR DESKTOP AND TABLET */}
-      <div className="hidden lg:block">
-        <Sidebar desktopCollapsed={!menuOpen} />
+      <div className="hidden md:block">
+        <Sidebar />
       </div>
 
-      {/* SIDEBAR MOBILE / TABLET */}
-      {menuOpen && (
-        <div className="mobile-menu-backdrop fixed inset-0 z-50 bg-slate-950/45 lg:hidden">
-          <Sidebar
-            mobile
-            onClose={() => setMenuOpen(false)}
-            navigationRef={navigationRef}
-            desktopCollapsed={false}
-          />
-        </div>
-      )}
-
-      {/* CONTENIDO */}
-      <div className={`min-h-dvh min-w-0 w-full transition-[padding] duration-300 ease-in-out motion-reduce:transition-none ${menuOpen ? "lg:pl-[290px]" : "xl:pl-[290px]"}`}>
-        <Navbar
-          onMenuClick={() => setMenuOpen((open) => !open)}
-          menuOpen={menuOpen}
-          menuButtonRef={menuButtonRef}
-        />
-
-        <main
-          className="
-            w-full
-            px-4
-            py-6
-            sm:px-6
-            md:px-8
-            xl:px-10
-            2xl:px-12
-          "
-        >
-          <div
-            className="
-              mx-auto
-              w-full
-              max-w-[1440px]
-            "
-          >
+      <div className="flex min-h-dvh min-w-0 w-full flex-col md:pl-[290px]">
+        <Navbar onOpenMobileMenu={() => {
+          setMobileAssistantOpen(false);
+          setMobileMenuOpen(true);
+        }} />
+        <main className="w-full flex-1 px-4 py-6 pb-28 sm:px-6 md:px-8 md:pb-6 xl:px-10 2xl:px-12">
+          <div className="mx-auto w-full max-w-[1440px]">
             {children}
           </div>
         </main>
+        <footer className="hidden border-t border-slate-200/80 bg-white/70 px-8 py-4 text-center text-xs text-slate-500 md:block xl:px-10 2xl:px-12">
+          <div className="mx-auto w-full max-w-[1440px]">
+            © {new Date().getFullYear()} FlashMonkey. Todos los derechos reservados.
+          </div>
+        </footer>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setMenuOpen((open) => !open)}
-        ref={menuButtonRef}
-        className={`fixed left-4 top-[max(1rem,env(safe-area-inset-top))] z-[70] flex size-11 items-center justify-center rounded-xl transition-all duration-300 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 motion-reduce:transition-none lg:hidden ${
-          menuOpen
-            ? "border border-white/30 bg-white/15 text-white shadow-lg hover:bg-white/25"
-            : "bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-        }`}
-        aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
-        aria-expanded={menuOpen}
-        aria-controls="mobile-navigation"
-      >
-        <span className="relative flex size-6 items-center justify-center" aria-hidden="true">
-          <span className={`absolute h-0.5 w-5 rounded-full bg-current transition-all duration-300 ease-in-out motion-reduce:transition-none ${menuOpen ? "rotate-45" : "-translate-y-1.5"}`} />
-          <span className={`absolute h-0.5 w-5 rounded-full bg-current transition-all duration-300 ease-in-out motion-reduce:transition-none ${menuOpen ? "scale-x-0 opacity-0" : "scale-x-100 opacity-100"}`} />
-          <span className={`absolute h-0.5 w-5 rounded-full bg-current transition-all duration-300 ease-in-out motion-reduce:transition-none ${menuOpen ? "-rotate-45" : "translate-y-1.5"}`} />
-        </span>
-      </button>
-
+      <MobileBottomNavigation
+        assistantOpen={mobileAssistantOpen}
+        onNavigate={() => {
+          setMobileAssistantOpen(false);
+          setMobileMenuOpen(false);
+        }}
+        onOpenAssistant={() => {
+          setMobileMenuOpen(false);
+          setMobileAssistantOpen((open) => !open);
+        }}
+      />
+      <div className="fixed bottom-6 right-6 z-40 hidden md:block">
+        <AnimatePresence>
+          {desktopAssistantOpen && (
+            <motion.div
+              key="desktop-assistant-panel"
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.98 }}
+              transition={{ duration: 0.18 }}
+              className="absolute bottom-[4.5rem] right-0 h-[min(680px,calc(100dvh-8rem))] w-[min(400px,calc(100vw-3rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+            >
+              <MobileAssistant
+                desktop
+                onClose={() => setDesktopAssistantOpen(false)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <button
+          type="button"
+          onClick={() => setDesktopAssistantOpen((open) => !open)}
+          aria-label={desktopAssistantOpen ? "Cerrar chat de Moki" : "Abrir chat de Moki"}
+          aria-expanded={desktopAssistantOpen}
+          className="flex size-14 items-center justify-center rounded-full bg-[#064E3B] text-white shadow-lg shadow-emerald-950/25 transition hover:scale-105 hover:bg-[#0B6651] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300"
+        >
+          {desktopAssistantOpen ? <X size={23} /> : (
+            <span className="relative flex size-11 items-center justify-center overflow-hidden rounded-full bg-white">
+              <img src="/flashmonkey-mascot.png" alt="" className="h-full w-full object-cover object-top" />
+              <MessageCircle className="absolute bottom-0 right-0 rounded-full bg-[#16835D] p-0.5 text-white" size={17} />
+            </span>
+          )}
+        </button>
+      </div>
+      <AnimatePresence>
+        {mobileAssistantOpen && (
+          <motion.div
+            key="mobile-assistant"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            transition={{ duration: 0.2 }}
+          >
+            <MobileAssistant
+              onClose={() => setMobileAssistantOpen(false)}
+              onOpenMenu={() => setMobileMenuOpen(true)}
+            />
+          </motion.div>
+        )}
+        {mobileMenuOpen && (
+          <motion.div
+            className="fixed inset-0 z-[60] bg-slate-950/50 md:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setMobileMenuOpen(false);
+            }}
+          >
+            <motion.div
+              className="h-dvh w-[min(88vw,360px)] overflow-hidden shadow-2xl"
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", stiffness: 320, damping: 34 }}
+            >
+              <Sidebar
+                mobile
+                onClose={() => setMobileMenuOpen(false)}
+                onNavigate={() => setMobileAssistantOpen(false)}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

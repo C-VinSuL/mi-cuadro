@@ -20,6 +20,8 @@ import {
   X
 } from "lucide-react";
 
+import SectionPageTitle from "../../components/ui/SectionPageTitle";
+import { createUniqueId } from "../../utils/uniqueId";
 import {
   useAuth
 } from "../../context/AuthContext";
@@ -105,7 +107,7 @@ const HistorialSocio = () => {
     }
 
     const channel = supabase
-      .channel(`historial-tesoreria-${grupoId}`)
+      .channel(`historial-tesoreria-${grupoId}-${createUniqueId()}`)
       .on("postgres_changes", {
         event: "*",
         schema: "public",
@@ -193,6 +195,8 @@ const HistorialSocio = () => {
   }), [desde, hasta, movimientos, tipoFiltro]);
   const movimientosConciliados = movimientos.filter((movimiento) => conciliaciones[String(movimiento.id)]).length;
   const movimientosPendientesConciliacion = movimientos.length - movimientosConciliados;
+  const diferenciaSaldo = saldo - (resumen.ingresos - resumen.egresos);
+  const saldoConciliado = Math.abs(diferenciaSaldo) < 0.01;
 
   const conciliarMovimiento = async () => {
     if (!movimientoSeleccionado || conciliando) return;
@@ -378,41 +382,12 @@ const HistorialSocio = () => {
 
       {/* HEADER */}
 
-      <div>
-
-        <p
-          className="
-            text-sm
-            font-semibold
-            text-emerald-700
-          "
-        >
-          Caja Comunal
-        </p>
-
-        <h1
-          className="
-            mt-1
-            text-3xl
-            font-bold
-            text-slate-900
-            md:text-4xl
-          "
-        >
-          Historial financiero
-        </h1>
-
-        <p
-          className="
-            mt-2
-            text-slate-500
-          "
-        >
-          Consulta los movimientos del fondo
-          comunitario de {grupo.nombre}.
-        </p>
-
-      </div>
+      <SectionPageTitle
+        icon={HistoryIcon}
+        eyebrow="Movimientos del grupo"
+        title="Historial financiero"
+        description={`Consulta los movimientos del fondo comunitario de ${grupo.nombre}.`}
+      />
 
       {error && (
         <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
@@ -643,6 +618,34 @@ const HistorialSocio = () => {
         )}
 
       </section>
+
+      {esTesorero && (
+        <section className={`rounded-xl border px-4 py-3 text-sm ${
+          saldoConciliado
+            ? "border-emerald-200 bg-emerald-50 text-emerald-950"
+            : "border-red-300 bg-red-50 text-red-950"
+        }`} aria-live="polite">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="font-semibold">
+                {saldoConciliado ? "Saldo del fondo consistente" : "Diferencia detectada en el saldo"}
+              </p>
+              <p className="mt-1">
+                El saldo actual se compara con ingresos menos egresos del libro contable.
+                {!saldoConciliado && ` Diferencia: $${diferenciaSaldo.toFixed(2)}.`}
+              </p>
+            </div>
+            <span className={`shrink-0 font-semibold ${movimientosPendientesConciliacion > 0 ? "text-amber-800" : ""}`}>
+              {movimientosPendientesConciliacion} movimiento{movimientosPendientesConciliacion === 1 ? "" : "s"} sin conciliar
+            </span>
+          </div>
+          {movimientosPendientesConciliacion > 0 && (
+            <p className="mt-2 text-xs">
+              Revisa los movimientos marcados como pendientes en el libro contable; conciliarlos deja constancia de su verificación, sin cambiar el monto.
+            </p>
+          )}
+        </section>
+      )}
 
       {esTesorero && (
         <section className="flex flex-wrap items-end justify-between gap-3 print:hidden">
@@ -876,6 +879,7 @@ const HistorialSocio = () => {
                           border-t
                           border-slate-100
                           hover:bg-slate-50
+                          transition-colors duration-150 motion-reduce:transition-none
                         "
                       >
 

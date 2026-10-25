@@ -323,7 +323,7 @@ const Auditoria = () => {
           .audit-print-footer { display: flex !important; justify-content: space-between; border-top: 1px solid #cbd5e1; margin-top: 8px; padding-top: 4px; color: #64748b; font-size: 8pt; }
         }
       `}</style>
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-5 print:hidden">
+      <header className="flex flex-wrap items-end justify-between gap-4 rounded-3xl border border-emerald-100 bg-gradient-to-br from-white to-emerald-50 p-6 md:p-8 print:hidden">
         <div>
           <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700"><ShieldCheck size={17} /> Control y trazabilidad</p>
           <h1 className="audit-screen-title mt-1 text-3xl font-bold text-slate-900">Auditoría</h1>

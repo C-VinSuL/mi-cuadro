@@ -7,6 +7,7 @@ import {
   Users
 } from "lucide-react";
 
+import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../hooks/usePermissions";
 import GroupAccessPanel from "../../components/cuadro/GroupAccessPanel";
@@ -61,11 +62,18 @@ const Grupos = () => {
   }, [actualizarParticipantes]);
 
   if (!grupo) {
+    const puedeGestionarGrupos = can("gestionarGrupo");
     return (
       <div className="min-w-0 space-y-5">
-        <header className="border-b border-slate-200 pb-4">
-          <h1 className="text-2xl font-bold text-slate-900">Grupos y cuadros</h1>
-          <p className="mt-1 break-words text-sm text-slate-600">Consulta los grupos disponibles y solicita una invitación, o crea un grupo nuevo si tienes permisos.</p>
+        <header>
+          <SectionPageTitle
+            icon={Users}
+            eyebrow={puedeGestionarGrupos ? "Administración de grupos" : "Directorio de grupos"}
+            title={puedeGestionarGrupos ? "Grupos y solicitudes" : "Grupos y cuadros"}
+            description={puedeGestionarGrupos
+              ? "Crea grupos y revisa las solicitudes de ingreso e invitación."
+              : "Consulta los grupos disponibles y solicita una invitación."}
+          />
         </header>
         <GroupAccessPanel onMembershipChange={actualizarParticipantes} />
       </div>
@@ -100,14 +108,14 @@ const Grupos = () => {
 
   return (
     <div className="space-y-7">
-      <GroupAccessPanel onMembershipChange={actualizarParticipantes} />
-
-      <header className="flex flex-col gap-5 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold text-emerald-700">Grupo activo</p>
-          <h1 className="mt-1 text-3xl font-bold text-slate-900">{grupo.nombre}</h1>
-          <p className="mt-2 text-sm text-slate-600">{esActivo ? "Cuadro activo" : grupo.estado === "finalizado" ? "Cuadro finalizado" : "En preparación"}</p>
-        </div>
+      <header className="flex flex-col gap-5 rounded-3xl border border-emerald-100 bg-gradient-to-br from-white to-emerald-50 p-6 sm:flex-row sm:items-end sm:justify-between md:p-8">
+        <SectionPageTitle
+          icon={Users}
+          eyebrow="Operaciones del grupo"
+          title={grupo.nombre}
+          description={esActivo ? "Cuadro activo" : grupo.estado === "finalizado" ? "Cuadro finalizado" : "En preparación"}
+          plain
+        />
         {can("iniciarCuadro") && esBorrador && (
           <button
             type="button"
@@ -124,6 +132,8 @@ const Grupos = () => {
           </p>
         )}
       </header>
+
+      <GroupAccessPanel onMembershipChange={actualizarParticipantes} />
 
       {mensaje && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{mensaje}</p>}
 
@@ -185,8 +195,8 @@ const Grupos = () => {
       )}
 
       {confirmandoInicio && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
-          <section className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="confirmar-sorteo-titulo">
+        <div className="ui-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation">
+          <section className="ui-dialog-panel w-full max-w-lg rounded-xl bg-white p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="confirmar-sorteo-titulo">
             <p className="text-sm font-semibold text-emerald-800">Aprobación de inicio</p>
             <h2 id="confirmar-sorteo-titulo" className="mt-1 text-xl font-bold text-slate-900">¿Sortear posiciones e iniciar?</h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">La base de datos asignará una posición aleatoria a cada socio y activará la primera ronda. Esta acción no se puede deshacer.</p>

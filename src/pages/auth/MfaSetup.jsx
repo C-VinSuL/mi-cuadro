@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase";
+import { useAuth } from "../../context/AuthContext";
+import { useNotifications } from "../../hooks/useNotifications";
 
 const MfaSetup = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { notify } = useNotifications();
   const [factor, setFactor] = useState(null);
   const [challengeId, setChallengeId] = useState("");
   const [qrCode, setQrCode] = useState("");
@@ -161,6 +165,12 @@ const MfaSetup = () => {
       if (assuranceData.currentLevel !== "aal2") {
         throw new Error("El código fue aceptado, pero la sesión aún no refleja MFA. Espera un momento e inténtalo otra vez.");
       }
+      notify({
+        title: "Sesión iniciada",
+        message: "Bienvenido nuevamente a FlashMonkey.",
+        type: "success",
+        recipientId: user?.id
+      });
       navigate(location.state?.from?.pathname || "/", { replace: true });
     } catch (verifyError) {
       console.error("Error verificando código MFA:", verifyError);

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { NotificationContext } from "./notificationStore";
 import NotificationToast from "../components/common/NotificationToast";
+import { createUniqueId } from "../utils/uniqueId";
 import { useAuth } from "./AuthContext";
 import { obtenerSolicitudesGrupo } from "../services/grupoService";
 import { supabase } from "../services/supabase";
@@ -24,6 +25,8 @@ const NotificationProvider = ({ children }) => {
   const [notificationState, setNotificationState] = useState({ userId: null, items: [] });
   const [groupRequests, setGroupRequests] = useState([]);
   const [groupRequestsError, setGroupRequestsError] = useState("");
+  const localNotificationSignaturesRef = useRef(new Map());
+  const realtimeNotificationIdsRef = useRef(new Map());
   const notifications = useMemo(
     () => notificationState.userId === user?.id ? notificationState.items : [],
     [notificationState, user?.id]
@@ -67,7 +70,7 @@ const NotificationProvider = ({ children }) => {
     loadNotifications();
 
     const channel = supabase
-      .channel(`notificaciones-${user.id}`)
+      .channel(`notificaciones-${user.id}-${createUniqueId()}`)
       .on(
         "postgres_changes",
         {
@@ -80,9 +83,39 @@ const NotificationProvider = ({ children }) => {
           if (!active) return;
           if (payload.eventType === "INSERT") {
             const notification = toNotification(payload.new);
+            const now = Date.now();
+            for (const [id, seenAt] of realtimeNotificationIdsRef.current) {
+              if (now - seenAt > TOAST_DURATION) realtimeNotificationIdsRef.current.delete(id);
+            }
+            if (realtimeNotificationIdsRef.current.has(notification.id)) return;
+            realtimeNotificationIdsRef.current.set(notification.id, now);
+
             updateNotifications(user.id, (current) => current.some((item) => item.id === notification.id)
               ? current
               : [notification, ...current]);
+
+            const signature = JSON.stringify([
+              user.id,
+              notification.title,
+              notification.message,
+              notification.type,
+              notification.actionPath,
+              notification.actionLabel
+            ]);
+            const localNotification = localNotificationSignaturesRef.current.get(signature);
+            if (localNotification && localNotification.expiresAt > now && localNotification.count > 0) {
+              if (localNotification.count === 1) {
+                localNotificationSignaturesRef.current.delete(signature);
+              } else {
+                localNotificationSignaturesRef.current.set(signature, {
+                  ...localNotification,
+                  count: localNotification.count - 1
+                });
+              }
+              return;
+            }
+            if (localNotification) localNotificationSignaturesRef.current.delete(signature);
+
             toast.custom((toastItem) => (
               <NotificationToast
                 notification={notification}
@@ -115,6 +148,7 @@ const NotificationProvider = ({ children }) => {
     recipientId
   }) => {
     const toastId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const notificationUserId = recipientId || user?.id;
     const notification = {
       title,
       message,
@@ -125,6 +159,26 @@ const NotificationProvider = ({ children }) => {
       read: false
     };
 
+    const signature = JSON.stringify([
+      notificationUserId,
+      title,
+      message,
+      type,
+      actionPath,
+      actionLabel
+    ]);
+    const now = Date.now();
+    for (const [key, pending] of localNotificationSignaturesRef.current) {
+      if (pending.expiresAt <= now) localNotificationSignaturesRef.current.delete(key);
+    }
+    if (notificationUserId === user?.id) {
+      const pending = localNotificationSignaturesRef.current.get(signature);
+      localNotificationSignaturesRef.current.set(signature, {
+        count: (pending?.count || 0) + 1,
+        expiresAt: now + TOAST_DURATION
+      });
+    }
+
     toast.custom((toastItem) => (
       <NotificationToast
         notification={notification}
@@ -133,7 +187,6 @@ const NotificationProvider = ({ children }) => {
       />
     ), { duration: TOAST_DURATION, id: toastId });
 
-    const notificationUserId = recipientId || user?.id;
     if (!notificationUserId) return null;
 
     const { data, error } = await supabase
@@ -150,6 +203,17 @@ const NotificationProvider = ({ children }) => {
       .single();
 
     if (error) {
+      const pending = localNotificationSignaturesRef.current.get(signature);
+      if (pending) {
+        if (pending.count === 1) {
+          localNotificationSignaturesRef.current.delete(signature);
+        } else {
+          localNotificationSignaturesRef.current.set(signature, {
+            ...pending,
+            count: pending.count - 1
+          });
+        }
+      }
       console.error("Error guardando notificación:", error);
       toast.error("La notificación se mostró, pero no se pudo guardar en el historial.");
       return null;

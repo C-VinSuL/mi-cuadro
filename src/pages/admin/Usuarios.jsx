@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Ban, CheckCircle2, ChevronLeft, ChevronRight, KeyRound, RotateCcw, Search, ShieldCheck, Trash2, UserRoundCog, X } from "lucide-react";
+import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import { useNotifications } from "../../hooks/useNotifications";
 import { cambiarEstadoUsuarioAdministrador, cambiarRolPerfil, eliminarUsuarioAdministrador, listarPerfilesAdministrador, solicitarRestablecimientoMfaAdministrador } from "../../services/adminService";
 
@@ -214,11 +215,14 @@ const Usuarios = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-semibold text-emerald-700">Administración de acceso</p>
-        <h1 className="mt-1 text-3xl font-bold text-slate-900">Socios y roles</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Listado de cuentas registradas, ordenadas desde la más reciente. Las cuentas nuevas ingresan como socios; el administrador principal puede asignarles un rol sin cargar el documento. Para los demás administradores, la verificación documental sigue siendo obligatoria. Los cambios y las eliminaciones con su motivo quedan auditados.</p>
+    <div className="min-w-0 w-full space-y-6">
+      <header>
+        <SectionPageTitle
+          icon={UserRoundCog}
+          eyebrow="Gestión de usuarios"
+          title="Socios y roles"
+          description="Listado de cuentas registradas, ordenadas desde la más reciente. Las cuentas nuevas ingresan como socios; el administrador principal puede asignarles un rol sin cargar el documento. Para los demás administradores, la verificación documental sigue siendo obligatoria. Los cambios y las eliminaciones con su motivo quedan auditados."
+        />
       </header>
 
       <form onSubmit={buscar} className="flex flex-col gap-2 sm:flex-row">
@@ -234,13 +238,101 @@ const Usuarios = () => {
 
       {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
 
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <section className="min-w-0 max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white">
         {loading ? (
           <p className="px-5 py-9 text-center text-sm text-slate-500" role="status">Cargando socios registrados...</p>
         ) : profiles.length === 0 ? (
           <p className="px-5 py-9 text-center text-sm text-slate-500">{activeQuery ? "No se encontraron cuentas para esta búsqueda." : "Todavía no hay cuentas registradas."}</p>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          <div className="divide-y divide-slate-200 2xl:hidden">
+            {profiles.map((profile) => (
+              <article key={profile.id} className="min-w-0 space-y-4 p-4 sm:p-5">
+                <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="break-words font-semibold text-slate-900">{profile.nombre} {profile.apellido}</h2>
+                    <p className="mt-1 break-all text-sm text-slate-600">{profile.correo || "Sin correo"}</p>
+                  </div>
+                  <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${profile.activo ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-slate-200 bg-slate-100 text-slate-600"}`}>
+                    {profile.activo ? <CheckCircle2 size={14} /> : <Ban size={14} />}
+                    {profile.activo ? "Cuenta activa" : "Cuenta inactiva"}
+                  </span>
+                </div>
+
+                <dl className="grid min-w-0 grid-cols-1 gap-x-5 gap-y-3 text-sm sm:grid-cols-2">
+                  <div className="min-w-0">
+                    <dt className="text-xs font-medium text-slate-500">Fecha de creación</dt>
+                    <dd className="mt-1 break-words text-slate-700">{formatDate(profile.creado_en)}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-xs font-medium text-slate-500">Teléfono</dt>
+                    <dd className="mt-1 break-words text-slate-700">{profile.telefono || "Sin teléfono"}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-xs font-medium text-slate-500">Documento</dt>
+                    <dd className="mt-1 break-words text-slate-700">{profile.cedula || "No registrado"}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-xs font-medium text-slate-500">Dirección</dt>
+                    <dd className="mt-1 break-words text-slate-700">{profile.direccion || "No registrada"}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-xs font-medium text-slate-500">Nacimiento</dt>
+                    <dd className="mt-1 break-words text-slate-700">{profile.fecha_nacimiento ? new Date(`${profile.fecha_nacimiento}T00:00:00`).toLocaleDateString("es-EC") : "No registrada"}</dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-xs font-medium text-slate-500">Verificación</dt>
+                    <dd className={`mt-1 inline-flex items-center gap-1.5 ${profile.documento_verificado ? "text-emerald-800" : "text-amber-800"}`}>
+                      <ShieldCheck size={16} /> {profile.documento_verificado ? "Verificado" : "Pendiente"}
+                    </dd>
+                  </div>
+                </dl>
+
+                <div className="flex min-w-0 flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-end">
+                  <label className="min-w-0 flex-1 text-xs font-medium text-slate-500">
+                    Rol
+                    <select
+                      value={profile.rol}
+                      onChange={(event) => actualizarRol(profile, event.target.value)}
+                      disabled={!profile.activo || savingId === profile.id}
+                      className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm capitalize text-slate-800 disabled:opacity-60"
+                    >
+                      {ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
+                    </select>
+                  </label>
+                  <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => restablecerSegundoFactor(profile)}
+                      disabled={!profile.activo || !profile.correo || Boolean(resettingMfaId) || Boolean(changingStatusId)}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 transition hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <KeyRound size={15} />
+                      {resettingMfaId === profile.id ? "Procesando..." : "Restablecer MFA"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => cambiarEstado(profile)}
+                      disabled={Boolean(deletingId) || Boolean(resettingMfaId) || Boolean(changingStatusId)}
+                      className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50 ${profile.activo ? "border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 focus-visible:ring-amber-500" : "border-emerald-300 bg-emerald-700 text-white hover:bg-emerald-800 focus-visible:ring-emerald-500"}`}
+                    >
+                      {profile.activo ? <Ban size={15} /> : <RotateCcw size={15} />}
+                      {changingStatusId === profile.id ? "Procesando..." : profile.activo ? "Desactivar" : "Reactivar"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget(profile)}
+                      disabled={Boolean(deletingId) || Boolean(resettingMfaId) || Boolean(changingStatusId)}
+                      className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-700 transition hover:border-red-400 hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2"
+                    >
+                      <Trash2 size={15} /> Eliminar usuario
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="hidden max-w-full overflow-x-auto 2xl:block">
             <table className="w-full min-w-[1580px] text-left text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
@@ -324,6 +416,7 @@ const Usuarios = () => {
               </tbody>
             </table>
           </div>
+          </>
         )}
         {!loading && total > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-3">

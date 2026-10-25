@@ -121,12 +121,6 @@ Las funciones de `supabase/functions` proporcionan operaciones de servidor
 para registro, invitaciones, correo y administración. Después de preparar el
 backend, despliega las funciones que usa tu entorno:
 
-```sh
-<<<<<<< HEAD
-npm install
-npm run dev
-```
-
 ### Migraciones de Supabase
 
 Aplica las migraciones de `supabase/migrations` en orden. La migración
@@ -216,9 +210,6 @@ Despliega las funciones después de aplicar la migración:
 
 ```sh
 npx supabase functions deploy register-member --no-verify-jwt
-=======
-npx supabase functions deploy register-member
->>>>>>> f36515fe1c43946865cb827ea05c761bc7b28dd0
 npx supabase functions deploy group-invitations
 npx supabase functions deploy send-welcome-email
 npx supabase functions deploy admin-reset-mfa
@@ -231,6 +222,26 @@ Configura esos valores en **Supabase Edge Function Secrets** o en el mecanismo
 seguro de secretos del entorno, nunca en este README, el código del navegador,
 el historial de Git o mensajes. Consulta la configuración de cada proveedor
 antes de habilitar correo o OAuth.
+
+Las funciones Edge verifican el origen del navegador. Configura `APP_URL` con
+el origen exacto de la aplicación que corresponda al proyecto Supabase (local
+en un proyecto de desarrollo; HTTPS estable en producción). `register-member`
+también admite orígenes exactos en `APP_ALLOWED_ORIGINS`; las demás funciones
+deben recibir solicitudes desde el origen configurado en `APP_URL`. No uses
+URLs de preview con funciones de correo o administración si no están
+configuradas expresamente. Para desarrollo, Vite usa
+`http://localhost:5173`:
+
+```powershell
+npx supabase secrets set "APP_URL=http://localhost:5173"
+npx supabase functions deploy register-member --no-verify-jwt
+```
+
+Usa proyectos Supabase separados para desarrollo y producción. No cambies
+`APP_URL` de producción para habilitar pruebas locales. En producción, define
+`APP_URL` con el dominio estable de Vercel y despliega las funciones Edge con
+esa configuración. No incluyas rutas (`/registro`) ni comodines en los
+orígenes permitidos.
 
 Para probar OAuth, Auth, MFA, Storage y Realtime, configura en Supabase los
 dominios de desarrollo y producción que realmente uses. Limita los orígenes y
@@ -247,11 +258,41 @@ npm run preview   # Vista previa de la compilación
 
 ## Despliegue del frontend
 
-El proyecto usa Vite: compila con `npm run build` y publica el contenido de
-`dist`. Configura `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en el entorno
-de compilación del proveedor de hosting. Revisa `vercel.json` si despliegas en
-Vercel. Configura también las URLs permitidas de Supabase Auth para el dominio
-publicado.
+Para publicar en Vercel:
+
+1. Sube el repositorio a GitHub sin incluir `.env` ni credenciales.
+2. En Vercel, crea un proyecto e importa el repositorio. Selecciona **Vite**;
+   el comando de compilación es `npm run build` y el directorio de salida es
+   `dist`. `vercel.json` configura el fallback de rutas para que enlaces
+   directos como `/login` funcionen con React Router.
+3. En **Settings → Environment Variables**, configura
+   `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` para Production (y Preview si
+   vas a probar previews). Usa la URL y la clave publicable de Supabase; nunca
+   configures `service_role`, `BREVO_API_KEY` u otros secretos como variables
+   `VITE_*`.
+4. Despliega y asigna un dominio estable, por ejemplo
+   `https://tu-dominio.vercel.app` o un dominio propio. Vercel sirve el sitio
+   por HTTPS.
+5. En Supabase **Authentication → URL Configuration**, establece el dominio
+   principal de Vercel como **Site URL** y añade los dominios usados por
+   Production y Preview a **Redirect URLs**. Limita la lista a dominios
+   controlados por el proyecto.
+6. En los secretos de Supabase Edge Functions, configura `APP_URL` con el
+   origen exacto de producción (sin ruta), además de `APP_ALLOWED_ORIGINS` para
+   los orígenes de desarrollo o preview que realmente usarás. Configura allí
+   también `BREVO_API_KEY`, `INVITATION_FROM` y los demás secretos requeridos.
+   Después despliega las Edge Functions para que reciban la nueva configuración.
+7. En Brevo, verifica el dominio/remitente autorizado y revisa sus registros
+   DNS. Los correos de confirmación/invitación deben usar el dominio estable
+   de la app para sus enlaces y redirecciones.
+8. Prueba registro, login, recuperación de contraseña, MFA, invitaciones,
+   correo de bienvenida, Moki, archivos y redirecciones desde el dominio HTTPS
+   publicado. No uses información financiera real para estas pruebas.
+
+Para el desarrollo local, usa `http://localhost:5173` (Vite está fijado a
+`localhost` para que coincida con el origen local documentado/configurado).
+Si cambias el dominio de producción, actualiza `APP_URL`, las URLs de Auth y
+los orígenes permitidos; no uses `*` para CORS.
 
 No compartas archivos `.env`, copias de bases de datos ni capturas que muestren
 tokens, cookies, datos personales o información financiera real.

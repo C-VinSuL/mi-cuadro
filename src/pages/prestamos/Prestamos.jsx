@@ -20,6 +20,7 @@ import {
   Activity
 } from "lucide-react";
 
+import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import {
   useAuth
 } from "../../context/AuthContext";
@@ -1193,43 +1194,14 @@ const Prestamos = () => {
         "
       >
 
-        <div>
-
-          <p
-            className="
-              text-sm
-              font-semibold
-              text-emerald-700
-            "
-          >
-            {puedeVerFondo ? "Fondo comunitario" : "Mis préstamos"}
-          </p>
-
-          <h1
-            className="
-              mt-1
-              text-3xl
-              font-bold
-              text-slate-900
-              md:text-4xl
-            "
-          >
-            Préstamos
-          </h1>
-
-          <p
-            className="
-              mt-2
-              text-slate-500
-            "
-          >
-            {can("aprobarPrestamos")
-              ? "Gestiona las solicitudes de préstamos del grupo."
-              : "Solicita y consulta tus préstamos personales."
-            }
-          </p>
-
-        </div>
+        <SectionPageTitle
+          icon={HandCoins}
+          eyebrow={puedeVerFondo ? "Gestión de préstamos" : "Préstamos personales"}
+          title="Préstamos"
+          description={can("aprobarPrestamos")
+            ? "Gestiona las solicitudes de préstamos del grupo."
+            : "Solicita y consulta tus préstamos personales."}
+        />
 
 
         {/* FONDO */}

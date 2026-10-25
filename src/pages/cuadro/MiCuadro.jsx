@@ -1,4 +1,6 @@
 
+import { Users } from "lucide-react";
+import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import CuadroSummary from "../../components/cuadro/CuadroSummary";
 import CuadroBoard from "../../components/cuadro/CuadroBoard";
 import RondaAdmin from "../../components/cuadro/RondaAdmin";
@@ -87,49 +89,30 @@ const MiCuadro = () => {
 
       <div
         className="
+          rounded-3xl
+          border
+          border-emerald-100
+          bg-gradient-to-br
+          from-white
+          to-emerald-50
+          p-6
           flex
           flex-col
           gap-5
           lg:flex-row
           lg:items-end
           lg:justify-between
+          md:p-8
         "
       >
 
-        <div>
-
-          <p
-            className="
-              text-sm
-              font-semibold
-              text-emerald-700
-            "
-          >
-            Caja Comunal
-          </p>
-
-          <h1
-            className="
-              mt-1
-              text-3xl
-              font-bold
-              text-slate-900
-              md:text-4xl
-            "
-          >
-            {profile?.rol?.toLowerCase() === "administrador" ? "Revisión de cuadros" : "Cuadro rotativo"}
-          </h1>
-
-          <p
-            className="
-              mt-2
-              text-slate-500
-            "
-          >
-            {grupo.nombre}
-          </p>
-
-        </div>
+        <SectionPageTitle
+          icon={Users}
+          eyebrow={profile?.rol?.toLowerCase() === "administrador" ? "Cuadros activos" : "Mi grupo"}
+          title={profile?.rol?.toLowerCase() === "administrador" ? "Revisión de cuadros" : "Cuadro rotativo"}
+          description={grupo.nombre}
+          plain
+        />
 
 
         {/* ESTADO */}

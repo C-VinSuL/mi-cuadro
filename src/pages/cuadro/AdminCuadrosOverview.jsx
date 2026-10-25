@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, CheckCircle2, Clock3, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import { useAuth } from "../../context/AuthContext";
 import { getAdminActiveCuadrosData } from "../../services/dashboardService";
 import RondaAdmin from "../../components/cuadro/RondaAdmin";
@@ -63,10 +64,13 @@ const AdminCuadrosOverview = () => {
 
   return (
     <div className="space-y-7">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-semibold text-emerald-700">Administración general</p>
-        <h1 className="mt-1 text-3xl font-bold text-slate-900">Revisión de cuadros</h1>
-        <p className="mt-2 text-sm text-slate-600">Supervisa rondas, aportes y entregas de todos los cuadros activos.</p>
+      <header>
+        <SectionPageTitle
+          icon={CalendarDays}
+          eyebrow="Cuadros activos"
+          title="Revisión de cuadros"
+          description="Supervisa rondas, aportes y entregas de todos los cuadros activos."
+        />
       </header>
 
       <section className="grid gap-4 sm:grid-cols-3" aria-label="Resumen de cuadros activos">

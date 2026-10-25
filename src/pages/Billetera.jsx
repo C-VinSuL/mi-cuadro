@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowDownToLine, ArrowUpFromLine, RefreshCw, Wallet } from "lucide-react";
+import SectionPageTitle from "../components/ui/SectionPageTitle";
+import { createUniqueId } from "../utils/uniqueId";
 import { supabase } from "../services/supabase";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../hooks/useNotifications";
@@ -28,7 +30,10 @@ const Billetera = () => {
   const [saving, setSaving] = useState(false);
   const [openingReceipt, setOpeningReceipt] = useState("");
   const [error, setError] = useState("");
-  const [depositForm, setDepositForm] = useState({ amount: "", reference: "", receipt: null });
+  const [requestToReject, setRequestToReject] = useState(null);
+  const [rejectionNote, setRejectionNote] = useState("");
+  const [depositForm, setDepositForm] = useState({ amount: "", receipt: null });
+  const [reviewReferences, setReviewReferences] = useState({});
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const withdrawableBalance = Math.max(
     (summary?.saldo || 0) - (summary?.garantia_minima || 0),
@@ -66,19 +71,18 @@ const Billetera = () => {
 
   useEffect(() => {
     const timeoutId = window.setTimeout(loadWallet, 0);
-    if (!esRevisor || !user?.id) {
-      return () => window.clearTimeout(timeoutId);
-    }
+    if (!user?.id) return () => window.clearTimeout(timeoutId);
 
     const channel = supabase
-      .channel(`solicitudes-billetera-revisor-${user.id}`)
+      .channel(`solicitudes-billetera-${user.id}-${createUniqueId()}`)
       .on("postgres_changes", {
         event: "INSERT",
         schema: "public",
         table: "notificaciones",
         filter: `usuario_id=eq.${user.id}`
       }, (payload) => {
-        if (payload.new?.ruta_accion === "/admin/billetera") loadWallet();
+        const walletRoute = esRevisor ? "/admin/billetera" : "/billetera";
+        if (payload.new?.ruta_accion === walletRoute) loadWallet();
       })
       .subscribe();
 
@@ -99,14 +103,14 @@ const Billetera = () => {
     setError("");
     try {
       const extension = depositForm.receipt.type === "application/pdf" ? "pdf" : depositForm.receipt.type.split("/")[1];
-      const path = `${user.id}/${crypto.randomUUID()}.${extension}`;
+      const path = `${user.id}/${createUniqueId()}.${extension}`;
       const { error: uploadError } = await supabase.storage.from("wallet-receipts").upload(path, depositForm.receipt, {
         contentType: depositForm.receipt.type,
         upsert: false
       });
       if (uploadError) throw uploadError;
-      await solicitarDepositoBilletera(depositForm.amount, depositForm.reference.trim(), path);
-      setDepositForm({ amount: "", reference: "", receipt: null });
+      await solicitarDepositoBilletera(depositForm.amount, path);
+      setDepositForm({ amount: "", receipt: null });
       notify({ title: "Depósito enviado a revisión", message: "El saldo se actualizará después de que administración o tesorería confirme el comprobante.", type: "success" });
       await loadWallet();
     } catch (submitError) {
@@ -134,11 +138,23 @@ const Billetera = () => {
     }
   };
 
-  const resolverMovimiento = async (request, approve) => {
+  const resolverMovimiento = async (request, approve, note = null) => {
     setSaving(true);
     setError("");
     try {
-      await resolverSolicitudBilletera(request.id, approve);
+      await resolverSolicitudBilletera(
+        request.id,
+        approve,
+        note || "",
+        approve ? reviewReferences[request.id] || "" : ""
+      );
+      setReviewReferences((current) => {
+        const next = { ...current };
+        delete next[request.id];
+        return next;
+      });
+      setRequestToReject(null);
+      setRejectionNote("");
       notify({
         title: approve ? "Movimiento aprobado" : "Movimiento rechazado",
         message: approve ? "El saldo del socio se actualizó y el cambio quedó en auditoría." : "La solicitud fue rechazada y quedó registrada en auditoría.",
@@ -173,10 +189,13 @@ const Billetera = () => {
   if (esRevisor) {
     return (
       <div className="space-y-7">
-        <header className="border-b border-slate-200 pb-5">
-          <p className="text-sm font-semibold text-emerald-700">FlashMonkey · Administración</p>
-          <h1 className="mt-1 text-3xl font-bold text-slate-900">Solicitudes de billetera</h1>
-          <p className="mt-2 text-sm text-slate-600">Revisa comprobantes y resuelve depósitos o retiros de los socios.</p>
+        <header>
+          <SectionPageTitle
+            icon={Wallet}
+            eyebrow="Revisión de movimientos"
+            title="Solicitudes de billetera"
+            description="Revisa comprobantes y resuelve depósitos o retiros de los socios."
+          />
         </header>
 
         {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
@@ -196,32 +215,86 @@ const Billetera = () => {
           ) : (
             <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white px-5">
               {adminRequests.map((request) => (
-                <article key={request.id} className="flex flex-wrap items-center justify-between gap-4 py-4">
+                <article key={request.id} className="flex flex-wrap items-center justify-between gap-4 py-4 transition-colors duration-150 hover:bg-slate-50 motion-reduce:transition-none">
                   <div>
                     <p className="font-semibold text-slate-900">{request.nombre} {request.apellido} · {request.tipo === "deposito" ? "Depósito" : "Retiro"}</p>
                     <p className="mt-1 text-sm text-slate-600">{currency.format(request.monto)} · {new Date(request.creada_en).toLocaleString("es-EC")}</p>
-                    {request.referencia && <p className="mt-1 text-xs text-slate-500">Referencia: {request.referencia}</p>}
+                    {request.tipo === "deposito" && (
+                      <label className="mt-2 block max-w-sm text-xs font-medium text-slate-600">
+                        Referencia verificada por tesorería
+                        <input
+                          value={reviewReferences[request.id] ?? ""}
+                          onChange={(event) => setReviewReferences((current) => ({
+                            ...current,
+                            [request.id]: event.target.value
+                          }))}
+                          maxLength={120}
+                          placeholder="Ingresa la referencia confirmada en el banco"
+                          className="mt-1 w-full rounded-md border border-slate-300 px-2.5 py-2 text-sm font-normal text-slate-800"
+                        />
+                        <span className="mt-1 block text-[11px] font-normal text-slate-500">
+                          Obligatoria para aprobar; ingresa la referencia verificada en el comprobante bancario.
+                        </span>
+                      </label>
+                    )}
                     {request.comprobante_path && <button type="button" onClick={() => abrirComprobante(request)} disabled={openingReceipt === request.id} className="mt-2 text-sm font-semibold text-emerald-800 underline">{openingReceipt === request.id ? "Abriendo..." : "Ver comprobante privado"}</button>}
                   </div>
                   <div className="flex gap-2">
-                    <button type="button" disabled={saving} onClick={() => resolverMovimiento(request, true)} className="rounded-lg bg-emerald-800 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">Aprobar</button>
-                    <button type="button" disabled={saving} onClick={() => resolverMovimiento(request, false)} className="rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 disabled:opacity-50">Rechazar</button>
+                    <button
+                      type="button"
+                      disabled={saving || (request.tipo === "deposito" && !reviewReferences[request.id]?.trim())}
+                      onClick={() => resolverMovimiento(request, true)}
+                      className="rounded-lg bg-emerald-800 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Aprobar
+                    </button>
+                    <button type="button" disabled={saving} onClick={() => {
+                      setRequestToReject(request);
+                      setRejectionNote("");
+                    }} className="rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50">Rechazar</button>
                   </div>
                 </article>
               ))}
             </div>
           )}
         </section>
+        {requestToReject && (
+          <div className="ui-dialog-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !saving) setRequestToReject(null);
+          }}>
+            <section role="dialog" aria-modal="true" aria-labelledby="rechazar-billetera-titulo" className="ui-dialog-panel w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+              <header className="border-b border-slate-200 px-5 py-4">
+                <p className="text-sm font-semibold text-red-700">Rechazar solicitud</p>
+                <h2 id="rechazar-billetera-titulo" className="mt-1 text-xl font-bold text-slate-900">{requestToReject.nombre} {requestToReject.apellido}</h2>
+                <p className="mt-1 text-sm text-slate-600">{requestToReject.tipo === "deposito" ? "Depósito" : "Retiro"} · {currency.format(requestToReject.monto)}</p>
+              </header>
+              <div className="space-y-2 px-5 py-4">
+                <label htmlFor="nota-rechazo-billetera" className="text-sm font-medium text-slate-700">Motivo que verá el socio</label>
+                <textarea id="nota-rechazo-billetera" value={rejectionNote} onChange={(event) => setRejectionNote(event.target.value)} maxLength={500} rows={4} required placeholder="Indica qué debe corregir o verificar el socio." className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500" />
+                <p className="text-right text-xs text-slate-500">{rejectionNote.trim().length}/500 caracteres (mínimo 5)</p>
+              </div>
+              <footer className="flex justify-end gap-2 border-t border-slate-200 px-5 py-4">
+                <button type="button" onClick={() => setRequestToReject(null)} disabled={saving} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Cancelar</button>
+                <button type="button" onClick={() => resolverMovimiento(requestToReject, false, rejectionNote.trim())} disabled={saving || rejectionNote.trim().length < 5} className="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50">
+                  {saving ? "Guardando..." : "Confirmar rechazo"}
+                </button>
+              </footer>
+            </section>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
     <div className="space-y-7">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-semibold text-emerald-700">FlashMonkey</p>
-        <h1 className="mt-1 text-3xl font-bold text-slate-900">Mi billetera</h1>
-        <p className="mt-2 text-sm text-slate-600">Consulta tu saldo, solicita depósitos o retiros y revisa el historial.</p>
+      <header>
+        <SectionPageTitle
+          icon={Wallet}
+          eyebrow="Finanzas personales"
+          title="Mi billetera"
+          description="Consulta tu saldo, solicita depósitos o retiros y revisa el historial."
+        />
       </header>
 
       {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
@@ -256,10 +329,6 @@ const Billetera = () => {
             <input type="number" min="0.01" max="100000" step="0.01" required value={depositForm.amount} onChange={(event) => setDepositForm((current) => ({ ...current, amount: event.target.value }))} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5" />
           </label>
           <label className="block text-sm font-medium text-slate-700">
-            Referencia de transferencia
-            <input maxLength={120} value={depositForm.reference} onChange={(event) => setDepositForm((current) => ({ ...current, reference: event.target.value }))} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5" />
-          </label>
-          <label className="block text-sm font-medium text-slate-700">
             Comprobante (JPG, PNG o PDF; máximo 5 MB)
             <input type="file" accept="image/jpeg,image/png,application/pdf" required onChange={(event) => setDepositForm((current) => ({ ...current, receipt: event.target.files?.[0] || null }))} className="mt-1.5 block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:font-semibold file:text-emerald-800" />
           </label>
@@ -285,7 +354,12 @@ const Billetera = () => {
           <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white px-5">
             {requests.map((request) => (
               <article key={request.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
-                <span className="font-medium capitalize text-slate-800">{request.tipo} · {currency.format(request.monto)}</span>
+                <div>
+                  <p className="font-medium capitalize text-slate-800">{request.tipo} · {currency.format(request.monto)}</p>
+                  {request.estado === "rechazada" && request.nota_revision && (
+                    <p className="mt-1 max-w-2xl text-xs leading-5 text-red-700">Motivo: {request.nota_revision}</p>
+                  )}
+                </div>
                 <span className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${request.estado === "aprobada" ? "bg-emerald-50 text-emerald-800" : request.estado === "rechazada" ? "bg-red-50 text-red-800" : "bg-amber-50 text-amber-800"}`}>{request.estado}</span>
               </article>
             ))}

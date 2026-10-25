@@ -12,6 +12,7 @@ import {
   CircleDollarSign
 } from "lucide-react";
 
+import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import {
   supabase
 } from "../../services/supabase";
@@ -22,6 +23,7 @@ import {
 import { useNotifications } from "../../hooks/useNotifications";
 import AportesAdmin from "./AportesAdmin";
 import { etiquetaPeriodo, etiquetaPeriodoMinuscula } from "../../services/grupoService";
+import { createUniqueId } from "../../utils/uniqueId";
 
 const obtenerAportesSocio = async (participantId) => {
   const { data, error } = await supabase
@@ -195,7 +197,7 @@ const AportesSocio = () => {
         const extension = comprobante.type === "application/pdf"
           ? "pdf"
           : comprobante.type.split("/")[1];
-        objectPath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+        objectPath = `${user.id}/${createUniqueId()}.${extension}`;
         const { error: uploadError } = await supabase.storage
           .from("contribution-receipts")
           .upload(objectPath, comprobante, {
@@ -275,42 +277,12 @@ const AportesSocio = () => {
           HEADER
       ====================== */}
 
-      <div>
-
-        <p
-          className="
-            text-sm
-            font-semibold
-            text-emerald-700
-          "
-        >
-          Mi aporte
-        </p>
-
-        <h1
-          className="
-            text-3xl
-            md:text-4xl
-            font-bold
-            text-slate-900
-            mt-1
-          "
-        >
-          Aportes
-        </h1>
-
-        <p
-          className="
-            text-slate-500
-            mt-2
-          "
-        >
-          Revisa tus aportes y registra
-          el pago correspondiente a cada {periodoActualMinuscula}.
-        </p>
-
-      </div>
-
+      <SectionPageTitle
+        icon={CircleDollarSign}
+        eyebrow="Mis aportes"
+        title="Aportes"
+        description={`Revisa tus aportes y registra el pago correspondiente a cada ${periodoActualMinuscula}.`}
+      />
 
       {/* =====================
           TARJETA PRINCIPAL

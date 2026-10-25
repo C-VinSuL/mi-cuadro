@@ -2,6 +2,7 @@ import {
   useEffect,
   useState
 } from "react";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 
 import {
   Wallet,
@@ -11,8 +12,10 @@ import {
   Trophy,
   HandCoins,
   ArrowRight,
-  CircleDollarSign
+  CircleDollarSign,
+  LayoutDashboard
 } from "lucide-react";
+import SectionPageTitle from "../../../components/ui/SectionPageTitle";
 
 import {
   Link
@@ -28,14 +31,18 @@ import {
 import { etiquetaAporte, etiquetaPeriodo } from "../../../services/grupoService";
 import TreasuryQueuePanel from "./TreasuryQueuePanel";
 import TreasuryGroupSummary from "./TreasuryGroupSummary";
+import StaggerList from "../../../components/motion/StaggerList";
 
 const DashboardTesorero = () => {
   const {
     grupo,
-    profile,
     fondoComunitario
   } = useAuth();
   const periodoActual = etiquetaPeriodo(grupo?.aporte_periodicidad);
+  const { scrollY } = useScroll();
+  const headerScale = useTransform(scrollY, [0, 180], [1, 0.98]);
+  const headerOpacity = useTransform(scrollY, [0, 180], [1, 0.92]);
+  const reduceMotion = useReducedMotion();
 
   const [datos, setDatos] =
     useState({
@@ -95,12 +102,9 @@ const DashboardTesorero = () => {
 
     cargarDashboard();
 
-<<<<<<< HEAD
   }, [
     grupo
   ]);
-=======
-  }, [grupo]);
 
   useEffect(() => {
     const updateTime = () => setCurrentTime(new Date());
@@ -111,7 +115,6 @@ const DashboardTesorero = () => {
       window.clearInterval(intervalId);
     };
   }, []);
->>>>>>> f36515fe1c43946865cb827ea05c761bc7b28dd0
 
   // ========================================
   // SIN GRUPO
@@ -119,23 +122,23 @@ const DashboardTesorero = () => {
 
   if (!grupo) {
     return (
-      <div
-        className="
-          rounded-2xl
-          border
-          border-slate-200
-          bg-white
-          p-6
-        "
-      >
-        <h2 className="text-xl font-bold text-slate-900">
-          No tienes un grupo asignado
-        </h2>
+      <div className="space-y-5">
+        <SectionPageTitle
+          icon={LayoutDashboard}
+          eyebrow="Resumen de tesorería"
+          title="Inicio"
+          description="Tu espacio para consultar y gestionar la tesorería de los grupos asignados."
+        />
+        <section className="rounded-2xl border border-slate-200 bg-white p-6">
+          <h2 className="text-xl font-bold text-slate-900">
+            No tienes un grupo asignado
+          </h2>
 
-        <p className="mt-2 text-slate-500">
-          Cuando seas asignado a un grupo,
-          podrás gestionar su tesorería aquí.
-        </p>
+          <p className="mt-2 text-slate-500">
+            Cuando seas asignado a un grupo,
+            podrás gestionar su tesorería aquí.
+          </p>
+        </section>
       </div>
     );
   }
@@ -261,40 +264,28 @@ const DashboardTesorero = () => {
   // ========================================
 
   return (
-    <div className="space-y-8">
+    <StaggerList className="space-y-8">
 
       {/* ==================================
           CABECERA
       =================================== */}
 
-      <section
+      <motion.section
+        style={{ scale: reduceMotion ? 1 : headerScale, opacity: reduceMotion ? 1 : headerOpacity }}
         className="
           rounded-3xl
           border
-          border-blue-100
+          border-emerald-100
           bg-gradient-to-br
           from-white
-          to-blue-50
+          to-emerald-50
           p-6
           md:p-8
         "
       >
 
-        <p
-          className="
-            text-sm
-            font-semibold
-            uppercase
-            tracking-[0.14em]
-            text-blue-700
-          "
-        >
-          Tesorería
-        </p>
-
         <div
           className="
-            mt-3
             flex
             flex-col
             gap-6
@@ -305,32 +296,13 @@ const DashboardTesorero = () => {
         >
 
           <div>
-
-            <h1
-              className="
-                text-3xl
-                font-bold
-                text-slate-900
-                md:text-4xl
-              "
-            >
-              Hola,{" "}
-              {profile?.nombre ||
-                "Tesorero"} 👋
-            </h1>
-
-            <p
-              className="
-                mt-2
-                max-w-2xl
-                text-slate-500
-              "
-            >
-              Controla los aportes,
-              movimientos y disponibilidad
-              financiera de {grupo.nombre}.
-            </p>
-
+            <SectionPageTitle
+              icon={LayoutDashboard}
+              eyebrow="Resumen de tesorería"
+              title="Inicio"
+              description={`Controla los aportes, movimientos y disponibilidad financiera de ${grupo.nombre}.`}
+              plain
+            />
           </div>
 
 
@@ -363,7 +335,7 @@ const DashboardTesorero = () => {
 
         </div>
 
-      </section>
+      </motion.section>
 
       <TreasuryGroupSummary />
       <TreasuryQueuePanel />
@@ -385,7 +357,7 @@ const DashboardTesorero = () => {
           MÉTRICAS
       =================================== */}
 
-      <section
+      <StaggerList
         className="
           grid
           grid-cols-1
@@ -405,6 +377,7 @@ const DashboardTesorero = () => {
             bg-white
             p-6
             shadow-sm
+            transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none
           "
         >
 
@@ -455,6 +428,7 @@ const DashboardTesorero = () => {
             bg-white
             p-6
             shadow-sm
+            transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none
           "
         >
 
@@ -505,6 +479,7 @@ const DashboardTesorero = () => {
             bg-white
             p-6
             shadow-sm
+            transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none
           "
         >
 
@@ -542,7 +517,7 @@ const DashboardTesorero = () => {
           </p>
 
           <p className="mt-1 text-xs text-slate-400">
-            Disponible para préstamos
+            Saldo registrado en el fondo
           </p>
 
         </div>
@@ -558,6 +533,7 @@ const DashboardTesorero = () => {
             bg-white
             p-6
             shadow-sm
+            transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none
           "
         >
 
@@ -597,7 +573,7 @@ const DashboardTesorero = () => {
 
         </div>
 
-      </section>
+      </StaggerList>
 
 
       {/* ==================================
@@ -1071,7 +1047,7 @@ const DashboardTesorero = () => {
 
       </section>
 
-    </div>
+    </StaggerList>
   );
 };
 

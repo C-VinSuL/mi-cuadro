@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-<<<<<<< HEAD
-import { Download, FileBarChart2, PiggyBank, TrendingDown, TrendingUp } from "lucide-react";
-=======
-import { Download, FileBarChart2, Printer, TrendingDown, TrendingUp } from "lucide-react";
->>>>>>> f36515fe1c43946865cb827ea05c761bc7b28dd0
+import { Download, FileBarChart2, PiggyBank, Printer, TrendingDown, TrendingUp } from "lucide-react";
+import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
 import { obtenerSaldoFondo } from "../../services/fondoService";
@@ -67,23 +64,14 @@ const ReportesAdmin = () => {
       setLoading(true);
       setError("");
       try {
-<<<<<<< HEAD
         const groupIds = grupos.map((grupo) => grupo.id);
         const [rows, saldos] = await Promise.all([
-          obtenerTodosLosMovimientos(groupIds),
+          obtenerTodosLosMovimientos(groupIds, { grupoFiltro, tipoFiltro, desde, hasta }),
           Promise.all(grupos.map(async (grupo) => [
             grupo.id,
             await obtenerSaldoFondo(grupo.id)
           ]))
         ]);
-=======
-        const rows = await obtenerTodosLosMovimientos(grupos.map((grupo) => grupo.id), {
-          grupoFiltro,
-          tipoFiltro,
-          desde,
-          hasta
-        });
->>>>>>> f36515fe1c43946865cb827ea05c761bc7b28dd0
         const groupNames = new Map(grupos.map((grupo) => [grupo.id, grupo.nombre]));
         if (active) {
           setMovimientos(rows.map((row) => ({ ...row, grupo: groupNames.get(row.grupo_id) || "Grupo" })));
@@ -171,11 +159,15 @@ const ReportesAdmin = () => {
 
   return (
     <div className="space-y-7">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-5">
+      <header className="flex flex-wrap items-end justify-between gap-4 rounded-3xl border border-emerald-100 bg-gradient-to-br from-white to-emerald-50 p-6 md:p-8">
         <div>
-          <p className="text-sm font-semibold text-emerald-700">Administración</p>
-          <h1 className="mt-1 text-3xl font-bold text-slate-900">Reportes financieros</h1>
-          <p className="mt-2 text-sm text-slate-600">Consolida los movimientos registrados en todos los grupos.</p>
+          <SectionPageTitle
+            icon={FileBarChart2}
+            eyebrow="Movimientos de todos los grupos"
+            title="Reportes financieros"
+            description="Consolida los movimientos registrados en todos los grupos."
+            plain
+          />
         </div>
         <div className="flex gap-2 print:hidden">
           <button type="button" onClick={descargarReporte} disabled={loading || movimientosFiltrados.length === 0} className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50">
