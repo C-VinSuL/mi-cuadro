@@ -241,7 +241,7 @@ const GroupAccessPanel = ({ onMembershipChange }) => {
   };
 
   return (
-    <section className="min-w-0 w-full space-y-5 border-y border-slate-200 py-5">
+    <section className="min-w-0 w-full space-y-5">
       {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
 
       <div className={`grid gap-6 ${esSocio && puedeGestionarGrupos ? "lg:grid-cols-2" : ""}`}>
@@ -356,10 +356,6 @@ const GroupAccessPanel = ({ onMembershipChange }) => {
 
       {puedeGestionarGrupos && (
         <div className="space-y-3">
-          <div>
-            <h2 className="font-semibold text-slate-900">Administración de grupos y solicitudes</h2>
-            <p className="mt-1 text-sm text-slate-500">Abre cada sección para revisar grupos creados y solicitudes pendientes.</p>
-          </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <AdminSectionButton
               icon={<Plus size={19} />}

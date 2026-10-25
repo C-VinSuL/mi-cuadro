@@ -3,7 +3,7 @@ import {
   Route,
   useLocation
 } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
@@ -28,16 +28,33 @@ import Usuarios from "../pages/admin/Usuarios";
 import VerificarDocumentos from "../pages/admin/VerificarDocumentos";
 import Auditoria from "../pages/reportes/Auditoria";
 import Billetera from "../pages/Billetera";
+import AtencionSocios from "../pages/admin/AtencionSocios";
+import PageTransition from "../components/motion/PageTransition";
+import SplashScreen from "../components/ui/SplashScreen";
+import { useAuth } from "../context/AuthContext";
 
 const AppRoutes = () => {
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
+  const { loading } = useAuth();
+  const [minimumSplashElapsed, setMinimumSplashElapsed] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setMinimumSplashElapsed(true), 600);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  if (loading || !minimumSplashElapsed) {
+    return <SplashScreen />;
+  }
+
   return (
-    <Routes>
+    <PageTransition>
+      <Routes location={location}>
 
       
 
@@ -250,6 +267,17 @@ const AppRoutes = () => {
       />
 
       <Route
+        path="/atencion-socios"
+        element={
+          <ProtectedRoute>
+            <RoleRoute permission="gestionarAtencionSocios">
+              <MainLayout><AtencionSocios /></MainLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/billetera"
         element={
           <ProtectedRoute>
@@ -271,7 +299,8 @@ const AppRoutes = () => {
         }
       />
 
-    </Routes>
+      </Routes>
+    </PageTransition>
   );
 };
 

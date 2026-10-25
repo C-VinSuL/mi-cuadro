@@ -2,6 +2,7 @@ import {
   Bell,
   LogOut,
   ChevronDown,
+  Menu,
   X,
   CheckCheck,
   Trash2
@@ -15,7 +16,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { supabase } from "../../../services/supabase";
 import { useNotifications } from "../../../hooks/useNotifications";
 
-const Navbar = ({ onMenuClick, menuOpen, menuButtonRef }) => {
+const Navbar = ({ onOpenMobileMenu }) => {
 
   const navigate = useNavigate();
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -377,17 +378,17 @@ const Navbar = ({ onMenuClick, menuOpen, menuButtonRef }) => {
 
         min-h-[82px]
 
-        bg-white/95
+        bg-[#064E3B]
         backdrop-blur
-
-        border-b
-        border-slate-200
+        border-0
+        shadow-none
+        ring-0
 
         flex
         items-center
         justify-between
 
-        px-4
+        px-2
         sm:px-6
         md:px-8
         xl:px-12
@@ -396,71 +397,21 @@ const Navbar = ({ onMenuClick, menuOpen, menuButtonRef }) => {
 
       {/* IZQUIERDA */}
 
-      <div className="flex items-center gap-4 pl-14 lg:gap-3 lg:pl-0">
-
+      <div className="flex items-center gap-1 lg:gap-3">
         <button
           type="button"
-          onClick={onMenuClick}
-          ref={menuButtonRef}
-          className={`hidden size-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 motion-reduce:transition-none lg:flex xl:hidden ${
-            menuOpen
-              ? "bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-              : "bg-white text-emerald-800 hover:bg-emerald-50"
-          }`}
-          aria-label={menuOpen ? "Ocultar menú lateral" : "Mostrar menú lateral"}
-          aria-expanded={menuOpen}
-          aria-controls="desktop-navigation"
+          onClick={onOpenMobileMenu}
+          aria-label="Abrir menú de navegación"
+          className="flex size-11 items-center justify-center rounded-xl text-white transition hover:bg-white/10 md:hidden"
         >
-          <span className="relative flex size-6 items-center justify-center" aria-hidden="true">
-            <span className={`absolute h-0.5 w-5 rounded-full bg-current transition-all duration-300 ease-in-out motion-reduce:transition-none ${menuOpen ? "rotate-45" : "-translate-y-1.5"}`} />
-            <span className={`absolute h-0.5 w-5 rounded-full bg-current transition-all duration-300 ease-in-out motion-reduce:transition-none ${menuOpen ? "scale-x-0 opacity-0" : "scale-x-100 opacity-100"}`} />
-            <span className={`absolute h-0.5 w-5 rounded-full bg-current transition-all duration-300 ease-in-out motion-reduce:transition-none ${menuOpen ? "-rotate-45" : "translate-y-1.5"}`} />
-          </span>
+          <Menu size={22} />
         </button>
-
-        {/* SALUDO */}
-
-        <div>
-
-          <p
-            className="
-              hidden
-              sm:block
-
-              text-[11px]
-              uppercase
-              tracking-[0.15em]
-              text-emerald-700
-              font-semibold
-            "
-          >
-            Panel principal
-          </p>
-
-          <h1
-            className="
-              text-lg
-              sm:text-xl
-              md:text-2xl
-              font-bold
-              text-slate-900
-            "
-          >
-            Hola, {profile?.nombre || "Usuario"} 👋
-          </h1>
-
-          <p
-            className="
-              hidden
-              sm:block
-              text-sm
-              text-slate-500
-              mt-1
-            "
-          >
-            Ahorra en comunidad y alcanza tus metas.
-          </p>
-
+        <div className="-ml-4 flex items-center md:hidden">
+          <img
+            src="/flashmonkey-logo.png"
+            alt="FlashMonkey"
+            className="h-[78px] w-[180px] shrink-0 object-contain sm:h-[96px] sm:w-[220px]"
+          />
         </div>
 
       </div>
@@ -482,7 +433,7 @@ const Navbar = ({ onMenuClick, menuOpen, menuButtonRef }) => {
               setNotificationsOpen((open) => !open);
               setUserMenuOpen(false);
             }}
-            className="relative flex size-11 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100"
+            className="relative flex size-11 items-center justify-center rounded-xl text-white transition hover:bg-white/10"
           >
             <Bell size={20} />
             {unreadCount > 0 && (
@@ -573,7 +524,7 @@ const Navbar = ({ onMenuClick, menuOpen, menuButtonRef }) => {
             setUserMenuOpen((open) => !open);
             setNotificationsOpen(false);
           }}
-          className="flex max-w-[15rem] items-center gap-2 rounded-xl px-2 py-2 text-left transition hover:bg-slate-50 sm:gap-3 sm:px-3"
+          className="flex max-w-[15rem] items-center gap-2 rounded-xl px-2 py-2 text-left transition hover:bg-white/10 sm:gap-3 sm:px-3"
         >
 
           <span
@@ -601,7 +552,7 @@ const Navbar = ({ onMenuClick, menuOpen, menuButtonRef }) => {
                 block
                 text-sm
                 font-semibold
-                text-slate-900
+                text-white
               "
             >
               {profile?.nombre}{" "}
@@ -614,7 +565,7 @@ const Navbar = ({ onMenuClick, menuOpen, menuButtonRef }) => {
                 gap-2
 
                 text-xs
-                text-slate-500
+                text-emerald-100
               "
             >
 
@@ -638,7 +589,7 @@ const Navbar = ({ onMenuClick, menuOpen, menuButtonRef }) => {
 
           <ChevronDown
             size={15}
-            className={`shrink-0 text-slate-400 transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`}
+            className={`shrink-0 text-emerald-100 transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`}
           />
 
         </button>

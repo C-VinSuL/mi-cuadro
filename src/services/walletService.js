@@ -23,9 +23,9 @@ export const listarMovimientosBilletera = () => callRpc("historial_billetera_pro
 
 export const listarSolicitudesBilleteraPropias = () => callRpc("solicitudes_billetera_propias");
 
-export const solicitarDepositoBilletera = (monto, referencia, comprobantePath) => callRpc(
+export const solicitarDepositoBilletera = (monto, comprobantePath) => callRpc(
   "solicitar_deposito_billetera",
-  { p_monto: Number(monto), p_referencia: referencia || null, p_comprobante_path: comprobantePath }
+  { p_monto: Number(monto), p_referencia: null, p_comprobante_path: comprobantePath }
 );
 
 export const solicitarRetiroBilletera = (monto) => callRpc(
@@ -35,7 +35,12 @@ export const solicitarRetiroBilletera = (monto) => callRpc(
 
 export const listarSolicitudesBilleteraAdmin = () => callRpc("listar_solicitudes_billetera_admin");
 
-export const resolverSolicitudBilletera = (solicitudId, aprobar, nota = "") => callRpc(
+export const resolverSolicitudBilletera = (solicitudId, aprobar, nota = "", referencia = "") => callRpc(
   "resolver_solicitud_billetera",
-  { p_solicitud_id: solicitudId, p_aprobar: aprobar, p_nota: nota || null }
+  {
+    p_solicitud_id: solicitudId,
+    p_aprobar: aprobar,
+    p_nota: nota || null,
+    p_referencia: referencia.trim() || null
+  }
 );

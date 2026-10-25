@@ -20,6 +20,7 @@ import {
   X
 } from "lucide-react";
 
+import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import {
   useAuth
 } from "../../context/AuthContext";
@@ -105,7 +106,7 @@ const HistorialSocio = () => {
     }
 
     const channel = supabase
-      .channel(`historial-tesoreria-${grupoId}`)
+      .channel(`historial-tesoreria-${grupoId}-${crypto.randomUUID()}`)
       .on("postgres_changes", {
         event: "*",
         schema: "public",
@@ -380,41 +381,12 @@ const HistorialSocio = () => {
 
       {/* HEADER */}
 
-      <div>
-
-        <p
-          className="
-            text-sm
-            font-semibold
-            text-emerald-700
-          "
-        >
-          Caja Comunal
-        </p>
-
-        <h1
-          className="
-            mt-1
-            text-3xl
-            font-bold
-            text-slate-900
-            md:text-4xl
-          "
-        >
-          Historial financiero
-        </h1>
-
-        <p
-          className="
-            mt-2
-            text-slate-500
-          "
-        >
-          Consulta los movimientos del fondo
-          comunitario de {grupo.nombre}.
-        </p>
-
-      </div>
+      <SectionPageTitle
+        icon={HistoryIcon}
+        eyebrow="Movimientos del grupo"
+        title="Historial financiero"
+        description={`Consulta los movimientos del fondo comunitario de ${grupo.nombre}.`}
+      />
 
       {error && (
         <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">

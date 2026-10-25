@@ -69,7 +69,7 @@ const NotificationProvider = ({ children }) => {
     loadNotifications();
 
     const channel = supabase
-      .channel(`notificaciones-${user.id}`)
+      .channel(`notificaciones-${user.id}-${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         {

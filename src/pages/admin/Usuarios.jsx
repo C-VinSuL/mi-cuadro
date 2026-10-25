@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Ban, CheckCircle2, ChevronLeft, ChevronRight, KeyRound, RotateCcw, Search, ShieldCheck, Trash2, UserRoundCog, X } from "lucide-react";
+import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import { useNotifications } from "../../hooks/useNotifications";
 import { cambiarEstadoUsuarioAdministrador, cambiarRolPerfil, eliminarUsuarioAdministrador, listarPerfilesAdministrador, solicitarRestablecimientoMfaAdministrador } from "../../services/adminService";
 
@@ -215,10 +216,13 @@ const Usuarios = () => {
 
   return (
     <div className="min-w-0 w-full space-y-6">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-semibold text-emerald-700">Administración de acceso</p>
-        <h1 className="mt-1 text-3xl font-bold text-slate-900">Socios y roles</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Listado de cuentas registradas, ordenadas desde la más reciente. Las cuentas nuevas ingresan como socios; el administrador principal puede asignarles un rol sin cargar el documento. Para los demás administradores, la verificación documental sigue siendo obligatoria. Los cambios y las eliminaciones con su motivo quedan auditados.</p>
+      <header>
+        <SectionPageTitle
+          icon={UserRoundCog}
+          eyebrow="Gestión de usuarios"
+          title="Socios y roles"
+          description="Listado de cuentas registradas, ordenadas desde la más reciente. Las cuentas nuevas ingresan como socios; el administrador principal puede asignarles un rol sin cargar el documento. Para los demás administradores, la verificación documental sigue siendo obligatoria. Los cambios y las eliminaciones con su motivo quedan auditados."
+        />
       </header>
 
       <form onSubmit={buscar} className="flex flex-col gap-2 sm:flex-row">

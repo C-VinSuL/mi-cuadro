@@ -2,6 +2,7 @@ import {
   useEffect,
   useState
 } from "react";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 
 import {
   Users,
@@ -12,8 +13,10 @@ import {
   Trophy,
   ArrowRight,
   Landmark,
-  HandCoins
+  HandCoins,
+  LayoutDashboard
 } from "lucide-react";
+import SectionPageTitle from "../../../components/ui/SectionPageTitle";
 
 import {
   Link
@@ -28,15 +31,19 @@ import {
 } from "../../../services/dashboardService";
 import DashboardAdminOverview from "./DashboardAdminOverview";
 import { etiquetaPeriodo } from "../../../services/grupoService";
+import StaggerList from "../../../components/motion/StaggerList";
 
 const DashboardAdmin = () => {
   const {
     grupo,
     grupos,
-    profile,
     fondoComunitario
   } = useAuth();
   const periodoActual = etiquetaPeriodo(grupo?.aporte_periodicidad);
+  const { scrollY } = useScroll();
+  const headerScale = useTransform(scrollY, [0, 180], [1, 0.98]);
+  const headerOpacity = useTransform(scrollY, [0, 180], [1, 0.92]);
+  const reduceMotion = useReducedMotion();
 
   const [datos, setDatos] =
     useState({
@@ -104,6 +111,12 @@ const DashboardAdmin = () => {
   if (!grupo) {
     return (
       <div className="space-y-6">
+        <SectionPageTitle
+          icon={LayoutDashboard}
+          eyebrow="Resumen administrativo"
+          title="Inicio"
+          description="Consulta la actividad general y administra los grupos de la plataforma."
+        />
         <DashboardAdminOverview grupos={grupos} />
         <section className="border-y border-slate-200 py-5">
           <h2 className="font-semibold text-slate-900">No hay un grupo seleccionado</h2>
@@ -178,14 +191,13 @@ const DashboardAdmin = () => {
   // ========================================
 
   return (
-    <div className="space-y-8">
-      <DashboardAdminOverview grupos={grupos} />
-
+    <StaggerList className="space-y-8">
       {/* ==================================
           CABECERA
       =================================== */}
 
-      <section
+      <motion.section
+        style={{ scale: reduceMotion ? 1 : headerScale, opacity: reduceMotion ? 1 : headerOpacity }}
         className="
           rounded-3xl
           border
@@ -198,21 +210,8 @@ const DashboardAdmin = () => {
         "
       >
 
-        <p
-          className="
-            text-sm
-            font-semibold
-            uppercase
-            tracking-[0.14em]
-            text-emerald-700
-          "
-        >
-          Panel administrativo
-        </p>
-
         <div
           className="
-            mt-3
             flex
             flex-col
             gap-6
@@ -223,32 +222,13 @@ const DashboardAdmin = () => {
         >
 
           <div>
-
-            <h1
-              className="
-                text-3xl
-                font-bold
-                text-slate-900
-                md:text-4xl
-              "
-            >
-              Hola,{" "}
-              {profile?.nombre ||
-                "Administrador"} 👋
-            </h1>
-
-            <p
-              className="
-                mt-2
-                max-w-2xl
-                text-slate-500
-              "
-            >
-              Aquí tienes el estado general
-              de {grupo.nombre} y las acciones
-              principales de esta ronda.
-            </p>
-
+            <SectionPageTitle
+              icon={LayoutDashboard}
+              eyebrow="Resumen administrativo"
+              title="Inicio"
+              description={`Aquí tienes el estado general de ${grupo.nombre} y las acciones principales de esta ronda.`}
+              plain
+            />
           </div>
 
           <div
@@ -288,14 +268,15 @@ const DashboardAdmin = () => {
 
         </div>
 
-      </section>
+      </motion.section>
 
+      <DashboardAdminOverview grupos={grupos} />
 
       {/* ==================================
           MÉTRICAS
       =================================== */}
 
-      <section
+      <StaggerList
         className="
           grid
           grid-cols-1
@@ -551,7 +532,7 @@ const DashboardAdmin = () => {
           </p>
         </div>
 
-      </section>
+      </StaggerList>
 
 
       {/* ==================================
@@ -1107,7 +1088,7 @@ const DashboardAdmin = () => {
 
       </section>
 
-    </div>
+    </StaggerList>
   );
 };
 

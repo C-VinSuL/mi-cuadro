@@ -1,17 +1,4 @@
-import {
-  Home,
-  Users,
-  Wallet,
-  Landmark,
-  HandCoins,
-  History,
-  Settings,
-  ShieldCheck,
-  UserRoundCog,
-  FileClock,
-  PiggyBank,
-  CalendarDays,
-} from "lucide-react";
+import { Wallet, PiggyBank, CalendarDays, ArrowLeft } from "lucide-react";
 
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
@@ -19,87 +6,12 @@ import { useAuth } from "../../../context/AuthContext";
 import { usePermissions } from "../../../hooks/usePermissions";
 import { etiquetaPeriodo } from "../../../services/grupoService";
 import { obtenerResumenBilletera } from "../../../services/walletService";
-
-
-const menu = [
-  {
-    title: "Inicio",
-    icon: Home,
-    path: "/",
-    permission: "verDashboard"
-  },
-  {
-    title: "Mi Grupo",
-    icon: Users,
-    path: "/grupo",
-    permission: "verGrupo"
-  },
-  {
-    title: "Mi billetera",
-    icon: Wallet,
-    path: "/billetera",
-    permission: "verBilletera"
-  },
-  {
-    title: "Aportes",
-    icon: Wallet,
-    path: "/aportes",
-    permission: "verAportes"
-  },
-  {
-    title: "Cuadro rotativo",
-    icon: Landmark,
-    path: "/cuadro",
-    permission: "verCuadro"
-  },
-  {
-    title: "Préstamos",
-    icon: HandCoins,
-    path: "/prestamos",
-    permission: "verPrestamos"
-  },
-  {
-    title: "Solicitudes de billetera",
-    icon: Wallet,
-    path: "/admin/billetera",
-    permission: "gestionarBilletera"
-  },
-  {
-    title: "Historial",
-    icon: History,
-    path: "/historial",
-    permission: "verFondoComunitario"
-  },
-  {
-    title: "Auditoría",
-    icon: FileClock,
-    path: "/auditoria",
-    permission: "verAuditoria"
-  },
-  {
-    title: "Socios y roles",
-    icon: UserRoundCog,
-    path: "/usuarios",
-    permission: "gestionarUsuarios"
-  },
-  {
-    title: "Verificar documentos",
-    icon: ShieldCheck,
-    path: "/verificar-documentos",
-    permission: "verificarDocumentos"
-  },
-  {
-    title: "Configuración",
-    icon: Settings,
-    path: "/configuracion",
-    permission: "verConfiguracion"
-  }
-];
-
+import { getVisibleMenu } from "./navigationItems";
 
 const Sidebar = ({
   mobile = false,
   onClose,
+  onNavigate,
   navigationRef,
   desktopCollapsed = false
 }) => {
@@ -162,40 +74,23 @@ const Sidebar = ({
       : 0;
 
 
-  const menuVisible = menu
-    .filter((item) => can(item.permission))
-    .map((item) => {
-      if (rol !== "administrador") return item;
-      const adminTitles = {
-        "/grupo": "Grupos",
-        "/aportes": "Control de aportes",
-        "/cuadro": "Revisar cuadro",
-        "/historial": "Reportes"
-      };
-      const roleTitles = {
-        ...adminTitles,
-        ...(rol === "tesorero" ? { "/grupo": "Grupos" } : {})
-      };
-      return { ...item, title: roleTitles[item.path] || item.title };
-    });
+  const menuVisible = getVisibleMenu(can, rol);
 
 
   return (
   <aside
     className={`
-      h-screen
-      h-dvh
-      min-h-0
       bg-[#064E3B]
       text-white
       flex
       flex-col
       overflow-hidden
-      ${mobile ? "mobile-menu-panel" : "transition-transform duration-300 ease-in-out motion-reduce:transition-none"}
+      md:border-r md:border-white/20 md:shadow-[10px_0_28px_rgba(255,255,255,0.2)]
+      ${mobile ? "" : "transition-transform duration-300 ease-in-out motion-reduce:transition-none"}
       ${
         mobile
-          ? "w-full"
-          : `fixed inset-y-0 left-0 w-[290px] ${desktopCollapsed ? "-translate-x-full xl:translate-x-0" : "translate-x-0"}`
+          ? "h-full min-h-0 w-full"
+          : `fixed inset-y-0 left-0 min-h-dvh w-[290px] ${desktopCollapsed ? "-translate-x-full xl:translate-x-0" : "translate-x-0"}`
       }
     `}
     id={mobile ? "mobile-navigation" : "desktop-navigation"}
@@ -208,8 +103,8 @@ const Sidebar = ({
       {/* LOGO */}
 
       <div
-        className={`shrink-0 border-b border-white/10 bg-[#023a2d] ${
-          mobile ? "px-4 py-4 sm:px-5 sm:py-5" : "px-5 py-5"
+        className={`shrink-0 bg-[#064E3B] ${
+          mobile ? "px-3 py-3 sm:px-4 sm:py-4" : "px-5 py-5"
         }`}
         style={mobile ? { paddingTop: "max(1rem, env(safe-area-inset-top))" } : undefined}
       >
@@ -220,18 +115,25 @@ const Sidebar = ({
             justify-between
           "
         >
-          <div className={`flex min-w-0 flex-1 items-center ${
-            mobile ? "justify-end" : ""
-          }`}>
+          {mobile && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Volver a la aplicación"
+              className="mr-2 flex size-11 shrink-0 items-center justify-center rounded-xl text-white hover:bg-white/10"
+            >
+              <ArrowLeft size={22} />
+            </button>
+          )}
+          <div className="flex min-w-0 flex-1 items-center">
             <img
               src="/flashmonkey-logo.png"
               alt="FlashMonkey, caja comunal"
               className={mobile
-                ? "h-[104px] w-auto max-w-[calc(100vw-104px)] object-contain object-right"
+                ? "h-[82px] w-auto max-w-[calc(100%-3.25rem)] object-contain object-left"
                 : "h-auto w-full max-w-[220px] object-contain object-left"}
             />
           </div>
-
         </div>
 
       </div>
@@ -282,7 +184,10 @@ const Sidebar = ({
               {rol === "administrador" ? "Grupo de trabajo" : "Cambiar de grupo"}
               <select
                 value={grupo?.id || ""}
-                onChange={(event) => seleccionarGrupo(event.target.value)}
+                onChange={(event) => {
+                  seleccionarGrupo(event.target.value);
+                  if (mobile) onClose?.();
+                }}
                 className="mt-1.5 w-full rounded-lg border border-white/20 bg-emerald-950 px-2.5 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-emerald-300"
               >
                 {grupos.map((item) => (
@@ -404,6 +309,7 @@ const Sidebar = ({
 
           overflow-y-auto
           overscroll-contain
+          scrollbar-hidden
         "
       >
 
@@ -437,6 +343,7 @@ const Sidebar = ({
               onClick={() => {
                 if (mobile && onClose) {
                   onClose();
+                  onNavigate?.();
                 }
               }}
 
@@ -490,7 +397,10 @@ const Sidebar = ({
         <NavLink
           to="/billetera"
           onClick={() => {
-            if (mobile && onClose) onClose();
+            if (mobile && onClose) {
+              onClose();
+              onNavigate?.();
+            }
           }}
           className="mx-4 mb-3 rounded-2xl border border-white/10 bg-[#0B6651] p-4 transition hover:bg-emerald-800"
         >

@@ -18,6 +18,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import SectionPageTitle from "../components/ui/SectionPageTitle";
 
 import {
   useAuth
@@ -540,48 +541,12 @@ const Configuracion = () => {
           HEADER
       =================================== */}
 
-      <div>
-
-        <p
-          className="
-            text-sm
-            font-semibold
-            text-emerald-700
-          "
-        >
-          Administración
-        </p>
-
-
-        <h1
-          className="
-            mt-1
-            text-3xl
-            font-bold
-            text-slate-900
-            md:text-4xl
-          "
-        >
-          Configuración
-        </h1>
-
-
-        <p
-          className="
-            mt-2
-            max-w-2xl
-            text-slate-500
-          "
-        >
-          Define las reglas financieras
-          y operativas de{" "}
-
-          <strong>
-            {grupo.nombre}
-          </strong>.
-        </p>
-
-      </div>
+      <SectionPageTitle
+        icon={Settings}
+        eyebrow="Reglas del grupo"
+        title="Configuración"
+        description={<>Define las reglas financieras y operativas de <strong>{grupo.nombre}</strong>.</>}
+      />
 
       <ConfiguracionGarantia />
 

@@ -15,6 +15,7 @@
     "dayjs": "^1.11.21",
     "exceljs": "^4.4.0",
     "lucide-react": "^1.29.0",
+    "motion": "^14.6.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-hook-form": "^7.84.0",

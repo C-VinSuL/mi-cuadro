@@ -2,17 +2,22 @@ import {
   useEffect,
   useState
 } from "react";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 
 import {
   Wallet,
+  CircleDollarSign,
   Armchair,
   CalendarDays,
   Trophy,
   CheckCircle2,
   Clock3,
   HandCoins,
-  ArrowRight
+  ArrowRight,
+  ArrowUpRight,
+  LayoutDashboard
 } from "lucide-react";
+import SectionPageTitle from "../../../components/ui/SectionPageTitle";
 
 import {
   Link
@@ -29,14 +34,100 @@ import {
   etiquetaAporte,
   etiquetaPeriodo
 } from "../../../services/grupoService";
+import StaggerList from "../../../components/motion/StaggerList";
+import { obtenerResumenBilletera } from "../../../services/walletService";
+
+const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
+
+const WalletBalanceCard = ({ userId }) => {
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!userId) return undefined;
+
+    let active = true;
+    const refreshBalance = async () => {
+      try {
+        const walletSummary = await obtenerResumenBilletera();
+        if (active) {
+          setSummary(walletSummary);
+          setError(false);
+        }
+      } catch (loadError) {
+        console.error("Error cargando saldo de billetera en Inicio:", loadError);
+        if (active) setError(true);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshBalance();
+    };
+
+    refreshBalance();
+    const intervalId = window.setInterval(refreshBalance, 30000);
+    window.addEventListener("focus", refreshBalance);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshBalance);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [userId]);
+
+  return (
+    <section className="flex flex-col gap-4 rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-4">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">
+          <CircleDollarSign size={24} />
+        </span>
+        <div>
+          <p className="text-sm font-medium text-slate-600">Saldo confirmado en mi billetera</p>
+          <p className="mt-1 text-2xl font-bold text-slate-900">
+            {loading && !summary
+              ? "Cargando..."
+              : error && !summary
+                ? "Saldo no disponible"
+                : currency.format(Number(summary?.saldo || 0))}
+          </p>
+          {summary && (
+            <p className="mt-1 text-xs text-slate-500">
+              {summary.garantia_cumplida
+                ? "Saldo confirmado; una parte puede estar reservada como garantía."
+                : "Saldo confirmado disponible en tu billetera."}
+            </p>
+          )}
+          {error && summary && (
+            <p className="mt-1 text-xs text-amber-700">No se pudo actualizar el saldo. Se muestra el último valor cargado.</p>
+          )}
+        </div>
+      </div>
+      <Link
+        to="/billetera"
+        className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-900"
+      >
+        Ver billetera <ArrowUpRight size={16} />
+      </Link>
+    </section>
+  );
+};
 
 const DashboardSocio = () => {
   const {
+    user,
     grupo,
-    profile,
     participant
   } = useAuth();
   const periodoActual = etiquetaPeriodo(grupo?.aporte_periodicidad);
+  const { scrollY } = useScroll();
+  const headerScale = useTransform(scrollY, [0, 180], [1, 0.98]);
+  const headerOpacity = useTransform(scrollY, [0, 180], [1, 0.92]);
+  const reduceMotion = useReducedMotion();
 
   const [aporteActual, setAporteActual] =
     useState(null);
@@ -191,23 +282,24 @@ const DashboardSocio = () => {
 
   if (!grupo) {
     return (
-      <div
-        className="
-          rounded-2xl
-          border
-          border-slate-200
-          bg-white
-          p-6
-        "
-      >
-        <h2 className="text-xl font-bold text-slate-900">
-          No perteneces a ningún cuadro
-        </h2>
+      <div className="space-y-5">
+        <SectionPageTitle
+          icon={LayoutDashboard}
+          eyebrow="Resumen personal"
+          title="Inicio"
+          description="Tu espacio para consultar la actividad y el estado de tus grupos."
+        />
+        <WalletBalanceCard userId={user?.id} />
+        <section className="rounded-2xl border border-slate-200 bg-white p-6">
+          <h2 className="text-xl font-bold text-slate-900">
+            No perteneces a ningún cuadro
+          </h2>
 
-        <p className="mt-2 text-slate-500">
-          Cuando seas agregado a un grupo,
-          podrás consultar aquí tu información.
-        </p>
+          <p className="mt-2 text-slate-500">
+            Cuando seas agregado a un grupo,
+            podrás consultar aquí tu información.
+          </p>
+        </section>
       </div>
     );
   }
@@ -291,13 +383,14 @@ const DashboardSocio = () => {
   // ========================================
 
   return (
-    <div className="space-y-8">
+    <StaggerList className="space-y-8">
 
       {/* ==================================
           CABECERA PERSONAL
       =================================== */}
 
-      <section
+      <motion.section
+        style={{ scale: reduceMotion ? 1 : headerScale, opacity: reduceMotion ? 1 : headerOpacity }}
         className="
           rounded-3xl
           border
@@ -310,21 +403,8 @@ const DashboardSocio = () => {
         "
       >
 
-        <p
-          className="
-            text-sm
-            font-semibold
-            uppercase
-            tracking-[0.14em]
-            text-emerald-700
-          "
-        >
-          Mi cuenta
-        </p>
-
         <div
           className="
-            mt-3
             flex
             flex-col
             gap-6
@@ -335,37 +415,13 @@ const DashboardSocio = () => {
         >
 
           <div>
-
-            <h1
-              className="
-                min-w-0
-                break-words
-                text-3xl
-                font-bold
-                text-slate-900
-                md:text-4xl
-              "
-            >
-              Hola,{" "}
-              {profile?.nombre ||
-                participant?.nombre ||
-                "Socio"} 👋
-            </h1>
-
-            <p
-              className="
-                min-w-0
-                break-words
-                mt-2
-                text-slate-500
-              "
-            >
-              Este es tu resumen dentro de{" "}
-              <strong>
-                {grupo.nombre}
-              </strong>.
-            </p>
-
+            <SectionPageTitle
+              icon={LayoutDashboard}
+              eyebrow="Resumen personal"
+              title="Inicio"
+              description={`Este es tu resumen dentro de ${grupo.nombre}.`}
+              plain
+            />
           </div>
 
 
@@ -400,14 +456,15 @@ const DashboardSocio = () => {
 
         </div>
 
-      </section>
+      </motion.section>
 
+      <WalletBalanceCard userId={user?.id} />
 
       {/* ==================================
           TARJETAS PERSONALES
       =================================== */}
 
-      <section
+      <StaggerList
         className="
           grid
           grid-cols-1
@@ -631,7 +688,7 @@ const DashboardSocio = () => {
 
         </div>
 
-      </section>
+      </StaggerList>
 
 
       {/* ==================================
@@ -1161,7 +1218,7 @@ const DashboardSocio = () => {
 
       </section>
 
-    </div>
+    </StaggerList>
   );
 };
 

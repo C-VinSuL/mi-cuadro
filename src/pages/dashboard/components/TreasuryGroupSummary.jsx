@@ -33,7 +33,7 @@ const TreasuryGroupSummary = () => {
     const timeoutId = window.setTimeout(load, 0);
     const intervalId = window.setInterval(load, 30000);
     const channel = supabase
-      .channel(`resumen-financiero-${user?.id || "sesion"}`)
+      .channel(`resumen-financiero-${user?.id || "sesion"}-${crypto.randomUUID()}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "aportes" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "movimientos_fondo" }, load)
       .subscribe();

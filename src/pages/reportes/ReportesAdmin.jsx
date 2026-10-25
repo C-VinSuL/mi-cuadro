@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Download, FileBarChart2, Printer, TrendingDown, TrendingUp } from "lucide-react";
+import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
 
@@ -148,11 +149,15 @@ const ReportesAdmin = () => {
 
   return (
     <div className="space-y-7">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-5">
+      <header className="flex flex-wrap items-end justify-between gap-4 rounded-3xl border border-emerald-100 bg-gradient-to-br from-white to-emerald-50 p-6 md:p-8">
         <div>
-          <p className="text-sm font-semibold text-emerald-700">Administración</p>
-          <h1 className="mt-1 text-3xl font-bold text-slate-900">Reportes financieros</h1>
-          <p className="mt-2 text-sm text-slate-600">Consolida los movimientos registrados en todos los grupos.</p>
+          <SectionPageTitle
+            icon={FileBarChart2}
+            eyebrow="Movimientos de todos los grupos"
+            title="Reportes financieros"
+            description="Consolida los movimientos registrados en todos los grupos."
+            plain
+          />
         </div>
         <div className="flex gap-2 print:hidden">
           <button type="button" onClick={descargarReporte} disabled={loading || movimientosFiltrados.length === 0} className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50">

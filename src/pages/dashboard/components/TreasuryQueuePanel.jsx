@@ -26,7 +26,7 @@ const TreasuryQueuePanel = () => {
     const intervalId = window.setInterval(loadSummary, 30000);
     const groupIds = new Set(grupos.map((grupo) => grupo.id));
     const channel = supabase
-      .channel(`pendientes-tesoreria-${user?.id || "sesion"}`)
+      .channel(`pendientes-tesoreria-${user?.id || "sesion"}-${crypto.randomUUID()}`)
       .on("postgres_changes", {
         event: "*",
         schema: "public",

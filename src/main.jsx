@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 
 import { BrowserRouter } from "react-router-dom";
+import { MotionConfig } from "motion/react";
 
 import "./index.css";
 
@@ -13,7 +14,7 @@ if (!supabaseUrl || !supabaseKey) {
   root.render(
     <main
       style={{
-        minHeight: "100vh",
+        minHeight: "100dvh",
         display: "grid",
         placeItems: "center",
         padding: "24px",
@@ -77,13 +78,15 @@ if (!supabaseUrl || !supabaseKey) {
 
     root.render(
       <React.StrictMode>
-        <BrowserRouter>
-          <AuthProvider>
-            <NotificationProvider>
-              <App />
-            </NotificationProvider>
-          </AuthProvider>
-        </BrowserRouter>
+        <MotionConfig reducedMotion="user">
+          <BrowserRouter>
+            <AuthProvider>
+              <NotificationProvider>
+                <App />
+              </NotificationProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </MotionConfig>
       </React.StrictMode>,
     );
   });

@@ -1,8 +1,9 @@
 # Registro de cambios del equipo
 
 **Responsable:** John Navarro  
+**Trabajo en conjunto:** Christopher Suárez
 **Proyecto:** FlashMonkey  
-**Fecha:** 24 de octubre de 2026
+**Fecha:** 25 de octubre de 2026
 
 ## Cambios implementados
 
@@ -44,6 +45,19 @@
   desde la aplicación vuelve a recibirse por Realtime.
 - El historial y la sincronización de notificaciones continúan actualizándose.
 
+### Moki, navegación y publicación
+
+- Se incorporó la experiencia de chat de Moki para socios y una bandeja de
+  atención a socios y resumen operativo para administración.
+- Se añadieron navegación inferior móvil, transiciones de página y mejoras de
+  navegación adaptable para los distintos roles.
+- Se asignan identificadores únicos a las suscripciones Realtime para evitar
+  colisiones cuando los componentes se desmontan y vuelven a montarse.
+- Vite usa `localhost` en desarrollo para coincidir con el origen local
+  documentado para Supabase.
+- Se documentó la publicación en Vercel y la configuración de URLs, secretos de
+  Supabase y remitente de Brevo en `README.md`.
+
 ## Validación y despliegue
 
 - La compilación de producción pasó después de los cambios de interfaz y
@@ -54,3 +68,29 @@
 - La configuración de orígenes y el despliegue de `register-member` se realizan
   en el proyecto Supabase; no se consideran publicados por crear este documento
   o compilar el frontend.
+
+## Pendiente antes de operar con datos o dinero reales
+
+> **No habilitar operaciones financieras reales hasta completar y documentar
+> estas verificaciones.** Hacerlas primero en un proyecto de pruebas aislado.
+
+1. **Migraciones:** revisar el proyecto Supabase enlazado, respaldar la base y
+   ejecutar una simulación (`npx supabase db push --dry-run`). Aplicar primero
+   en pruebas y comprobar cada migración. No aplicar migraciones vacías ni
+   marcar migraciones como ejecutadas sin verificar el esquema.
+2. **RLS y permisos:** confirmar que RLS está habilitado en las tablas con datos
+   privados y probar con cuentas de socio, tesorero y administrador que cada
+   rol solo pueda acceder a las operaciones autorizadas. Un socio no debe poder
+   aprobar comprobantes, cambiar saldos ni asignarse permisos.
+3. **Storage:** verificar que los comprobantes y documentos estén en buckets
+   privados; comprobar con cuentas de prueba que un socio no pueda consultar ni
+   descargar archivos de otro.
+4. **Flujos financieros:** con datos ficticios, probar envío, aprobación y
+   rechazo de comprobantes; confirmar que una aprobación repetida o solicitudes
+   simultáneas no dupliquen créditos y que el historial concilie con el saldo.
+5. **Backups y restauración:** confirmar que haya una copia reciente y
+   restaurarla en un proyecto separado. Verificar también la recuperación de
+   archivos de Storage; no asumir que el backup de la base incluye esos archivos.
+6. **Producción:** solo después de que las pruebas anteriores pasen, coordinar
+   la ventana de despliegue, tomar un backup reciente y repetir las
+   comprobaciones esenciales en el dominio y proyecto de producción.

@@ -22,6 +22,14 @@ body {
   box-sizing: border-box;
 }
 
+.scrollbar-hidden {
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
 main,
 .overflow-x-auto {
   min-width: 0;

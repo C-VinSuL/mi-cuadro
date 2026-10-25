@@ -12,6 +12,7 @@ import {
   CircleDollarSign
 } from "lucide-react";
 
+import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import {
   supabase
 } from "../../services/supabase";
@@ -275,42 +276,12 @@ const AportesSocio = () => {
           HEADER
       ====================== */}
 
-      <div>
-
-        <p
-          className="
-            text-sm
-            font-semibold
-            text-emerald-700
-          "
-        >
-          Mi aporte
-        </p>
-
-        <h1
-          className="
-            text-3xl
-            md:text-4xl
-            font-bold
-            text-slate-900
-            mt-1
-          "
-        >
-          Aportes
-        </h1>
-
-        <p
-          className="
-            text-slate-500
-            mt-2
-          "
-        >
-          Revisa tus aportes y registra
-          el pago correspondiente a cada {periodoActualMinuscula}.
-        </p>
-
-      </div>
-
+      <SectionPageTitle
+        icon={CircleDollarSign}
+        eyebrow="Mis aportes"
+        title="Aportes"
+        description={`Revisa tus aportes y registra el pago correspondiente a cada ${periodoActualMinuscula}.`}
+      />
 
       {/* =====================
           TARJETA PRINCIPAL

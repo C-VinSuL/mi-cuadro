@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ShieldCheck } from "lucide-react";
+import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import { useNotifications } from "../../hooks/useNotifications";
 import { listarDocumentosPendientes, verificarDocumento } from "../../services/adminService";
 import { supabase } from "../../services/supabase";
@@ -65,10 +66,13 @@ const VerificarDocumentos = () => {
 
   return (
     <div className="space-y-6">
-      <header className="border-b border-slate-200 pb-5">
-        <p className="text-sm font-semibold text-emerald-700">Solo administrador</p>
-        <h1 className="mt-1 text-3xl font-bold text-slate-900">Verificación documental</h1>
-        <p className="mt-2 text-sm text-slate-600">Solo el administrador puede comparar los datos declarados con el documento original. Esta revisión humana queda registrada en auditoría; no valida automáticamente la identidad.</p>
+      <header>
+        <SectionPageTitle
+          icon={ShieldCheck}
+          eyebrow="Identidad de socios"
+          title="Verificación documental"
+          description="Solo el administrador puede comparar los datos declarados con el documento original. Esta revisión humana queda registrada en auditoría; no valida automáticamente la identidad."
+        />
       </header>
       {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
       {loading ? (

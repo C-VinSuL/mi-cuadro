@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, CircleDollarSign, ExternalLink, RefreshCw, Users, Wallet, X } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
+import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
 import { etiquetaPeriodo } from "../../services/grupoService";
@@ -88,7 +89,7 @@ const AportesAdmin = () => {
 
     const groupIds = new Set(grupos.map((grupo) => grupo.id));
     const channel = supabase
-      .channel(`aportes-admin-${profile.id}`)
+      .channel(`aportes-admin-${profile.id}-${crypto.randomUUID()}`)
       .on("postgres_changes", {
         event: "*",
         schema: "public",
@@ -186,11 +187,15 @@ const AportesAdmin = () => {
 
   return (
     <div className="space-y-7">
-      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-200 pb-5">
+      <header className="flex flex-wrap items-end justify-between gap-4 rounded-3xl border border-emerald-100 bg-gradient-to-br from-white to-emerald-50 p-6 md:p-8">
         <div>
-          <p className="text-sm font-semibold text-emerald-700">Supervisión general</p>
-          <h1 className="mt-1 text-3xl font-bold text-slate-900">Control de aportes</h1>
-          <p className="mt-2 text-sm text-slate-600">Prioriza comprobantes pendientes y revisa por grupo, periodo o antigüedad.</p>
+          <SectionPageTitle
+            icon={CircleDollarSign}
+            eyebrow="Revisión de aportes"
+            title="Control de aportes"
+            description="Prioriza comprobantes pendientes y revisa por grupo, periodo o antigüedad."
+            plain
+          />
         </div>
         <div className="flex flex-wrap gap-2">
           <button

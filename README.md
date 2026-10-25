@@ -136,23 +136,25 @@ seguro de secretos del entorno, nunca en este README, el código del navegador,
 el historial de Git o mensajes. Consulta la configuración de cada proveedor
 antes de habilitar correo o OAuth.
 
-La función `register-member` valida el origen del navegador. Configura `APP_URL`
-con la URL principal de la aplicación y, si también recibes registros desde
-otros dominios (por ejemplo, una URL de previsualización o desarrollo),
-añádelos como orígenes exactos separados por comas en `APP_ALLOWED_ORIGINS`.
-Usa solo dominios controlados por el proyecto, con HTTPS en producción; para
-desarrollo local se permiten `http://localhost` y `http://127.0.0.1`. Si solo
-necesitas añadir el origen local, conserva `APP_URL` como está y agrega el
-origen de Vite:
+Las funciones Edge verifican el origen del navegador. Configura `APP_URL` con
+el origen exacto de la aplicación que corresponda al proyecto Supabase (local
+en un proyecto de desarrollo; HTTPS estable en producción). `register-member`
+también admite orígenes exactos en `APP_ALLOWED_ORIGINS`; las demás funciones
+deben recibir solicitudes desde el origen configurado en `APP_URL`. No uses
+URLs de preview con funciones de correo o administración si no están
+configuradas expresamente. Para desarrollo, Vite usa
+`http://localhost:5173`:
 
 ```powershell
-npx supabase secrets set "APP_ALLOWED_ORIGINS=http://localhost:5173"
+npx supabase secrets set "APP_URL=http://localhost:5173"
 npx supabase functions deploy register-member
 ```
 
-Para más de un origen, sepáralos con comas y configura el dominio público real
-además del origen local. No incluyas rutas (`/registro`) ni comodines en la
-lista.
+Usa proyectos Supabase separados para desarrollo y producción. No cambies
+`APP_URL` de producción para habilitar pruebas locales. En producción, define
+`APP_URL` con el dominio estable de Vercel y despliega las funciones Edge con
+esa configuración. No incluyas rutas (`/registro`) ni comodines en los
+orígenes permitidos.
 
 Para probar OAuth, Auth, MFA, Storage y Realtime, configura en Supabase los
 dominios de desarrollo y producción que realmente uses. Limita los orígenes y
@@ -169,11 +171,40 @@ npm run preview   # Vista previa de la compilación
 
 ## Despliegue del frontend
 
-El proyecto usa Vite: compila con `npm run build` y publica el contenido de
-`dist`. Configura `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en el entorno
-de compilación del proveedor de hosting. Revisa `vercel.json` si despliegas en
-Vercel. Configura también las URLs permitidas de Supabase Auth para el dominio
-publicado.
+Para publicar en Vercel:
+
+1. Sube el repositorio a GitHub sin incluir `.env` ni credenciales.
+2. En Vercel, crea un proyecto e importa el repositorio. Selecciona **Vite**;
+   el comando de compilación es `npm run build` y el directorio de salida es
+   `dist`.
+3. En **Settings → Environment Variables**, configura
+   `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` para Production (y Preview si
+   vas a probar previews). Usa la URL y la clave publicable de Supabase; nunca
+   configures `service_role`, `BREVO_API_KEY` u otros secretos como variables
+   `VITE_*`.
+4. Despliega y asigna un dominio estable, por ejemplo
+   `https://tu-dominio.vercel.app` o un dominio propio. Vercel sirve el sitio
+   por HTTPS.
+5. En Supabase **Authentication → URL Configuration**, establece el dominio
+   principal de Vercel como **Site URL** y añade los dominios usados por
+   Production y Preview a **Redirect URLs**. Limita la lista a dominios
+   controlados por el proyecto.
+6. En los secretos de Supabase Edge Functions, configura `APP_URL` con el
+   origen exacto de producción (sin ruta), además de `APP_ALLOWED_ORIGINS` para
+   los orígenes de desarrollo o preview que realmente usarás. Configura allí
+   también `BREVO_API_KEY`, `INVITATION_FROM` y los demás secretos requeridos.
+   Después despliega las Edge Functions para que reciban la nueva configuración.
+7. En Brevo, verifica el dominio/remitente autorizado y revisa sus registros
+   DNS. Los correos de confirmación/invitación deben usar el dominio estable
+   de la app para sus enlaces y redirecciones.
+8. Prueba registro, login, recuperación de contraseña, MFA, invitaciones,
+   correo de bienvenida, Moki, archivos y redirecciones desde el dominio HTTPS
+   publicado. No uses información financiera real para estas pruebas.
+
+Para el desarrollo local, usa `http://localhost:5173` (Vite está fijado a
+`localhost` para que coincida con el origen local documentado/configurado).
+Si cambias el dominio de producción, actualiza `APP_URL`, las URLs de Auth y
+los orígenes permitidos; no uses `*` para CORS.
 
 No compartas archivos `.env`, copias de bases de datos ni capturas que muestren
 tokens, cookies, datos personales o información financiera real.
