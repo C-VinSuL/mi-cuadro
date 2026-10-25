@@ -584,13 +584,13 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                 {isAdministrator ? "Accesos administrativos" : "Preguntas rápidas"}
               </p>
-              <div className="flex gap-2 overflow-x-auto overscroll-x-contain pb-1">
+              <div className="flex max-h-24 flex-col items-start overflow-y-auto overscroll-contain">
                 {suggestions.map((entry) => (
                   <button
                     key={entry.label}
                     type="button"
                     onClick={() => (isAdministrator ? goTo(entry.path) : handleQuickHelp(entry))}
-                    className="min-h-10 shrink-0 rounded-full border border-emerald-800/15 bg-emerald-50 px-3.5 py-2 text-left text-xs font-medium text-emerald-950 transition hover:border-emerald-700/30 hover:bg-emerald-100"
+                    className="min-h-8 shrink-0 py-1 text-left text-sm font-medium text-emerald-900 transition-colors hover:text-emerald-700 hover:underline focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700"
                   >
                     {entry.label}
                   </button>
@@ -598,7 +598,11 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
               </div>
             </section>
           )}
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-5">
+          <div
+            aria-label="Mensajes de la conversación"
+            aria-live="polite"
+            className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-5"
+          >
             {!adminInbox && (
               <div className="flex items-end gap-2">
                 <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white">
