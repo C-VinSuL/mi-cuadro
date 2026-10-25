@@ -136,6 +136,24 @@ seguro de secretos del entorno, nunca en este README, el código del navegador,
 el historial de Git o mensajes. Consulta la configuración de cada proveedor
 antes de habilitar correo o OAuth.
 
+La función `register-member` valida el origen del navegador. Configura `APP_URL`
+con la URL principal de la aplicación y, si también recibes registros desde
+otros dominios (por ejemplo, una URL de previsualización o desarrollo),
+añádelos como orígenes exactos separados por comas en `APP_ALLOWED_ORIGINS`.
+Usa solo dominios controlados por el proyecto, con HTTPS en producción; para
+desarrollo local se permiten `http://localhost` y `http://127.0.0.1`. Si solo
+necesitas añadir el origen local, conserva `APP_URL` como está y agrega el
+origen de Vite:
+
+```powershell
+npx supabase secrets set "APP_ALLOWED_ORIGINS=http://localhost:5173"
+npx supabase functions deploy register-member
+```
+
+Para más de un origen, sepáralos con comas y configura el dominio público real
+además del origen local. No incluyas rutas (`/registro`) ni comodines en la
+lista.
+
 Para probar OAuth, Auth, MFA, Storage y Realtime, configura en Supabase los
 dominios de desarrollo y producción que realmente uses. Limita los orígenes y
 URLs de redirección a esos dominios.

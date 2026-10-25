@@ -1,30 +1,30 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders, rejectUntrustedOrigin } from "../_shared/cors.ts";
+import { corsHeadersForRequest, rejectUntrustedOriginFromAllowlist } from "../_shared/cors.ts";
 
-const response = (status: number, body: Record<string, unknown>) =>
+const response = (request: Request, status: number, body: Record<string, unknown>) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeadersForRequest(request), "Content-Type": "application/json" },
   });
 
-const genericConfirmation = () => response(200, {
+const genericConfirmation = (request: Request) => response(request, 200, {
   created: true,
   confirmationRequired: true,
   message: "Si los datos permiten crear la cuenta, recibirás un correo de confirmación.",
 });
 
 Deno.serve(async (request) => {
-  const originError = rejectUntrustedOrigin(request);
+  const originError = rejectUntrustedOriginFromAllowlist(request);
   if (originError) return originError;
-  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (request.method !== "POST") return response(405, { error: "Método no permitido" });
+  if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeadersForRequest(request) });
+  if (request.method !== "POST") return response(request, 405, { error: "Método no permitido" });
 
   const url = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !anonKey || !serviceRoleKey) {
     console.error("Falta configurar Supabase en los secretos del registro.");
-    return response(500, { error: "El registro no está configurado." });
+    return response(request, 500, { error: "El registro no está configurado." });
   }
 
   let form: {
@@ -43,7 +43,7 @@ Deno.serve(async (request) => {
   try {
     form = await request.json();
   } catch {
-    return response(400, { error: "La solicitud no contiene JSON válido." });
+    return response(request, 400, { error: "La solicitud no contiene JSON válido." });
   }
 
   const email = typeof form.email === "string" ? form.email.trim().toLowerCase() : "";
@@ -55,19 +55,19 @@ Deno.serve(async (request) => {
   const fechaNacimiento = typeof form.fechaNacimiento === "string" ? form.fechaNacimiento : null;
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return response(400, { error: "Escribe un correo electrónico válido." });
+    return response(request, 400, { error: "Escribe un correo electrónico válido." });
   }
   if (password.length < 8) {
-    return response(400, { error: "La contraseña debe tener al menos 8 caracteres." });
+    return response(request, 400, { error: "La contraseña debe tener al menos 8 caracteres." });
   }
   if (!nombre) {
-    return response(400, { error: "Ingresa tu nombre completo." });
+    return response(request, 400, { error: "Ingresa tu nombre completo." });
   }
   if (cedula !== null && (cedula.length < 6 || cedula.length > 20)) {
-    return response(400, { error: "El número de documento debe tener entre 6 y 20 caracteres." });
+    return response(request, 400, { error: "El número de documento debe tener entre 6 y 20 caracteres." });
   }
   if (fechaNacimiento && (Number.isNaN(Date.parse(fechaNacimiento)) || Date.parse(fechaNacimiento) > Date.now())) {
-    return response(400, { error: "La fecha de nacimiento no es válida." });
+    return response(request, 400, { error: "La fecha de nacimiento no es válida." });
   }
 
   const authClient = createClient(url, anonKey, {
@@ -95,6 +95,7 @@ Deno.serve(async (request) => {
       email_exists: "No se pudo crear la cuenta con esos datos. Si ya tienes una cuenta, inicia sesión o solicita restablecer tu contraseña.",
     };
     return response(
+      request,
       400,
       {
         error: registrationErrorMessages[error.code || ""] ||
@@ -104,7 +105,7 @@ Deno.serve(async (request) => {
   }
 
   let user = data.user;
-  if (!user?.id) return response(500, { error: "No se pudo completar el registro." });
+  if (!user?.id) return response(request, 500, { error: "No se pudo completar el registro." });
 
   // A duplicate signup only proceeds after the account owner proves the password.
   if (!user.identities?.length) {
@@ -113,7 +114,7 @@ Deno.serve(async (request) => {
       password,
     });
     if (signInError || !signInData.user) {
-      return genericConfirmation();
+      return genericConfirmation(request);
     }
     user = signInData.user;
     const { error: signOutError } = await authClient.auth.signOut();
@@ -135,7 +136,7 @@ Deno.serve(async (request) => {
       details: profileError.details,
       hint: profileError.hint,
     });
-    return response(500, { error: "La cuenta se creó, pero no se pudo guardar el perfil. Contacta a administración." });
+    return response(request, 500, { error: "La cuenta se creó, pero no se pudo guardar el perfil. Contacta a administración." });
   }
   if (!profile) {
     const { error: createProfileError } = await adminClient.from("perfiles").insert({
@@ -159,7 +160,7 @@ Deno.serve(async (request) => {
           hint: createProfileError.hint,
           retryError: retryError?.message,
         });
-        return response(500, { error: "La cuenta se creó, pero no se pudo guardar el perfil. Reintenta el registro con el mismo correo y contraseña o contacta a administración." });
+        return response(request, 500, { error: "La cuenta se creó, pero no se pudo guardar el perfil. Reintenta el registro con el mismo correo y contraseña o contacta a administración." });
       }
     }
   }
@@ -184,7 +185,7 @@ Deno.serve(async (request) => {
       .eq("perfil_id", user.id)
       .maybeSingle();
     if (!privateDataRetryError && savedPrivateData) {
-      return response(200, {
+      return response(request, 200, {
         created: true,
         confirmationRequired: true,
         message: "La cuenta y el perfil ya están registrados. Revisa tu correo para confirmar la dirección.",
@@ -197,10 +198,10 @@ Deno.serve(async (request) => {
       hint: privateDataError.hint,
       retryError: privateDataRetryError?.message,
     });
-    return response(500, { error: "La cuenta se creó, pero no se pudieron guardar los datos privados. Contacta a administración." });
+    return response(request, 500, { error: "La cuenta se creó, pero no se pudieron guardar los datos privados. Contacta a administración." });
   }
 
-  return response(200, {
+  return response(request, 200, {
     created: true,
     confirmationRequired: true,
     message: "Cuenta creada. Revisa tu correo para confirmar la dirección.",

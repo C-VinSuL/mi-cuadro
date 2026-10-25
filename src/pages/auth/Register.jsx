@@ -68,6 +68,11 @@ const Register = () => {
         } catch {
           details = null;
         }
+        if (error.name === "FunctionsFetchError") {
+          throw new Error(
+            "No se pudo conectar con el servicio de registro. Verifica que la función register-member esté desplegada y que el dominio de esta página esté permitido en APP_ALLOWED_ORIGINS de Supabase."
+          );
+        }
         throw new Error(details?.error || error.message);
       }
       if (data?.error) throw new Error(data.error);
