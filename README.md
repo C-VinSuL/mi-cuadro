@@ -176,7 +176,8 @@ Para publicar en Vercel:
 1. Sube el repositorio a GitHub sin incluir `.env` ni credenciales.
 2. En Vercel, crea un proyecto e importa el repositorio. Selecciona **Vite**;
    el comando de compilación es `npm run build` y el directorio de salida es
-   `dist`.
+   `dist`. `vercel.json` configura el fallback de rutas para que enlaces
+   directos como `/login` funcionen con React Router.
 3. En **Settings → Environment Variables**, configura
    `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` para Production (y Preview si
    vas a probar previews). Usa la URL y la clave publicable de Supabase; nunca
