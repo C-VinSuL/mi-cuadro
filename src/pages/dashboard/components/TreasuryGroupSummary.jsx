@@ -3,6 +3,7 @@ import { CheckCircle2, Landmark, PiggyBank, RefreshCw, Wallet } from "lucide-rea
 import { useAuth } from "../../../context/AuthContext";
 import { getTreasuryGroupSummary } from "../../../services/dashboardService";
 import { supabase } from "../../../services/supabase";
+import { createUniqueId } from "../../../utils/uniqueId";
 
 const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
 
@@ -33,7 +34,7 @@ const TreasuryGroupSummary = () => {
     const timeoutId = window.setTimeout(load, 0);
     const intervalId = window.setInterval(load, 30000);
     const channel = supabase
-      .channel(`resumen-financiero-${user?.id || "sesion"}-${crypto.randomUUID()}`)
+      .channel(`resumen-financiero-${user?.id || "sesion"}-${createUniqueId()}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "aportes" }, load)
       .on("postgres_changes", { event: "*", schema: "public", table: "movimientos_fondo" }, load)
       .subscribe();

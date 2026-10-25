@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { createUniqueId } from "../utils/uniqueId";
 
 const unwrap = ({ data, error }) => {
   if (error) throw error;
@@ -53,7 +54,7 @@ export const enviarArchivoMoki = async (conversacionId, file, mensaje = "") => {
   if (!user?.id) throw new Error("Inicia sesión para adjuntar un archivo.");
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(-120) || "adjunto";
-  const objectPath = `${conversacionId}/${user.id}/${crypto.randomUUID()}-${safeName}`;
+  const objectPath = `${conversacionId}/${user.id}/${createUniqueId()}-${safeName}`;
   const { error: uploadError } = await supabase.storage
     .from("moki-attachments")
     .upload(objectPath, file, { contentType: file.type, upsert: false });

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ArrowDownToLine, ArrowUpFromLine, RefreshCw, Wallet } from "lucide-react";
 import SectionPageTitle from "../components/ui/SectionPageTitle";
+import { createUniqueId } from "../utils/uniqueId";
 import { supabase } from "../services/supabase";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../hooks/useNotifications";
@@ -73,7 +74,7 @@ const Billetera = () => {
     if (!user?.id) return () => window.clearTimeout(timeoutId);
 
     const channel = supabase
-      .channel(`solicitudes-billetera-${user.id}-${crypto.randomUUID()}`)
+      .channel(`solicitudes-billetera-${user.id}-${createUniqueId()}`)
       .on("postgres_changes", {
         event: "INSERT",
         schema: "public",
@@ -102,7 +103,7 @@ const Billetera = () => {
     setError("");
     try {
       const extension = depositForm.receipt.type === "application/pdf" ? "pdf" : depositForm.receipt.type.split("/")[1];
-      const path = `${user.id}/${crypto.randomUUID()}.${extension}`;
+      const path = `${user.id}/${createUniqueId()}.${extension}`;
       const { error: uploadError } = await supabase.storage.from("wallet-receipts").upload(path, depositForm.receipt, {
         contentType: depositForm.receipt.type,
         upsert: false

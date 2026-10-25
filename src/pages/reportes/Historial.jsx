@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import SectionPageTitle from "../../components/ui/SectionPageTitle";
+import { createUniqueId } from "../../utils/uniqueId";
 import {
   useAuth
 } from "../../context/AuthContext";
@@ -106,7 +107,7 @@ const HistorialSocio = () => {
     }
 
     const channel = supabase
-      .channel(`historial-tesoreria-${grupoId}-${crypto.randomUUID()}`)
+      .channel(`historial-tesoreria-${grupoId}-${createUniqueId()}`)
       .on("postgres_changes", {
         event: "*",
         schema: "public",

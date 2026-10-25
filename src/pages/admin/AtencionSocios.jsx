@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "../../context/AuthContext";
+import { createUniqueId } from "../../utils/uniqueId";
 import { supabase } from "../../services/supabase";
 import {
   cambiarEstadoConversacionMoki,
@@ -88,7 +89,7 @@ const AtencionSocios = () => {
     if (!user?.id) return undefined;
 
     const intervalId = window.setInterval(refreshInbox, 15000);
-    const channel = supabase.channel(`moki-inbox-page-${user.id}-${crypto.randomUUID()}`)
+    const channel = supabase.channel(`moki-inbox-page-${user.id}-${createUniqueId()}`)
       .on("postgres_changes", {
         event: "*",
         schema: "public",

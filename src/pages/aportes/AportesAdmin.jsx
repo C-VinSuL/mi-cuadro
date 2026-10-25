@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, CircleDollarSign, ExternalLink, RefreshCw, Users, Wallet, X } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import SectionPageTitle from "../../components/ui/SectionPageTitle";
+import { createUniqueId } from "../../utils/uniqueId";
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../context/AuthContext";
 import { etiquetaPeriodo } from "../../services/grupoService";
@@ -89,7 +90,7 @@ const AportesAdmin = () => {
 
     const groupIds = new Set(grupos.map((grupo) => grupo.id));
     const channel = supabase
-      .channel(`aportes-admin-${profile.id}-${crypto.randomUUID()}`)
+      .channel(`aportes-admin-${profile.id}-${createUniqueId()}`)
       .on("postgres_changes", {
         event: "*",
         schema: "public",

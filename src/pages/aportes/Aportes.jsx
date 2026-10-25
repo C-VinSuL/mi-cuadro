@@ -23,6 +23,7 @@ import {
 import { useNotifications } from "../../hooks/useNotifications";
 import AportesAdmin from "./AportesAdmin";
 import { etiquetaPeriodo, etiquetaPeriodoMinuscula } from "../../services/grupoService";
+import { createUniqueId } from "../../utils/uniqueId";
 
 const obtenerAportesSocio = async (participantId) => {
   const { data, error } = await supabase
@@ -196,7 +197,7 @@ const AportesSocio = () => {
         const extension = comprobante.type === "application/pdf"
           ? "pdf"
           : comprobante.type.split("/")[1];
-        objectPath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+        objectPath = `${user.id}/${createUniqueId()}.${extension}`;
         const { error: uploadError } = await supabase.storage
           .from("contribution-receipts")
           .upload(objectPath, comprobante, {

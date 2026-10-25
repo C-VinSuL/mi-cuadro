@@ -17,6 +17,7 @@ import { listarDocumentosPendientes } from "../../services/adminService";
 import { listarBandejaMoki } from "../../services/mokiService";
 import { supabase } from "../../services/supabase";
 import { listarSolicitudesBilleteraAdmin } from "../../services/walletService";
+import { createUniqueId } from "../../utils/uniqueId";
 
 const DesktopAdminOverview = ({ onClose }) => {
   const navigate = useNavigate();
@@ -81,7 +82,7 @@ const DesktopAdminOverview = ({ onClose }) => {
     const timeoutId = window.setTimeout(refresh, 0);
     const intervalId = window.setInterval(refresh, 30000);
     let refreshTimeoutId;
-    const channel = supabase.channel(`moki-admin-overview-${crypto.randomUUID()}`)
+    const channel = supabase.channel(`moki-admin-overview-${createUniqueId()}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "moki_conversaciones" }, () => {
         window.clearTimeout(refreshTimeoutId);
         refreshTimeoutId = window.setTimeout(refresh, 250);

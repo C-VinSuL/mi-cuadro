@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../hooks/usePermissions";
+import { createUniqueId } from "../../utils/uniqueId";
 import DesktopAdminOverview from "./DesktopAdminOverview";
 import { supabase } from "../../services/supabase";
 import {
@@ -171,7 +172,7 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
   useEffect(() => {
     if (!user?.id) return undefined;
 
-    const channel = supabase.channel(`moki-chat-${user.id}-${crypto.randomUUID()}`)
+    const channel = supabase.channel(`moki-chat-${user.id}-${createUniqueId()}`)
       .on("postgres_changes", {
         event: "*",
         schema: "public",

@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { getTreasuryPendingSummary } from "../../../services/dashboardService";
 import { supabase } from "../../../services/supabase";
+import { createUniqueId } from "../../../utils/uniqueId";
 
 const TreasuryQueuePanel = () => {
   const { user, grupos } = useAuth();
@@ -26,7 +27,7 @@ const TreasuryQueuePanel = () => {
     const intervalId = window.setInterval(loadSummary, 30000);
     const groupIds = new Set(grupos.map((grupo) => grupo.id));
     const channel = supabase
-      .channel(`pendientes-tesoreria-${user?.id || "sesion"}-${crypto.randomUUID()}`)
+      .channel(`pendientes-tesoreria-${user?.id || "sesion"}-${createUniqueId()}`)
       .on("postgres_changes", {
         event: "*",
         schema: "public",

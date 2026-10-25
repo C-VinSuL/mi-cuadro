@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { supabase } from "../../../services/supabase";
 import { useNotifications } from "../../../hooks/useNotifications";
+import { createUniqueId } from "../../../utils/uniqueId";
 
 const Navbar = ({ onOpenMobileMenu }) => {
 
@@ -274,7 +275,7 @@ const Navbar = ({ onOpenMobileMenu }) => {
     setUploadingIdentityDocument(true);
     try {
       const extension = file.type === "application/pdf" ? "pdf" : file.type.split("/")[1];
-      const objectPath = `${user.id}/${crypto.randomUUID()}.${extension}`;
+      const objectPath = `${user.id}/${createUniqueId()}.${extension}`;
       const { error: uploadError } = await supabase.storage.from("identity-documents").upload(objectPath, file, {
         contentType: file.type,
         upsert: false
@@ -321,7 +322,7 @@ const Navbar = ({ onOpenMobileMenu }) => {
     setUploadingAvatar(true);
     try {
       const extension = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
-      const objectPath = `${profile.id}/${crypto.randomUUID()}.${extension}`;
+      const objectPath = `${profile.id}/${createUniqueId()}.${extension}`;
       const { error } = await supabase.storage.from("profile-avatars").upload(objectPath, file, {
         contentType: file.type,
         upsert: false

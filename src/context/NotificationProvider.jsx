@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { NotificationContext } from "./notificationStore";
 import NotificationToast from "../components/common/NotificationToast";
+import { createUniqueId } from "../utils/uniqueId";
 import { useAuth } from "./AuthContext";
 import { obtenerSolicitudesGrupo } from "../services/grupoService";
 import { supabase } from "../services/supabase";
@@ -69,7 +70,7 @@ const NotificationProvider = ({ children }) => {
     loadNotifications();
 
     const channel = supabase
-      .channel(`notificaciones-${user.id}-${crypto.randomUUID()}`)
+      .channel(`notificaciones-${user.id}-${createUniqueId()}`)
       .on(
         "postgres_changes",
         {
