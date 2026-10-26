@@ -129,7 +129,7 @@ const DashboardTesorero = () => {
           title="Inicio"
           description="Tu espacio para consultar y gestionar la tesorería de los grupos asignados."
         />
-        <section className="rounded-2xl border border-slate-200 bg-white p-6">
+        <section className="dashboard-card fade-in-up rounded-2xl border border-slate-200 bg-white p-6">
           <h2 className="text-xl font-bold text-slate-900">
             No tienes un grupo asignado
           </h2>

@@ -83,7 +83,7 @@ const TreasuryGroupSummary = () => {
           {visibleRows.map((row) => {
             const selected = grupo?.id === row.grupo_id;
             return (
-              <article key={row.grupo_id} className={`rounded-xl border bg-white p-4 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none ${Number(row.aportes_pendientes_revision) > 0 ? "border-amber-300" : selected ? "border-blue-400 ring-1 ring-blue-100" : "border-slate-200"}`}>
+              <article key={row.grupo_id} className={`dashboard-card rounded-xl border bg-white p-4 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none ${Number(row.aportes_pendientes_revision) > 0 ? "border-amber-300" : selected ? "border-blue-400 ring-1 ring-blue-100" : "border-slate-200"}`}>
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="font-semibold text-slate-900">{row.grupo_nombre}</h3>
                   <span className={`rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${

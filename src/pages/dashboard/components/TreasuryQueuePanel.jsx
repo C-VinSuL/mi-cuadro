@@ -59,7 +59,7 @@ const TreasuryQueuePanel = () => {
       </header>
       {error && <p className="border-l-4 border-amber-500 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="alert">{error}</p>}
       <div className="grid gap-4 md:grid-cols-2">
-        <Link to="/aportes?estado=pendiente" className="group flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 motion-reduce:transform-none motion-reduce:transition-none">
+        <Link to="/aportes?estado=pendiente" className="action-card fade-in-up group flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 motion-reduce:transform-none motion-reduce:transition-none">
           <div className="flex items-center gap-3">
             <span className="flex size-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700"><Clock3 size={21} /></span>
             <div>
@@ -69,7 +69,7 @@ const TreasuryQueuePanel = () => {
           </div>
           <span className="flex items-center gap-2 text-xl font-bold text-slate-900">{summary.receipts}<ArrowRight size={17} className="text-slate-400 transition group-hover:translate-x-1" /></span>
         </Link>
-        <Link to="/admin/billetera" className="group flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 motion-reduce:transform-none motion-reduce:transition-none">
+        <Link to="/admin/billetera" className="action-card fade-in-up group flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 motion-reduce:transform-none motion-reduce:transition-none">
           <div className="flex items-center gap-3">
             <span className="flex size-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><Wallet size={21} /></span>
             <div>

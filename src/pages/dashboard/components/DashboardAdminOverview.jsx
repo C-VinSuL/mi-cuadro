@@ -61,7 +61,7 @@ const ActivityChart = ({ data }) => {
   }));
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="dashboard-activity-title">
+    <section className="dashboard-card fade-in-up rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="dashboard-activity-title">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-emerald-800">
@@ -151,7 +151,7 @@ const LoanStatusChart = ({ loans }) => {
   const total = loans.length;
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="loan-status-title">
+    <section className="dashboard-card fade-in-up rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" aria-labelledby="loan-status-title">
       <div className="flex items-center gap-2 text-emerald-800">
         <HandCoins size={18} />
         <h3 id="loan-status-title" className="font-semibold text-slate-900">Estado de préstamos</h3>

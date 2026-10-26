@@ -81,7 +81,7 @@ const WalletBalanceCard = ({ userId }) => {
   }, [userId]);
 
   return (
-    <section className="flex flex-col gap-4 rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+    <section className="card fade-in-up flex flex-col gap-4 rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-4">
         <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">
           <CircleDollarSign size={24} />
@@ -306,7 +306,7 @@ const DashboardSocio = () => {
           description="Tu espacio para consultar la actividad y el estado de tus grupos."
         />
         <WalletBalanceCard userId={user?.id} />
-        <section className="rounded-2xl border border-slate-200 bg-white p-6">
+        <section className="dashboard-card fade-in-up rounded-2xl border border-slate-200 bg-white p-6">
           <h2 className="text-xl font-bold text-slate-900">
             No perteneces a ningún cuadro
           </h2>

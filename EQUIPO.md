@@ -29,6 +29,11 @@
   y medianas, y conserva la tabla desplazable en pantallas grandes.
 - Se añadieron transiciones discretas en interacciones seleccionadas, respetando
   la preferencia de movimiento reducido del dispositivo.
+- Se unificaron las tarjetas del dashboard con bordes de 12 px, sombras sutiles
+  y elevación al pasar el cursor, además de una animación CSS de entrada y una
+  respuesta de escala para botones. Las animaciones se desactivan cuando el
+  dispositivo solicita movimiento reducido; no se añadió JavaScript ni
+  dependencias para estos efectos.
 
 ### Registro de nuevos usuarios
 
@@ -62,6 +67,8 @@
 
 - La compilación de producción pasó después de los cambios de interfaz y
   notificaciones.
+- La compilación de producción y ESLint focalizado pasaron para los nuevos
+  estilos CSS y los componentes de dashboard modificados.
 - ESLint pasó para los módulos modificados que se revisaron de forma focalizada.
 - La migración `202610240001_treasury_review_timestamps.sql` agrega el registro
   de fecha de envío del comprobante.
