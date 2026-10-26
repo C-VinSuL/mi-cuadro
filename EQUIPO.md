@@ -34,9 +34,16 @@
   respuesta de escala para botones. Las animaciones se desactivan cuando el
   dispositivo solicita movimiento reducido; no se añadió JavaScript ni
   dependencias para estos efectos.
-- Se añadieron transiciones de entrada y salida al navegar entre páginas, junto
-  con elevación sutil en el botón reutilizable. Se conserva `motion`, ya
-  existente en el proyecto, y se respeta la preferencia de movimiento reducido.
+- Se añadieron transiciones de entrada y salida entre páginas con `AnimatePresence`
+  de `motion`, que ya forma parte del proyecto; no se instaló otra librería.
+- El botón reutilizable incorpora una elevación discreta al pasar el cursor y
+  vuelve a su posición al pulsarlo. Los botones también tienen respuesta CSS de
+  escala al hacer clic.
+- Las animaciones de tarjetas y navegación usan transformaciones y opacidad para
+  limitar el trabajo de renderizado. Se respeta `prefers-reduced-motion` para
+  desactivar o reducir el movimiento según la preferencia del dispositivo.
+- Los diálogos existentes conservan sus transiciones CSS de entrada. Los efectos
+  visuales descritos no requieren JavaScript adicional ni dependencias nuevas.
 
 ### Registro de nuevos usuarios
 
@@ -72,6 +79,11 @@
   notificaciones.
 - La compilación de producción y ESLint focalizado pasaron para los nuevos
   estilos CSS y los componentes de dashboard modificados.
+- La compilación de producción, ESLint focalizado para los componentes de
+  navegación y botones, y las 15 pruebas automatizadas pasaron tras incorporar
+  las transiciones entre páginas.
+- Vite conserva una advertencia preexistente sobre el tamaño de algunos bloques
+  JavaScript; la compilación finalizó correctamente.
 - ESLint pasó para los módulos modificados que se revisaron de forma focalizada.
 - La migración `202610240001_treasury_review_timestamps.sql` agrega el registro
   de fecha de envío del comprobante.
