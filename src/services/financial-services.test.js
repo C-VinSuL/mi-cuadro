@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import process from "node:process";
 import { test } from "node:test";
 
 process.env.VITE_SUPABASE_URL = "https://example.supabase.co";
@@ -20,9 +21,17 @@ const {
   listarEgresosRecientes,
   obtenerTotalEgresos,
 } = await import("./egresosService.js");
+const {
+  amountCentsToDecimal,
+  formatCurrencyDecimal,
+  parseAmountToCents,
+  sumAmountsToCents,
+} = await import("../utils/money.js");
 
 const rpcCalls = [];
 const fromCalls = [];
+const expenseInsertPayloads = [];
+const testGroupId = "11111111-1111-4111-8111-111111111111";
 
 supabase.rpc = async (name, params = {}) => {
   rpcCalls.push([name, params]);
@@ -83,21 +92,24 @@ supabase.from = (table) => {
   if (table === "grupos") {
     return {
       select: () => createQueryBuilder([
-        { id: "grupo-1", nombre: "Grupo prueba" },
+        { id: testGroupId, nombre: "Grupo prueba" },
       ]),
     };
   }
 
   return {
-    insert: () => ({
-      select: () => ({
-        single: async () => ({ data: { id: "egreso-1" }, error: null }),
-      }),
-    }),
+    insert: (payload) => {
+      expenseInsertPayloads.push(payload);
+      return {
+        select: () => ({
+          single: async () => ({ data: { id: "egreso-1" }, error: null }),
+        }),
+      };
+    },
     select: () => createQueryBuilder([
       {
         id: "egreso-1",
-        grupo_id: "grupo-1",
+        grupo_id: testGroupId,
         concepto: "Pago de servicios",
         categoria: "Operativo",
         monto: 1250,
@@ -141,21 +153,29 @@ test("wallet service exposes authenticated wallet reads and writes through RPC",
 });
 
 test("expense service inserts records and totals treasury spend with role-guarded access", async () => {
+  const grupoId = testGroupId;
   const inserted = await registrarEgreso({
-    grupoId: "grupo-1",
+    grupoId,
     concepto: "Pago de servicios",
     categoria: "Operativo",
-    monto: 1250,
+    monto: "1250.00",
     fecha: "2026-10-20",
   });
 
-  const lastExpenses = await listarEgresosRecientes(["grupo-1"]);
+  const lastExpenses = await listarEgresosRecientes([grupoId]);
   const total = await obtenerTotalEgresos();
 
   assert.deepEqual(inserted, { id: "egreso-1" });
+  assert.deepEqual(expenseInsertPayloads[0], {
+    grupo_id: grupoId,
+    concepto: "Pago de servicios",
+    categoria: "Operativo",
+    monto: "1250.00",
+    fecha: "2026-10-20",
+  });
   assert.deepEqual(lastExpenses, [{
     id: "egreso-1",
-    grupo_id: "grupo-1",
+    grupo_id: grupoId,
     concepto: "Pago de servicios",
     categoria: "Operativo",
     monto: 1250,
@@ -163,6 +183,39 @@ test("expense service inserts records and totals treasury spend with role-guarde
     created_at: "2026-10-20T12:00:00Z",
     grupo: "Grupo prueba",
   }]);
-  assert.equal(total, 4100);
+  assert.equal(total, "4100");
   assert.equal(fromCalls.length > 0, true);
+
+  const insertCount = expenseInsertPayloads.length;
+  await assert.rejects(registrarEgreso({
+    grupoId: "grupo-1",
+    concepto: "Gasto",
+    categoria: "Otros",
+    monto: "10.00",
+    fecha: "2026-10-20",
+  }), /identificador del grupo no es válido/);
+  await assert.rejects(registrarEgreso({
+    grupoId,
+    concepto: "Gasto",
+    categoria: "Otros",
+    monto: "10.005",
+    fecha: "2026-10-20",
+  }), /monto debe ser positivo/);
+  assert.equal(expenseInsertPayloads.length, insertCount);
+});
+
+test("money helpers validate two-decimal amounts and preserve cents exactly", () => {
+  assert.equal(parseAmountToCents("0.01"), 1);
+  assert.equal(parseAmountToCents("1250.4"), 125040);
+  assert.equal(parseAmountToCents("9999999999.99"), 999999999999);
+  assert.equal(parseAmountToCents("0"), null);
+  assert.equal(parseAmountToCents("1.005"), null);
+  assert.equal(parseAmountToCents("1e3"), null);
+  assert.equal(parseAmountToCents("10000000000.00"), null);
+  assert.equal(amountCentsToDecimal(125040), "1250.40");
+  assert.equal(sumAmountsToCents(["0.10", "0.20", "1250.40"]), 125070);
+  assert.equal(
+    formatCurrencyDecimal("123456789012345.67", new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" })),
+    "$123,456,789,012,345.67",
+  );
 });

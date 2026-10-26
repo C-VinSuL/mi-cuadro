@@ -7,6 +7,26 @@
 
 ## Cambios implementados
 
+### Actualización reciente: tesorería, fondos y egresos
+
+- Se modernizaron las tarjetas de resumen y el formulario de egresos con una
+  jerarquía visual más clara, gradientes sutiles, estados de foco, animación
+  escalonada y búsqueda instantánea.
+- Se añadieron validaciones del lado del cliente y del servicio para el UUID del
+  grupo, la categoría, el concepto, la fecha y los montos con hasta dos
+  decimales.
+- Los montos se convierten a centavos enteros para validar y sumar; se envían a
+  la base como decimales de dos posiciones. Los totales del servidor se
+  conservan como decimales para mostrarlos sin convertirlos a punto flotante.
+- Se mantienen las protecciones del servidor: RLS exige MFA y limita la lectura
+  y creación de egresos a administración o tesorería; PostgreSQL valida grupo,
+  concepto, categoría y monto positivo `numeric(12,2)`.
+- Se realizó una revisión de seguridad acotada de los componentes y servicios
+  financieros: no se identificaron vulnerabilidades explotables de alta
+  confianza. Esto no reemplaza verificar permisos y despliegues en Supabase.
+- Se ejecutaron las 16 pruebas automatizadas, la compilación de producción y
+  ESLint focalizado; todos pasaron después de los cambios financieros.
+
 ### Tesorería y control financiero
 
 - Se mejoró el tablero para priorizar grupos con comprobantes por revisar y
@@ -100,6 +120,12 @@
   las transiciones entre páginas.
 - La compilación de producción y ESLint focalizado pasaron para el rediseño de
   **Control de aportes** y su nueva búsqueda en tiempo real.
+- La compilación, ESLint focalizado y las pruebas de servicios financieros
+  pasaron tras los cambios de egresos; se verifican UUID y precisión de montos
+  con dos decimales antes de enviar la operación.
+- Las 16 pruebas automatizadas, la compilación de producción y ESLint focalizado
+  pasaron tras añadir la conversión exacta a centavos y el formato de importes
+  decimales del servidor.
 - La compilación, ESLint focalizado para el acceso y recuperación de contraseña
   y las 15 pruebas automatizadas pasaron tras los ajustes móviles del flujo de
   autenticación.

@@ -10,6 +10,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../hooks/useNotifications";
 import { etiquetaPeriodo, listarParticipantesGrupoAdmin, registrarAporteMiembro } from "../../services/grupoService";
 import { logOperationalError } from "../../utils/logOperationalError";
+import { amountCentsToDecimal, formatCurrencyDecimal, sumAmountsToCents } from "../../utils/money";
 
 const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
 const fieldClassName = "w-full rounded-xl border border-slate-200 bg-white/90 px-3.5 py-2.5 text-sm text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 hover:border-emerald-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 disabled:cursor-not-allowed disabled:bg-slate-100 motion-reduce:transition-none";
@@ -246,7 +247,8 @@ const AportesAdmin = () => {
   )].sort((a, b) => b - a), [aportes, grupoFiltro]);
 
   const pagados = aportesFiltrados.filter((aporte) => estadoAporte(aporte) === "pagado");
-  const totalPagado = pagados.reduce((total, aporte) => total + Number(aporte.monto || 0), 0);
+  const totalPagadoCents = sumAmountsToCents(pagados.map((aporte) => aporte.monto));
+  const totalPagado = formatCurrencyDecimal(amountCentsToDecimal(totalPagadoCents), currency);
   const pendientesRevision = aportes.filter((aporte) => estadoAporte(aporte) === "pendiente" && aporte.estado_revision === "pendiente");
 
   const abrirComprobante = async (aporte) => {
@@ -324,7 +326,7 @@ const AportesAdmin = () => {
 
       <StaggerList className="grid gap-4 sm:grid-cols-3" aria-label="Resumen de aportes">
         <Metric tone="blue" icon={<Users size={19} />} label="Registros filtrados" value={aportesFiltrados.length} caption="Coinciden con la búsqueda y filtros" />
-        <Metric tone="emerald" icon={<CircleDollarSign size={19} />} label="Total aprobado" value={currency.format(totalPagado)} caption="Aportes aprobados en los resultados" />
+        <Metric tone="emerald" icon={<CircleDollarSign size={19} />} label="Total aprobado" value={totalPagado} caption="Aportes aprobados en los resultados" />
         <Metric tone="amber" icon={<Wallet size={19} />} label="Pendientes de revisión" value={pendientesRevision.length} caption="Pendientes en todos los grupos" />
       </StaggerList>
 

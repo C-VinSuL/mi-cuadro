@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { TrendingDown, Wallet } from "lucide-react";
+import { Check, Search, TrendingDown, Wallet } from "lucide-react";
+import StaggerList from "../../components/motion/StaggerList";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../hooks/useNotifications";
 import {
@@ -8,6 +9,7 @@ import {
   registrarEgreso
 } from "../../services/egresosService";
 import { logOperationalError } from "../../utils/logOperationalError";
+import { formatCurrencyDecimal, parseAmountToCents } from "../../utils/money";
 
 const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
 const categories = ["Suministros", "Eventos", "Servicios", "Transporte", "Otros"];
@@ -22,6 +24,7 @@ const Egresos = () => {
   const [form, setForm] = useState(emptyForm);
   const [egresos, setEgresos] = useState([]);
   const [categoriaFiltro, setCategoriaFiltro] = useState("todas");
+  const [busqueda, setBusqueda] = useState("");
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -68,9 +71,23 @@ const Egresos = () => {
     return () => window.clearTimeout(timeoutId);
   }, [cargarEgresos]);
 
-  const egresosFiltrados = useMemo(() => egresos.filter((egreso) => (
-    categoriaFiltro === "todas" || egreso.categoria === categoriaFiltro
-  )), [egresos, categoriaFiltro]);
+  const egresosFiltrados = useMemo(() => {
+    const query = busqueda.trim().toLocaleLowerCase("es");
+
+    return egresos.filter((egreso) => {
+      const matchesCategory = categoriaFiltro === "todas" || egreso.categoria === categoriaFiltro;
+      const matchesQuery = !query || [
+        egreso.grupo,
+        egreso.concepto,
+        egreso.categoria,
+        egreso.fecha,
+        new Date(`${egreso.fecha}T00:00:00`).toLocaleDateString("es-EC"),
+        formatCurrencyDecimal(egreso.monto, currency)
+      ].some((value) => String(value ?? "").toLocaleLowerCase("es").includes(query));
+
+      return matchesCategory && matchesQuery;
+    });
+  }, [egresos, categoriaFiltro, busqueda]);
 
   const cambiarCampo = (event) => {
     const { name, value } = event.target;
@@ -82,10 +99,15 @@ const Egresos = () => {
     if (saving) return;
 
     const concepto = form.concepto.trim();
-    const amount = Number(form.monto);
-    if (!grupoInicialId || !concepto || !form.categoria || !form.fecha
-      || !Number.isFinite(amount) || amount <= 0) {
-      setError("Completa todos los campos con un monto mayor que cero.");
+    const amountInCents = parseAmountToCents(form.monto);
+    const validGroup = grupos.some((grupo) => grupo.id === grupoInicialId);
+    const validCategory = categories.includes(form.categoria);
+    const validDate = /^\d{4}-\d{2}-\d{2}$/.test(form.fecha)
+      && !Number.isNaN(Date.parse(`${form.fecha}T00:00:00.000Z`))
+      && new Date(`${form.fecha}T00:00:00.000Z`).toISOString().slice(0, 10) === form.fecha;
+    if (!validGroup || !concepto || concepto.length > 500 || !validCategory || !validDate
+      || amountInCents === null) {
+      setError("Revisa el grupo, la categoría, la fecha y el monto (mayor que cero y hasta dos decimales).");
       return;
     }
 
@@ -96,13 +118,13 @@ const Egresos = () => {
         grupoId: grupoInicialId,
         concepto,
         categoria: form.categoria,
-        monto: amount,
+        monto: form.monto,
         fecha: form.fecha
       });
       setForm({ ...emptyForm, grupoId: grupoInicialId });
       notify({
         title: "Gasto registrado",
-        message: `${currency.format(amount)} se guardó correctamente.`,
+        message: `${formatCurrencyDecimal(form.monto, currency)} se guardó correctamente.`,
         type: "success"
       });
       await cargarEgresos();
@@ -124,48 +146,55 @@ const Egresos = () => {
 
       {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
 
-      <section className="grid gap-5 sm:grid-cols-2" aria-label="Resumen de gastos">
-        <Metric icon={<Wallet size={20} />} label="Total de gastos acumulado" value={currency.format(total)} />
-        <Metric icon={<TrendingDown size={20} />} label="Gastos recientes" value={egresos.length} />
-      </section>
+      <StaggerList className="grid gap-5 sm:grid-cols-2" aria-label="Resumen de gastos">
+        <Metric tone="emerald" icon={<Wallet size={20} />} label="Total de gastos acumulado" value={formatCurrencyDecimal(total, currency)} />
+        <Metric tone="blue" icon={<TrendingDown size={20} />} label="Gastos recientes" value={egresos.length} />
+      </StaggerList>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-        <h2 className="text-lg font-semibold text-slate-900">Registrar un gasto</h2>
-        <p className="mt-1 text-sm text-slate-600">El registro quedará asociado al grupo elegido.</p>
+      <section className="overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-xl shadow-emerald-950/5">
+        <header className="flex items-center gap-3 border-b border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-teal-50 px-5 py-5 sm:px-6">
+          <span className="flex size-11 items-center justify-center rounded-2xl bg-emerald-700 text-white shadow-lg shadow-emerald-900/15"><TrendingDown size={20} /></span>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Registrar un gasto</h2>
+            <p className="mt-1 text-sm text-slate-600">El registro quedará asociado al grupo elegido.</p>
+          </div>
+        </header>
         {grupos.length === 0 ? (
-          <p className="mt-5 rounded-lg bg-amber-50 p-4 text-sm text-amber-900" role="status">No hay grupos disponibles para registrar gastos.</p>
+          <p className="m-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:m-6" role="status">No hay grupos disponibles para registrar gastos.</p>
         ) : (
-          <form onSubmit={enviarEgreso} className="mt-5 grid gap-4 sm:grid-cols-2">
+          <form onSubmit={enviarEgreso} className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
             <label className="text-sm font-medium text-slate-700">
               Grupo
-              <select name="grupoId" value={grupoInicialId} onChange={cambiarCampo} required className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-100">
+              <select name="grupoId" value={grupoInicialId} onChange={cambiarCampo} required className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 font-normal shadow-sm outline-none transition hover:border-emerald-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 motion-reduce:transition-none">
                 {grupos.map((grupo) => <option key={grupo.id} value={grupo.id}>{grupo.nombre}</option>)}
               </select>
             </label>
             <label className="text-sm font-medium text-slate-700">
               Categoría
-              <select name="categoria" value={form.categoria} onChange={cambiarCampo} required className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-100">
+              <select name="categoria" value={form.categoria} onChange={cambiarCampo} required className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 font-normal shadow-sm outline-none transition hover:border-emerald-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 motion-reduce:transition-none">
                 <option value="">Selecciona una categoría</option>
                 {categories.map((category) => <option key={category} value={category}>{category}</option>)}
               </select>
             </label>
             <label className="text-sm font-medium text-slate-700 sm:col-span-2">
               Concepto / Descripción
-              <textarea name="concepto" value={form.concepto} onChange={cambiarCampo} maxLength={500} rows={3} required className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-100" placeholder="Describe el gasto" />
+              <textarea name="concepto" value={form.concepto} onChange={cambiarCampo} maxLength={500} rows={3} required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 font-normal shadow-sm outline-none transition hover:border-emerald-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 motion-reduce:transition-none" placeholder="Describe el gasto" />
             </label>
             <label className="text-sm font-medium text-slate-700">
               Monto (USD)
-              <input name="monto" type="number" min="0.01" step="0.01" value={form.monto} onChange={cambiarCampo} required className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-100" placeholder="0.00" />
+              <input name="monto" type="number" min="0.01" max="9999999999.99" step="0.01" value={form.monto} onChange={cambiarCampo} required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 font-normal shadow-sm outline-none transition hover:border-emerald-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 motion-reduce:transition-none" placeholder="0.00" />
             </label>
             <label className="text-sm font-medium text-slate-700">
               Fecha
-              <input name="fecha" type="date" value={form.fecha} onChange={cambiarCampo} required className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal focus:border-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-100" />
+              <input name="fecha" type="date" value={form.fecha} onChange={cambiarCampo} required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 font-normal shadow-sm outline-none transition hover:border-emerald-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 motion-reduce:transition-none" />
             </label>
             <div className="sm:col-span-2">
-              <button type="submit" disabled={saving} className="rounded-lg bg-emerald-800 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="submit" disabled={saving} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 to-teal-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/15 transition hover:-translate-y-0.5 hover:from-emerald-800 hover:to-teal-700 hover:shadow-xl disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-400 disabled:shadow-none motion-reduce:transform-none motion-reduce:transition-none">
+                {!saving && <Check size={17} />}
                 {saving ? "Guardando..." : "Guardar gasto"}
               </button>
             </div>
+            {error && <p className="sm:col-span-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
           </form>
         )}
       </section>
@@ -176,10 +205,17 @@ const Egresos = () => {
             <h2 className="font-semibold text-slate-900">Gastos recientes</h2>
             <p className="mt-1 text-sm text-slate-500">Últimos 100 gastos registrados.</p>
           </div>
-          <select value={categoriaFiltro} onChange={(event) => setCategoriaFiltro(event.target.value)} aria-label="Filtrar egresos por categoría" className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
-            <option value="todas">Todas las categorías</option>
-            {categoriasFiltro.map((category) => <option key={category} value={category}>{category}</option>)}
-          </select>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <label className="relative">
+              <span className="sr-only">Buscar egresos</span>
+              <Search size={16} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input value={busqueda} onChange={(event) => setBusqueda(event.target.value)} type="search" aria-label="Buscar gastos" placeholder="Buscar gasto..." className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 sm:w-52 motion-reduce:transition-none" />
+            </label>
+            <select value={categoriaFiltro} onChange={(event) => setCategoriaFiltro(event.target.value)} aria-label="Filtrar egresos por categoría" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 motion-reduce:transition-none">
+              <option value="todas">Todas las categorías</option>
+              {categoriasFiltro.map((category) => <option key={category} value={category}>{category}</option>)}
+            </select>
+          </div>
         </div>
         {loading ? (
           <p className="px-5 py-8 text-sm text-slate-500" role="status">Cargando egresos...</p>
@@ -206,7 +242,7 @@ const Egresos = () => {
                     <td className="px-5 py-3 text-slate-700">{egreso.grupo}</td>
                     <td className="max-w-xs px-5 py-3 text-slate-700">{egreso.concepto}</td>
                     <td className="px-5 py-3 text-slate-700">{egreso.categoria}</td>
-                    <td className="whitespace-nowrap px-5 py-3 text-right font-semibold text-slate-900">{currency.format(egreso.monto)}</td>
+                    <td className="whitespace-nowrap px-5 py-3 text-right font-semibold text-slate-900">{formatCurrencyDecimal(egreso.monto, currency)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -218,14 +254,20 @@ const Egresos = () => {
   );
 };
 
-const Metric = ({ icon, label, value }) => (
-  <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-800">{icon}</span>
+const Metric = ({ tone, icon, label, value }) => {
+  const styles = tone === "emerald"
+    ? "border-emerald-100 from-white to-emerald-50 text-emerald-700"
+    : "border-blue-100 from-white to-blue-50 text-blue-700";
+
+  return (
+  <article className={`dashboard-card flex items-center gap-4 rounded-2xl border bg-gradient-to-br p-5 shadow-lg shadow-slate-900/5 sm:p-6 ${styles}`}>
+    <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-current/10">{icon}</span>
     <div>
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-slate-900">{value}</p>
+      <p className="text-sm font-semibold text-slate-600">{label}</p>
+      <p className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900">{value}</p>
     </div>
-  </div>
-);
+  </article>
+  );
+};
 
 export default Egresos;
