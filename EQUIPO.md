@@ -55,10 +55,12 @@
 - La pantalla **Socios y roles** presenta fichas legibles en pantallas pequeñas
   y medianas, y conserva la tabla desplazable en pantallas grandes.
 - El logotipo local del encabezado incorpora una flotación vertical de baja
-  amplitud y una inclinación sutil al pasar el cursor en dispositivos que lo
-  permiten. Mantiene texto alternativo descriptivo y desactiva el movimiento
-  cuando el usuario prefiere movimiento reducido; no usa URLs externas, SVG
-  inline ni contenido de usuario para construir atributos o estilos.
+  amplitud y un balanceo muy leve en un bucle automático, sin depender del
+  cursor. Usa una animación CSS estática sobre `transform`, conserva el texto
+  alternativo descriptivo y desactiva el movimiento cuando el usuario prefiere
+  movimiento reducido. La imagen permanece en una ruta local fija; no se usan
+  URLs externas, SVG inline ni estilos construidos a partir de entradas de
+  usuario.
 - Se añadieron transiciones discretas en interacciones seleccionadas, respetando
   la preferencia de movimiento reducido del dispositivo.
 - Se unificaron las tarjetas del dashboard con bordes de 12 px, sombras sutiles
