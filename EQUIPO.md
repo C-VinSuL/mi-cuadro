@@ -11,6 +11,13 @@
 
 - Se mejoró el tablero para priorizar grupos con comprobantes por revisar y
   acceder directamente a las colas de aportes y solicitudes de billetera.
+- Se rediseñó **Control de aportes** con tarjetas KPI en tonos azul, esmeralda y
+  ámbar, búsqueda inmediata por socio, grupo, periodo, estado, monto y fecha, y
+  filtros con estados de foco visibles.
+- El formulario de registro de aportes ahora presenta una jerarquía visual más
+  clara, campos con foco accesible y un botón de acción con estados de envío.
+- Las tarjetas aparecen escalonadas y sus valores se animan al actualizarse
+  usando `motion`, que ya está instalado; no se añadieron dependencias.
 - Se incorporaron filtros de aportes por grupo, periodo, estado y antigüedad.
 - Se solicita el motivo al rechazar un comprobante de aporte o una solicitud de
   billetera, y el socio puede consultar ese motivo en su historial.
@@ -82,6 +89,8 @@
 - La compilación de producción, ESLint focalizado para los componentes de
   navegación y botones, y las 15 pruebas automatizadas pasaron tras incorporar
   las transiciones entre páginas.
+- La compilación de producción y ESLint focalizado pasaron para el rediseño de
+  **Control de aportes** y su nueva búsqueda en tiempo real.
 - Vite conserva una advertencia preexistente sobre el tamaño de algunos bloques
   JavaScript; la compilación finalizó correctamente.
 - ESLint pasó para los módulos modificados que se revisaron de forma focalizada.

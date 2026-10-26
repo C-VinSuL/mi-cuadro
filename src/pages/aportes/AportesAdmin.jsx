@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, CircleDollarSign, ExternalLink, RefreshCw, Users, Wallet, X } from "lucide-react";
+import { Check, CircleDollarSign, ExternalLink, RefreshCw, Search, Users, Wallet, X } from "lucide-react";
+import { motion } from "motion/react";
 import { useSearchParams } from "react-router-dom";
+import StaggerList from "../../components/motion/StaggerList";
 import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import { createUniqueId } from "../../utils/uniqueId";
 import { supabase } from "../../services/supabase";
@@ -10,6 +12,7 @@ import { etiquetaPeriodo, listarParticipantesGrupoAdmin, registrarAporteMiembro 
 import { logOperationalError } from "../../utils/logOperationalError";
 
 const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
+const fieldClassName = "w-full rounded-xl border border-slate-200 bg-white/90 px-3.5 py-2.5 text-sm text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 hover:border-emerald-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 disabled:cursor-not-allowed disabled:bg-slate-100 motion-reduce:transition-none";
 
 const estadoAporte = (aporte) => {
   if (aporte.estado_revision === "pendiente") return "pendiente";
@@ -25,6 +28,7 @@ const AportesAdmin = () => {
   const [aportes, setAportes] = useState([]);
   const [grupoFiltro, setGrupoFiltro] = useState("todos");
   const [estadoFiltro, setEstadoFiltro] = useState(() => searchParams.get("estado") || "todos");
+  const [busquedaTexto, setBusquedaTexto] = useState("");
   const [grupoRegistroId, setGrupoRegistroId] = useState("");
   const [participantes, setParticipantes] = useState([]);
   const [participanteId, setParticipanteId] = useState("");
@@ -203,17 +207,36 @@ const AportesAdmin = () => {
     };
   }, [cargarAportes, grupos, profile?.id]);
 
-  const aportesFiltrados = useMemo(() => aportes.filter((aporte) => (
-    (grupoFiltro === "todos" || aporte.grupo_id === grupoFiltro)
-    && (estadoFiltro === "todos" || estadoAporte(aporte) === estadoFiltro)
-    && (periodoFiltro === "todos" || String(aporte.semana) === periodoFiltro)
-    && (antiguedadFiltro === "todos" || (() => {
+  const aportesFiltrados = useMemo(() => {
+    const query = busquedaTexto.trim().toLocaleLowerCase("es");
+
+    return aportes.filter((aporte) => {
+      const estado = estadoAporte(aporte);
       const fechaRegistro = aporte.comprobante_en || aporte.fecha_pago;
-      return estadoAporte(aporte) === "pendiente"
-        && Boolean(fechaRegistro)
-        && Date.now() - new Date(fechaRegistro).getTime() >= Number(antiguedadFiltro);
-    })())
-  )), [aportes, grupoFiltro, estadoFiltro, periodoFiltro, antiguedadFiltro]);
+      const coincideBusqueda = !query || [
+        aporte.socio,
+        aporte.grupo,
+        aporte.semana,
+        aporte.monto,
+        currency.format(Number(aporte.monto || 0)),
+        estado,
+        estado === "pendiente" && aporte.estado_revision === "pendiente" ? "en revisión" : "",
+        fechaRegistro ? new Date(fechaRegistro).toLocaleDateString("es-EC") : ""
+      ].some((valor) => String(valor ?? "").toLocaleLowerCase("es").includes(query));
+
+      return (
+        (grupoFiltro === "todos" || aporte.grupo_id === grupoFiltro)
+        && (estadoFiltro === "todos" || estado === estadoFiltro)
+        && (periodoFiltro === "todos" || String(aporte.semana) === periodoFiltro)
+        && (antiguedadFiltro === "todos" || (() => (
+          estado === "pendiente"
+          && Boolean(fechaRegistro)
+          && Date.now() - new Date(fechaRegistro).getTime() >= Number(antiguedadFiltro)
+        ))())
+        && coincideBusqueda
+      );
+    });
+  }, [aportes, grupoFiltro, estadoFiltro, periodoFiltro, antiguedadFiltro, busquedaTexto]);
 
   const periodosDisponibles = useMemo(() => [...new Set(
     aportes
@@ -292,45 +315,40 @@ const AportesAdmin = () => {
               setLoading(false);
             })}
             disabled={loading}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none motion-reduce:transition-none"
           >
-            <RefreshCw size={16} /> Actualizar
+            <RefreshCw size={16} className={loading ? "animate-spin motion-reduce:animate-none" : ""} /> Actualizar
           </button>
-          <select value={grupoFiltro} onChange={(event) => setGrupoFiltro(event.target.value)} aria-label="Filtrar aportes por grupo" className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
-            <option value="todos">Todos los grupos</option>
-            {grupos.map((grupo) => <option key={grupo.id} value={grupo.id}>{grupo.nombre}</option>)}
-          </select>
-          <select value={estadoFiltro} onChange={(event) => setEstadoFiltro(event.target.value)} aria-label="Filtrar aportes por estado" className="rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800">
-            <option value="todos">Todos los estados</option>
-            <option value="pendiente">Pendientes de revisión</option>
-            <option value="pagado">Aprobados</option>
-            <option value="rechazado">Rechazados</option>
-          </select>
         </div>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-3" aria-label="Resumen de aportes">
-        <Metric icon={<Users size={19} />} label="Registros filtrados" value={aportesFiltrados.length} />
-        <Metric icon={<CircleDollarSign size={19} />} label="Total aprobado" value={currency.format(totalPagado)} />
-        <Metric icon={<Wallet size={19} />} label="Pendientes de revisión" value={pendientesRevision.length} />
-      </section>
+      <StaggerList className="grid gap-4 sm:grid-cols-3" aria-label="Resumen de aportes">
+        <Metric tone="blue" icon={<Users size={19} />} label="Registros filtrados" value={aportesFiltrados.length} caption="Coinciden con la búsqueda y filtros" />
+        <Metric tone="emerald" icon={<CircleDollarSign size={19} />} label="Total aprobado" value={currency.format(totalPagado)} caption="Aportes aprobados en los resultados" />
+        <Metric tone="amber" icon={<Wallet size={19} />} label="Pendientes de revisión" value={pendientesRevision.length} caption="Pendientes en todos los grupos" />
+      </StaggerList>
 
       {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
       {mensaje && <p className="border-l-4 border-emerald-600 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="status">{mensaje}</p>}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
-        <div className="mb-5">
-          <h2 className="text-lg font-semibold text-slate-900">Registrar aporte de un miembro</h2>
-          <p className="mt-1 text-sm text-slate-600">Al guardar, el aporte se registra para el periodo actual del grupo.</p>
+      <section className="fade-in-up overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-xl shadow-emerald-950/5">
+        <div className="flex flex-wrap items-center gap-3 border-b border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-teal-50 px-5 py-5 sm:px-6">
+          <span className="flex size-11 items-center justify-center rounded-2xl bg-emerald-700 text-white shadow-lg shadow-emerald-900/15">
+            <CircleDollarSign size={21} />
+          </span>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Registrar aporte de un miembro</h2>
+            <p className="mt-1 text-sm text-slate-600">Al guardar, el aporte se registra para el periodo actual del grupo.</p>
+          </div>
         </div>
-        <form onSubmit={registrarAporte} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <form onSubmit={registrarAporte} className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6 lg:grid-cols-4">
           <label className="text-sm font-medium text-slate-700">
             Grupo
             <select
               value={grupoRegistroIdActual}
               onChange={(event) => setGrupoRegistroId(event.target.value)}
               required
-              className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal"
+              className={`${fieldClassName} mt-1.5 font-normal`}
             >
               <option value="" disabled>Selecciona un grupo</option>
               {grupos.map((grupo) => (
@@ -345,7 +363,7 @@ const AportesAdmin = () => {
               onChange={(event) => setParticipanteId(event.target.value)}
               required
               disabled={!grupoActivo || cargandoParticipantes}
-              className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 font-normal disabled:bg-slate-100"
+              className={`${fieldClassName} mt-1.5 font-normal`}
             >
               <option value="">{cargandoParticipantes ? "Cargando miembros..." : "Selecciona un miembro"}</option>
               {participantes.map((participante) => (
@@ -363,23 +381,25 @@ const AportesAdmin = () => {
               onChange={(event) => setMonto(event.target.value)}
               required
               disabled={!grupoActivo}
-              className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5 font-normal disabled:bg-slate-100"
+              className={`${fieldClassName} mt-1.5 font-normal`}
             />
           </label>
           <div className="flex items-end">
             <button
               type="submit"
               disabled={!grupoActivo || !participanteId || registrando}
-              className="w-full rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 via-emerald-600 to-teal-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-900/20 transition hover:-translate-y-0.5 hover:from-emerald-800 hover:via-emerald-700 hover:to-teal-700 hover:shadow-xl active:translate-y-0 disabled:cursor-not-allowed disabled:from-slate-300 disabled:via-slate-300 disabled:to-slate-400 disabled:shadow-none motion-reduce:transform-none motion-reduce:transition-none"
             >
-              {registrando ? "Guardando..." : "Registrar aporte"}
+              {registrando
+                ? <><RefreshCw size={17} className="animate-spin motion-reduce:animate-none" /> Guardando...</>
+                : <><Check size={17} /> Registrar aporte</>}
             </button>
           </div>
         </form>
         {!grupoActivo && grupoRegistro && (
-          <p className="mt-4 text-sm text-amber-800" role="status">El grupo debe estar activo para registrar aportes.</p>
+          <p className="mx-5 mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 sm:mx-6 sm:mb-6" role="status">El grupo debe estar activo para registrar aportes.</p>
         )}
-        {registroError && <p className="mt-4 text-sm text-red-700" role="alert">{registroError}</p>}
+        {registroError && <p className="mx-5 mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 sm:mx-6 sm:mb-6" role="alert">{registroError}</p>}
       </section>
 
       <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -402,25 +422,37 @@ const AportesAdmin = () => {
                   : estadoTiempoRealVisible === "inactivo" ? "Sin grupos para supervisar" : "Conectando en tiempo real..."}
             </span>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_repeat(4,minmax(150px,auto))]">
+            <label className="relative block">
+              <span className="sr-only">Buscar aportes</span>
+              <Search size={17} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={busquedaTexto}
+                onChange={(event) => setBusquedaTexto(event.target.value)}
+                aria-label="Buscar por miembro, grupo, periodo o estado"
+                placeholder="Buscar miembro o aporte..."
+                className={`${fieldClassName} pl-10`}
+              />
+            </label>
             <select value={grupoFiltro} onChange={(event) => {
               setGrupoFiltro(event.target.value);
               setPeriodoFiltro("todos");
-            }} aria-label="Filtrar aportes por grupo" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+            }} aria-label="Filtrar aportes por grupo" className={fieldClassName}>
               <option value="todos">Todos los grupos</option>
               {grupos.map((grupo) => <option key={grupo.id} value={grupo.id}>{grupo.nombre}</option>)}
             </select>
-            <select value={periodoFiltro} onChange={(event) => setPeriodoFiltro(event.target.value)} aria-label="Filtrar aportes por periodo" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+            <select value={periodoFiltro} onChange={(event) => setPeriodoFiltro(event.target.value)} aria-label="Filtrar aportes por periodo" className={fieldClassName}>
               <option value="todos">Todos los periodos</option>
               {periodosDisponibles.map((periodo) => <option key={periodo} value={periodo}>Periodo {periodo}</option>)}
             </select>
-            <select value={estadoFiltro} onChange={(event) => setEstadoFiltro(event.target.value)} aria-label="Filtrar aportes por estado" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+            <select value={estadoFiltro} onChange={(event) => setEstadoFiltro(event.target.value)} aria-label="Filtrar aportes por estado" className={fieldClassName}>
               <option value="todos">Todos los estados</option>
               <option value="pendiente">Pendientes de revisión</option>
               <option value="pagado">Aprobados</option>
               <option value="rechazado">Rechazados</option>
             </select>
-            <select value={antiguedadFiltro} onChange={(event) => setAntiguedadFiltro(event.target.value)} aria-label="Filtrar pendientes por antigüedad" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+            <select value={antiguedadFiltro} onChange={(event) => setAntiguedadFiltro(event.target.value)} aria-label="Filtrar pendientes por antigüedad" className={fieldClassName}>
               <option value="todos">Cualquier antigüedad</option>
               <option value={24 * 60 * 60 * 1000}>Pendientes hace más de 24 horas</option>
               <option value={3 * 24 * 60 * 60 * 1000}>Pendientes hace más de 3 días</option>
@@ -431,7 +463,7 @@ const AportesAdmin = () => {
         {loading ? (
           <p className="px-5 py-8 text-sm text-slate-500" role="status">Cargando aportes...</p>
         ) : aportesFiltrados.length === 0 ? (
-          <p className="px-5 py-8 text-sm text-slate-500">No hay aportes para estos filtros.</p>
+          <p className="px-5 py-8 text-sm text-slate-500">No hay aportes que coincidan con la búsqueda y los filtros.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] text-left text-sm">
@@ -536,14 +568,44 @@ const AportesAdmin = () => {
   );
 };
 
-const Metric = ({ icon, label, value }) => (
-  <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-4 transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-sm motion-reduce:transform-none motion-reduce:transition-none">
-    <span className="text-emerald-800">{icon}</span>
-    <div>
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-xl font-bold text-slate-900">{value}</p>
-    </div>
-  </div>
-);
+const metricTones = {
+  blue: {
+    card: "border-blue-100 from-white via-white to-blue-50/90 hover:border-blue-200 hover:shadow-blue-900/10",
+    icon: "bg-blue-100 text-blue-700"
+  },
+  emerald: {
+    card: "border-emerald-100 from-white via-white to-emerald-50/90 hover:border-emerald-200 hover:shadow-emerald-900/10",
+    icon: "bg-emerald-100 text-emerald-700"
+  },
+  amber: {
+    card: "border-amber-100 from-white via-white to-amber-50/90 hover:border-amber-200 hover:shadow-amber-900/10",
+    icon: "bg-amber-100 text-amber-700"
+  }
+};
+
+const Metric = ({ tone, icon, label, value, caption }) => {
+  const colors = metricTones[tone] || metricTones.blue;
+
+  return (
+    <article className={`group flex min-w-0 items-start gap-4 rounded-2xl border bg-gradient-to-br p-5 shadow-lg shadow-slate-900/5 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-1 hover:shadow-xl motion-reduce:transform-none motion-reduce:transition-none ${colors.card}`}>
+      <span className={`flex size-12 shrink-0 items-center justify-center rounded-2xl shadow-sm transition-transform duration-200 group-hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none ${colors.icon}`}>
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-slate-600">{label}</p>
+        <motion.p
+          key={String(value)}
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          className="mt-1 truncate text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl"
+        >
+          {value}
+        </motion.p>
+        <p className="mt-1 text-xs leading-5 text-slate-500">{caption}</p>
+      </div>
+    </article>
+  );
+};
 
 export default AportesAdmin;
