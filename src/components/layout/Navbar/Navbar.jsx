@@ -410,9 +410,11 @@ const Navbar = ({ onOpenMobileMenu }) => {
         </button>
         <div className="-ml-4 flex items-center md:hidden">
           <img
-            src="/flashmonkey-logo.png"
+            src="/flashmonkey-logo-animated.svg"
             alt="Logotipo de FlashMonkey con su mascota"
             className="navbar-mascot-logo h-[78px] w-[180px] shrink-0 object-contain sm:h-[96px] sm:w-[220px]"
+            width="360"
+            height="150"
           />
         </div>
 

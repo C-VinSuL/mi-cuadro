@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 150" role="img" aria-labelledby="logo-title">
+  <title id="logo-title">FlashMonkey</title>
+  <defs>
+    <linearGradient id="background" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fff8dc"/>
+      <stop offset="1" stop-color="#f8d781"/>
+    </linearGradient>
+    <linearGradient id="jacket" x1="0" x2=".9" y1="0" y2="1">
+      <stop offset="0" stop-color="#087b58"/>
+      <stop offset="1" stop-color="#064e3b"/>
+    </linearGradient>
+    <style>
+      .wave-arm {
+        animation: mascot-wave 5.6s ease-in-out infinite;
+        transform-box: view-box;
+        transform-origin: 47px 82px;
+      }
+
+      .wink-eye {
+        animation: mascot-eye-open 5.6s linear infinite;
+      }
+
+      .wink-lid {
+        animation: mascot-eye-close 5.6s linear infinite;
+      }
+
+      @keyframes mascot-wave {
+        0%, 72%, 100% { transform: rotate(0deg); }
+        76% { transform: rotate(-7deg); }
+        80% { transform: rotate(8deg); }
+        84% { transform: rotate(-6deg); }
+        88% { transform: rotate(5deg); }
+        92% { transform: rotate(0deg); }
+      }
+
+      @keyframes mascot-eye-open {
+        0%, 86%, 91%, 100% { opacity: 1; }
+        87%, 90% { opacity: 0; }
+      }
+
+      @keyframes mascot-eye-close {
+        0%, 86%, 91%, 100% { opacity: 0; }
+        87%, 90% { opacity: 1; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .wave-arm, .wink-eye, .wink-lid { animation: none; }
+        .wink-eye { opacity: 1; }
+        .wink-lid { opacity: 0; }
+      }
+    </style>
+  </defs>
+
+  <g transform="translate(5 10) scale(1.02)">
+    <circle cx="64" cy="64" r="62" fill="url(#background)"/>
+    <path d="M90 93c16 2 20-9 17-19-2-6-8-8-13-5" fill="none" stroke="#783e20" stroke-linecap="round" stroke-width="7"/>
+    <path d="M106 74c5-5 10-2 10 2" fill="none" stroke="#a65a2a" stroke-linecap="round" stroke-width="4"/>
+    <ellipse cx="64" cy="115" rx="39" ry="5" fill="#c6a34c" opacity=".35"/>
+
+    <path d="M43 33c-8-9-7-18-2-23 8 2 13 8 14 16m15 0c2-10 8-15 16-16 4 8 2 16-6 23" fill="#8d4a25" stroke="#673416" stroke-linejoin="round" stroke-width="3"/>
+    <circle cx="35" cy="44" r="12" fill="#8d4a25"/>
+    <circle cx="93" cy="44" r="12" fill="#8d4a25"/>
+    <circle cx="35" cy="44" r="6" fill="#f3b782"/>
+    <circle cx="93" cy="44" r="6" fill="#f3b782"/>
+    <path d="M64 13c-19 0-32 14-32 34 0 18 10 31 23 37h18c13-6 23-19 23-37 0-20-13-34-32-34Z" fill="#a65a2a"/>
+    <path d="M64 35c-14 0-23 9-23 22 0 13 10 22 23 22s23-9 23-22c0-13-9-22-23-22Z" fill="#f8d7ae"/>
+    <path d="M46 43c5-4 11-4 16-1m6 0c5-3 11-3 16 1" fill="none" stroke="#402516" stroke-linecap="round" stroke-width="3"/>
+    <g>
+      <ellipse cx="53" cy="54" rx="5.5" ry="7" fill="#fffaf1"/>
+      <ellipse cx="54" cy="55" rx="2.5" ry="4" fill="#402516"/>
+      <ellipse cx="55" cy="53" rx="1" ry="1.2" fill="#fff"/>
+    </g>
+    <g class="wink-eye">
+      <ellipse cx="76" cy="54" rx="5.5" ry="7" fill="#fffaf1"/>
+      <ellipse cx="77" cy="55" rx="2.5" ry="4" fill="#402516"/>
+      <ellipse cx="78" cy="53" rx="1" ry="1.2" fill="#fff"/>
+    </g>
+    <path class="wink-lid" d="M70 55c3 4 8 4 12 0" fill="none" stroke="#402516" stroke-linecap="round" stroke-width="3"/>
+    <ellipse cx="64" cy="64" rx="6" ry="4" fill="#713716"/>
+    <path d="M55 70c6 7 14 7 21-1-1 9-8 13-15 11-5-1-7-5-6-10Z" fill="#713716"/>
+    <path d="M60 75c4 2 9 1 12-2" fill="none" stroke="#fff4e6" stroke-linecap="round" stroke-width="2"/>
+
+    <path d="M47 76c-8 1-13 6-15 14l-4 17h72l-4-17c-2-8-7-13-15-14l-7-2H54Z" fill="url(#jacket)" stroke="#063f31" stroke-linejoin="round" stroke-width="2.5"/>
+    <path d="m52 75 12 11 12-11-6-4H58Z" fill="#fff7e8"/>
+    <path d="m61 79 3 4 3-4 4 20-7 7-7-7Z" fill="#f2ae26" stroke="#b9770e" stroke-linejoin="round" stroke-width="1.5"/>
+    <path d="m47 77 12 11-12 11-8-19Zm34 0L69 88l12 11 8-19Z" fill="#0a684d" stroke="#063f31" stroke-linejoin="round" stroke-width="2"/>
+    <circle cx="72" cy="91" r="1.4" fill="#f7d27a"/>
+    <circle cx="73" cy="98" r="1.4" fill="#f7d27a"/>
+    <path d="M32 88c-4 5-6 10-6 16m69-16c4 4 6 8 7 13" fill="none" stroke="#a65a2a" stroke-linecap="round" stroke-width="7"/>
+
+    <g class="wave-arm">
+      <path d="M48 80c-7-3-12-8-16-16" fill="none" stroke="#0a684d" stroke-linecap="round" stroke-width="13"/>
+      <path d="M33 65c-5-7-7-14-6-22" fill="none" stroke="#a65a2a" stroke-linecap="round" stroke-width="7"/>
+      <path d="M29 48c-5 0-6-6-7-12-1-4 4-5 5-1l2 6-1-12c0-4 5-4 5 0l1 11 2-9c1-4 6-2 5 2l-2 11c4-4 8 0 5 4l-6 8c-2 3-6 4-9 2Z" fill="#a65a2a" stroke="#713716" stroke-linejoin="round" stroke-width="1.5"/>
+    </g>
+
+    <path d="M45 106h15v8c0 3-3 5-7 5H39c-2 0-3-2-2-4l8-9Zm23 0h15l8 9c1 2 0 4-2 4H75c-4 0-7-2-7-5Z" fill="#57301e"/>
+    <path d="M38 116h18m23 0h13" stroke="#f5d28b" stroke-linecap="round" stroke-width="2"/>
+  </g>
+
+  <text x="143" y="91" fill="#fff" font-family="Inter, system-ui, sans-serif" font-size="32" font-weight="750" letter-spacing="-1.2">FlashMonkey</text>
+  <path d="m335 67 5 12 12 5-12 5-5 12-5-12-12-5 12-5Z" fill="#16835d"/>
+</svg>
