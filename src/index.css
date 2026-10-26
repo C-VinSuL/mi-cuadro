@@ -45,11 +45,12 @@ textarea {
 
 button {
   cursor: pointer;
+  scale: 1;
+  transition: scale 140ms ease;
 }
 
 button:active:not(:disabled) {
-  transform: scale(0.98);
-  transition: transform 140ms ease;
+  scale: 0.98;
 }
 
 img,
@@ -237,5 +238,10 @@ svg {
   .action-card:hover,
   button:active:not(:disabled) {
     transform: none;
+    scale: 1;
+  }
+
+  button {
+    transition: none;
   }
 }

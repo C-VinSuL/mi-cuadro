@@ -34,6 +34,9 @@
   respuesta de escala para botones. Las animaciones se desactivan cuando el
   dispositivo solicita movimiento reducido; no se añadió JavaScript ni
   dependencias para estos efectos.
+- Se añadieron transiciones de entrada y salida al navegar entre páginas, junto
+  con elevación sutil en el botón reutilizable. Se conserva `motion`, ya
+  existente en el proyecto, y se respeta la preferencia de movimiento reducido.
 
 ### Registro de nuevos usuarios
 

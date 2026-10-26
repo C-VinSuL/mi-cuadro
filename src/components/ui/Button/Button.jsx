@@ -24,6 +24,10 @@ const Button = ({ children, variant = "primary", onClick }) => {
         font-semibold
         transition-all
         duration-200
+        hover:-translate-y-0.5
+        active:translate-y-0
+        motion-reduce:transform-none
+        motion-reduce:transition-none
         focus-visible:outline-none
         focus-visible:ring-2
         focus-visible:ring-emerald-500
