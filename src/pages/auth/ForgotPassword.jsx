@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Mail } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, Mail } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { useNotifications } from "../../hooks/useNotifications";
+import AuthRecoveryStepper from "./AuthRecoveryStepper";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -52,6 +53,7 @@ const ForgotPassword = () => {
         </aside>
 
         <div className="px-6 py-7 sm:px-10 sm:py-10 md:flex md:h-full md:min-h-0 md:flex-col md:px-12 md:py-12">
+          <AuthRecoveryStepper currentStep={sent ? 2 : 1} />
           <header className="mb-6 md:mb-4">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">Recuperación segura</p>
             <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">¿Olvidaste tu contraseña?</h1>
@@ -59,8 +61,9 @@ const ForgotPassword = () => {
           </header>
 
           {sent ? (
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-950" role="status">
-              Si el correo está registrado, recibirás un mensaje con los siguientes pasos. Revisa también la carpeta de spam.
+            <div className="auth-mobile-enter rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm leading-6 text-emerald-950 max-md:rounded-2xl max-md:bg-gradient-to-br max-md:from-emerald-50 max-md:to-white max-md:p-5" role="status">
+              <CheckCircle2 size={28} className="auth-mobile-success-check mb-3 text-emerald-700 md:hidden" />
+              <p>Si el correo está registrado, recibirás un mensaje con los siguientes pasos. Revisa también la carpeta de spam.</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4 md:flex md:min-h-0 md:flex-1 md:flex-col md:gap-y-4 md:space-y-0">
@@ -73,7 +76,9 @@ const ForgotPassword = () => {
               </label>
               {error && <p className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700" role="alert">{error}</p>}
               <button disabled={loading} className="w-full rounded-xl bg-emerald-800 py-3 font-semibold text-white shadow-sm transition hover:bg-emerald-900 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-700/20 disabled:cursor-wait disabled:opacity-60">
-                {loading ? "Enviando enlace..." : "Enviar enlace de recuperación"}
+                {loading
+                  ? <span className="inline-flex items-center justify-center gap-2"><Loader2 size={18} className="auth-mobile-spin md:hidden" />Enviando enlace...</span>
+                  : "Enviar enlace de recuperación"}
               </button>
             </form>
           )}

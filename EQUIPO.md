@@ -60,6 +60,15 @@
   para distinguir un problema de red o despliegue de un rechazo del registro.
 - Se documentó cómo agregar el origen local sin reemplazar `APP_URL`, que puede
   ser utilizado por otras funciones del backend.
+- En móvil, el acceso y la recuperación de contraseña incluyen estados de carga
+  animados, un indicador de tres pasos y una confirmación visual de éxito al
+  guardar la contraseña.
+- El indicador de seguridad de contraseña es orientativo y se muestra solo en
+  móvil; la validación y los requisitos de Supabase no se reemplazan. El flujo
+  conserva la recuperación mediante enlace de correo existente, sin añadir ni
+  simular verificación por PIN, nuevas rutas o pasos de autenticación.
+- Las nuevas animaciones CSS están limitadas a pantallas móviles y se desactivan
+  si el dispositivo solicita movimiento reducido. No se añadieron dependencias.
 
 ### Notificaciones
 
@@ -91,6 +100,9 @@
   las transiciones entre páginas.
 - La compilación de producción y ESLint focalizado pasaron para el rediseño de
   **Control de aportes** y su nueva búsqueda en tiempo real.
+- La compilación, ESLint focalizado para el acceso y recuperación de contraseña
+  y las 15 pruebas automatizadas pasaron tras los ajustes móviles del flujo de
+  autenticación.
 - Vite conserva una advertencia preexistente sobre el tamaño de algunos bloques
   JavaScript; la compilación finalizó correctamente.
 - ESLint pasó para los módulos modificados que se revisaron de forma focalizada.

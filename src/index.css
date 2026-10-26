@@ -69,6 +69,56 @@ svg {
     #f1f5f1;
 }
 
+@keyframes auth-mobile-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes auth-mobile-check {
+  from {
+    opacity: 0;
+    transform: scale(0.75);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (max-width: 767px) {
+  .auth-mobile-enter {
+    animation: auth-mobile-enter 260ms ease-out both;
+  }
+
+  .auth-mobile-enter-delay {
+    animation-delay: 70ms;
+  }
+
+  .auth-mobile-spin {
+    animation: spin 800ms linear infinite;
+  }
+
+  .auth-mobile-success-check {
+    animation: auth-mobile-check 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+}
+
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .auth-mobile-enter,
+  .auth-mobile-spin,
+  .auth-mobile-success-check {
+    animation: none;
+  }
+}
+
 @keyframes loading-sweep {
   from {
     transform: translateX(-110%);
