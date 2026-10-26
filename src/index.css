@@ -70,7 +70,27 @@ svg {
 }
 
 .navbar-mascot-logo {
-  display: block;
+  animation: navbar-mascot-float 4s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes navbar-mascot-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+
+  50% {
+    transform: translate3d(0, -2px, 0) rotate(-0.5deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar-mascot-logo {
+    animation: none;
+    transform: none;
+    will-change: auto;
+  }
 }
 
 @keyframes auth-mobile-enter {

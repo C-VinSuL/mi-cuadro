@@ -54,11 +54,10 @@
 
 - La pantalla **Socios y roles** presenta fichas legibles en pantallas pequeñas
   y medianas, y conserva la tabla desplazable en pantallas grandes.
-- El encabezado usa una ilustración SVG local del logotipo con saludo animado
-  mediante rotación del brazo y un guiño periódico mediante `opacity`. Los
-  fotogramas se definen estáticamente en el SVG; no se usan scripts, contenido
-  dinámico ni recursos externos. El recurso tiene dimensiones explícitas, texto
-  alternativo y desactiva ambas animaciones con `prefers-reduced-motion`.
+- El encabezado conserva el logotipo original y su mascota en pose de saludo,
+  con una flotación y balanceo muy sutiles mediante CSS. La animación respeta
+  `prefers-reduced-motion`. La imagen original es un PNG aplanado, por lo que
+  no permite animar el brazo ni el ojo por separado sin modificar la ilustración.
 - Se añadieron transiciones discretas en interacciones seleccionadas, respetando
   la preferencia de movimiento reducido del dispositivo.
 - Se unificaron las tarjetas del dashboard con bordes de 12 px, sombras sutiles
