@@ -1,0 +1,27 @@
+{
+  "name": "flashmonkey-video-welcome",
+  "displayName": "FlashMonkey Video Welcome",
+  "description": "Muestra el video de FlashMonkey al abrir el workspace del proyecto.",
+  "version": "0.1.0",
+  "publisher": "flashmonkey",
+  "type": "module",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "workspaceContains:public/flashmonkey-welcome.mp4",
+    "onCommand:flashmonkey-video-welcome.openWelcome"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "flashmonkey-video-welcome.openWelcome",
+        "title": "FlashMonkey: Abrir bienvenida con video"
+      }
+    ]
+  }
+}

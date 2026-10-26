@@ -27,6 +27,31 @@
 - Se ejecutaron las 16 pruebas automatizadas, la compilación de producción y
   ESLint focalizado; todos pasaron después de los cambios financieros.
 
+### Video de bienvenida FlashMonkey
+
+- Se agregó el video local `public/flashmonkey-welcome.mp4`, copiado desde el
+  archivo proporcionado, para que su ruta no dependa de la carpeta Descargas.
+- La pantalla de inicio de sesión reproduce el video en silencio y en bucle, con
+  el logo local como poster y una alternativa si el navegador no admite video.
+  La reproducción se pausa cuando el sistema solicita movimiento reducido.
+- Se creó la extensión fuente `flashmonkey-vscode-welcome/` para abrir el video
+  en un panel de bienvenida al iniciar VS Code con el workspace FlashMonkey.
+  Usa `workspaceContains` para activarse solo cuando el workspace contiene el
+  video, carga los recursos desde el disco local y aplica una Content Security
+  Policy restrictiva. Se puede reabrir mediante
+  **FlashMonkey: Abrir bienvenida con video**.
+- Para instalar la extensión en VS Code: desde PowerShell, instalar una vez el
+  empaquetador con `npm install --global @vscode/vsce`; entrar a
+  `flashmonkey-vscode-welcome` y ejecutar `vsce package`; instalar el `.vsix`
+  generado desde **Extensions: Install from VSIX...** o con
+  `code --install-extension .\flashmonkey.flashmonkey-video-welcome-0.1.0.vsix`.
+  Abrir después la carpeta del proyecto FlashMonkey en VS Code. La extensión
+  abre una pestaña Webview; para ocultar la bienvenida predeterminada, configurar
+  `"workbench.startupEditor": "none"` en los ajustes de usuario de VS Code.
+- No se modifica la autenticación existente ni se requieren librerías runtime
+  para la extensión; el video se reproduce en silencio para permitir autoplay y
+  dispone de controles para pausarlo.
+
 ### Tesorería y control financiero
 
 - Se mejoró el tablero para priorizar grupos con comprobantes por revisar y
