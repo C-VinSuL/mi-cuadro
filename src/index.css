@@ -69,6 +69,42 @@ svg {
     #f1f5f1;
 }
 
+@keyframes navbar-mascot-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  50% {
+    translate: 0 -2px;
+  }
+}
+
+.navbar-mascot-logo {
+  animation: navbar-mascot-float 3.6s ease-in-out infinite;
+  will-change: translate;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .navbar-mascot-logo {
+    transition: rotate 180ms ease-out;
+  }
+
+  .navbar-mascot-logo:hover {
+    rotate: 2deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navbar-mascot-logo {
+    animation: none;
+    transition: none;
+    translate: none;
+    rotate: none;
+    will-change: auto;
+  }
+}
+
 @keyframes auth-mobile-enter {
   from {
     opacity: 0;
