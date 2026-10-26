@@ -54,10 +54,10 @@
 
 - La pantalla **Socios y roles** presenta fichas legibles en pantallas pequeñas
   y medianas, y conserva la tabla desplazable en pantallas grandes.
-- El encabezado conserva el logotipo original y su mascota en pose de saludo,
-  con una flotación y balanceo muy sutiles mediante CSS. La animación respeta
-  `prefers-reduced-motion`. La imagen original es un PNG aplanado, por lo que
-  no permite animar el brazo ni el ojo por separado sin modificar la ilustración.
+- El encabezado conserva el logotipo PNG original y aplica un balanceo
+  automático entre -5 y 5 grados mediante CSS, sin depender del hover. La
+  animación respeta `prefers-reduced-motion`. Al ser una imagen aplanada, no
+  permite animar el brazo ni el ojo por separado sin modificar la ilustración.
 - Se añadieron transiciones discretas en interacciones seleccionadas, respetando
   la preferencia de movimiento reducido del dispositivo.
 - Se unificaron las tarjetas del dashboard con bordes de 12 px, sombras sutiles

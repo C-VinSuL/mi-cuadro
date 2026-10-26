@@ -70,18 +70,19 @@ svg {
 }
 
 .navbar-mascot-logo {
-  animation: navbar-mascot-float 4s ease-in-out infinite;
+  animation: navbar-mascot-wave 2.4s ease-in-out infinite;
+  transform-origin: 50% 50%;
   will-change: transform;
 }
 
-@keyframes navbar-mascot-float {
+@keyframes navbar-mascot-wave {
   0%,
   100% {
-    transform: translate3d(0, 0, 0) rotate(0deg);
+    transform: rotate(-5deg);
   }
 
   50% {
-    transform: translate3d(0, -2px, 0) rotate(-0.5deg);
+    transform: rotate(5deg);
   }
 }
 
