@@ -77,31 +77,6 @@ svg {
     #f1f5f1;
 }
 
-.navbar-mascot-logo {
-  animation: navbar-mascot-wave 2.4s ease-in-out infinite;
-  transform-origin: 50% 50%;
-  will-change: transform;
-}
-
-@keyframes navbar-mascot-wave {
-  0%,
-  100% {
-    transform: rotate(-5deg);
-  }
-
-  50% {
-    transform: rotate(5deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .navbar-mascot-logo {
-    animation: none;
-    transform: none;
-    will-change: auto;
-  }
-}
-
 @keyframes auth-mobile-enter {
   from {
     opacity: 0;
