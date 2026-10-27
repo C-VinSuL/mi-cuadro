@@ -203,19 +203,14 @@ const Sidebar = ({
           </div>
         </div>
       ) : (
-        <div className={`pointer-events-none flex shrink-0 items-center py-5 ${
+        <div className={`pointer-events-none flex min-h-[72px] shrink-0 items-center py-4 ${
           expanded ? "justify-start gap-3 px-4" : "justify-center"
         }`}>
-          <img
-            src="/flashmonkey-mascot.png"
-            alt="FlashMonkey"
-            className="size-10 object-contain"
-          />
           <motion.span
             initial={false}
             animate={{ opacity: expanded ? 1 : 0, x: expanded ? 0 : -6 }}
             transition={{ duration: reduceMotion ? 0 : 0.16, ease: "easeOut" }}
-            className={`text-sm font-bold tracking-wide ${expanded ? "relative" : "absolute"}`}
+            className={`whitespace-nowrap text-sm font-bold tracking-wide ${expanded ? "relative" : "absolute"}`}
             aria-hidden={!expanded}
           >
             FlashMonkey

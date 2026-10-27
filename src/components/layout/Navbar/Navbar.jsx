@@ -380,13 +380,26 @@ const Navbar = ({ onOpenMobileMenu }) => {
         sticky
         top-0
         z-30
+        md:top-3
+        md:mx-3
+        md:w-auto
+        md:rounded-[2rem]
 
         min-h-[82px]
+        md:min-h-[108px]
 
         bg-[#064E3B]
+        md:bg-gradient-to-r
+        md:from-[#064E3B]
+        md:via-[#0B6651]
+        md:to-[#16835D]
         backdrop-blur
         border-0
+        md:border
+        md:border-emerald-100/20
         shadow-none
+        md:shadow-md
+        md:shadow-emerald-950/10
         ring-0
 
         flex
@@ -398,6 +411,7 @@ const Navbar = ({ onOpenMobileMenu }) => {
         sm:px-6
         md:px-8
         xl:px-12
+        md:py-2
       "
     >
 
@@ -412,11 +426,11 @@ const Navbar = ({ onOpenMobileMenu }) => {
         >
           <Menu size={22} />
         </button>
-        <div className="flex min-w-0 items-center md:hidden">
+        <div className="flex min-w-0 items-center">
           <img
             src="/flashmonkey-logo.png"
             alt="Logotipo de FlashMonkey con su mascota"
-            className="h-[68px] w-[clamp(6rem,30vw,11rem)] min-w-0 max-w-full shrink object-contain sm:h-[78px] md:h-[96px] md:w-[220px]"
+            className="h-[68px] w-[clamp(6rem,30vw,11rem)] min-w-0 max-w-full shrink object-contain sm:h-[78px] md:h-[76px] md:w-[190px]"
             width="360"
             height="150"
           />
