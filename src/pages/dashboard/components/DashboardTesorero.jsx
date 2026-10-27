@@ -273,13 +273,15 @@ const DashboardTesorero = () => {
       <motion.section
         style={{ scale: reduceMotion ? 1 : headerScale, opacity: reduceMotion ? 1 : headerOpacity }}
         className="
+          overflow-hidden
           rounded-3xl
           border
           border-emerald-100
           bg-gradient-to-br
           from-white
           to-emerald-50
-          p-6
+          p-4
+          sm:p-6
           md:p-8
         "
       >
@@ -287,6 +289,7 @@ const DashboardTesorero = () => {
         <div
           className="
             flex
+            min-w-0
             flex-col
             gap-6
             lg:flex-row
@@ -295,7 +298,7 @@ const DashboardTesorero = () => {
           "
         >
 
-          <div>
+          <div className="min-w-0 flex-1">
             <SectionPageTitle
               icon={LayoutDashboard}
               eyebrow="Resumen de tesorería"
@@ -308,6 +311,7 @@ const DashboardTesorero = () => {
 
           <div
             className="
+              w-full
               rounded-2xl
               border
               border-blue-200
@@ -315,6 +319,7 @@ const DashboardTesorero = () => {
               px-5
               py-4
               shadow-sm
+              sm:w-auto
             "
           >
             <p className="text-xs text-slate-500">
@@ -324,9 +329,10 @@ const DashboardTesorero = () => {
             <p
               className="
                 mt-1
-                text-xl
+                text-lg
                 font-bold
                 text-slate-900
+                sm:text-xl
               "
             >
               {semana} de {capacidad}
