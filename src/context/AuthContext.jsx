@@ -276,7 +276,7 @@ export const AuthProvider = ({ children }) => {
     );
     if (!isCurrentRequest(requestId, currentUser.id)) return;
 
-    if (currentProfile && !currentProfile.activo) {
+    if (shouldClearSessionForInactiveProfile(currentProfile)) {
       console.warn("La sesión pertenece a una cuenta desactivada; se cerrará.");
       const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });
       if (!isCurrentRequest(requestId, currentUser.id)) return;

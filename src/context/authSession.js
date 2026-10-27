@@ -11,4 +11,4 @@ export const shouldSendWelcomeEmail = (event, session) => {
 
 export const isProfileActive = (profile) => Boolean(profile && profile.activo !== false);
 
-export const shouldClearSessionForInactiveProfile = (profile) => Boolean(profile && !profile.activo);
+export const shouldClearSessionForInactiveProfile = (profile) => Boolean(profile && profile.activo === false);
