@@ -138,6 +138,33 @@
 - Se documentó la publicación en Vercel y la configuración de URLs, secretos de
   Supabase y remitente de Brevo en `README.md`.
 
+### Dashboard V18: fases 1 a 3 (quedamos aquí)
+
+- Se definió una base de diseño visual inspirada en la referencia `Dashboard V18`:
+  barra lateral oscura tipo píldora, tarjetas tipo bento con esquinas redondeadas,
+  banner destacado, tira semanal y panel de notificaciones con separación clara por
+  módulos.
+- **Fase 1 — componentes compartidos en `src/components/ui/`**: se consolidaron
+  `BentoCard`, `StatCard`, `MiniBars`, `ProgressBar`, `SegmentedToggle`,
+  `WeekStrip`, `PillButton` y `Skeleton`. Se añadieron tokens de marca mediante
+  `@theme` en `src/index.css` con la paleta FlashMonkey (`#064E3B`, `#16835D`,
+  `#0B6651`, fondo `#F4F7F5`).
+- **Fase 2 — layout y navegación**: se ajustó `MainLayout` para mantener un
+  ancho de contenido más dinámico, se simplificó la navegación lateral con una
+  composición tipo píldora y se conservó la experiencia móvil con
+  `MobileBottomNavigation` y el drawer actual. El menú sigue respetando
+  `getVisibleMenu(can, rol)` y no se tocó la lógica de permisos.
+- **Fase 3 — transiciones y carga**: se reforzó `PageTransition` con fade +
+  desplazamiento breve y un esqueleto de carga de pantalla. Además, los cards
+  reutilizan `StaggerList` y `StaggerItem` para animaciones escalonadas con
+  movimiento limitado y soporte a `prefers-reduced-motion`.
+- Se mantuvo la práctica de no alterar la lógica financiera ni los cálculos de
+  dinero; cualquier animación de cifras se aplica solo a la presentación final,
+  y el formato sigue canalizado por `utils/money.js`.
+- El diseño queda preparado para continuar con la **Fase 4 — DashboardSocio**
+  sin tocar la lógica de negocio ni permisos, ni configura nuevos servicios ni
+  consultas.
+
 ## Validación y despliegue
 
 - La compilación de producción pasó después de los cambios de interfaz y
