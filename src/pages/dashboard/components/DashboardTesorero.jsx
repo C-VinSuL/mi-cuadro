@@ -13,9 +13,15 @@ import {
   HandCoins,
   ArrowRight,
   CircleDollarSign,
-  LayoutDashboard
+  LayoutDashboard,
+  Sparkles,
+  Coins
 } from "lucide-react";
 import SectionPageTitle from "../../../components/ui/SectionPageTitle";
+import StatCard from "../../../components/ui/StatCard";
+import BentoCard from "../../../components/ui/BentoCard";
+import ProgressBar from "../../../components/ui/ProgressBar";
+import PillButton from "../../../components/ui/PillButton";
 
 import {
   Link
@@ -272,75 +278,33 @@ const DashboardTesorero = () => {
 
       <motion.section
         style={{ scale: reduceMotion ? 1 : headerScale, opacity: reduceMotion ? 1 : headerOpacity }}
-        className="
-          overflow-hidden
-          rounded-3xl
-          border
-          border-emerald-100
-          bg-gradient-to-br
-          from-white
-          to-emerald-50
-          p-4
-          sm:p-6
-          md:p-8
-        "
+        className="overflow-hidden rounded-[2rem] border border-emerald-100 bg-gradient-to-br from-[#064E3B] via-[#0B6651] to-[#16835D] p-5 text-white shadow-[0_18px_45px_rgba(6,78,59,0.18)] sm:p-6 md:p-8"
       >
-
-        <div
-          className="
-            flex
-            min-w-0
-            flex-col
-            gap-6
-            lg:flex-row
-            lg:items-end
-            lg:justify-between
-          "
-        >
-
-          <div className="min-w-0 flex-1">
-            <SectionPageTitle
-              icon={LayoutDashboard}
-              eyebrow="Resumen de tesorería"
-              title="Inicio"
-              description={`Controla los aportes, movimientos y disponibilidad financiera de ${grupo.nombre}.`}
-              plain
-            />
+        <div className="flex min-w-0 flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15 sm:size-14">
+              <Sparkles className="size-6 text-emerald-100 sm:size-7" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-100/80">Resumen de tesorería</p>
+              <h1 className="mt-1 break-words text-2xl font-black tracking-tight text-white sm:text-3xl md:text-4xl">{grupo.nombre}</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-emerald-50/85 sm:text-base">
+                Controla los aportes, movimientos y disponibilidad financiera de tu grupo.
+              </p>
+            </div>
           </div>
 
-
-          <div
-            className="
-              w-full
-              rounded-2xl
-              border
-              border-blue-200
-              bg-white
-              px-5
-              py-4
-              shadow-sm
-              sm:w-auto
-            "
-          >
-            <p className="text-xs text-slate-500">
-              {periodoActual} actual
-            </p>
-
-            <p
-              className="
-                mt-1
-                text-lg
-                font-bold
-                text-slate-900
-                sm:text-xl
-              "
-            >
-              {semana} de {capacidad}
-            </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center xl:shrink-0 xl:flex-col xl:items-stretch">
+            <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/15 backdrop-blur-sm">
+              <p className="text-xs text-emerald-100/80">{periodoActual} actual</p>
+              <p className="mt-1 text-lg font-bold text-white sm:text-xl">{semana} de {capacidad}</p>
+            </div>
+            <PillButton to="/aportes" variant="light" className="w-full shadow-lg shadow-emerald-950/10 sm:w-auto">
+              Revisar aportes
+              <ArrowRight size={17} aria-hidden="true" />
+            </PillButton>
           </div>
-
         </div>
-
       </motion.section>
 
       <TreasuryGroupSummary />
@@ -363,222 +327,35 @@ const DashboardTesorero = () => {
           MÉTRICAS
       =================================== */}
 
-      <StaggerList
-        className="
-          grid
-          grid-cols-1
-          gap-5
-          sm:grid-cols-2
-          2xl:grid-cols-4
-        "
-      >
-
-        {/* RECAUDADO */}
-
-        <div
-          className="
-            rounded-2xl
-            border
-            border-slate-200
-            bg-white
-            p-6
-            shadow-sm
-            transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none
-          "
-        >
-
-          <div
-            className="
-              flex
-              h-11
-              w-11
-              items-center
-              justify-center
-              rounded-xl
-              bg-blue-50
-              text-blue-600
-            "
-          >
-            <CircleDollarSign size={22} />
-          </div>
-
-          <p className="mt-5 text-sm text-slate-500">
-            Recaudado
-          </p>
-
-          <p
-            className="
-              mt-1
-              text-3xl
-              font-bold
-              text-slate-900
-            "
-          >
-            ${recaudado.toFixed(2)}
-          </p>
-
-          <p className="mt-1 text-xs text-slate-400">
-            Meta: ${Number(datos.pozo).toFixed(2)}
-          </p>
-
-        </div>
-
-
-        {/* PAGOS */}
-
-        <div
-          className="
-            rounded-2xl
-            border
-            border-slate-200
-            bg-white
-            p-6
-            shadow-sm
-            transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none
-          "
-        >
-
-          <div
-            className="
-              flex
-              h-11
-              w-11
-              items-center
-              justify-center
-              rounded-xl
-              bg-emerald-50
-              text-emerald-700
-            "
-          >
-            <CheckCircle2 size={22} />
-          </div>
-
-          <p className="mt-5 text-sm text-slate-500">
-            Pagaron
-          </p>
-
-          <p
-            className="
-              mt-1
-              text-3xl
-              font-bold
-              text-slate-900
-            "
-          >
-            {datos.totalPagados} / {capacidad}
-          </p>
-
-          <p className="mt-1 text-xs text-slate-400">
-            {datos.pendientes.length} pendientes
-          </p>
-
-        </div>
-
-
-        {/* FONDO */}
-
-        <div
-          className="
-            rounded-2xl
-            border
-            border-slate-200
-            bg-white
-            p-6
-            shadow-sm
-            transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none
-          "
-        >
-
-          <div
-            className="
-              flex
-              h-11
-              w-11
-              items-center
-              justify-center
-              rounded-xl
-              bg-violet-50
-              text-violet-600
-            "
-          >
-            <PiggyBank size={22} />
-          </div>
-
-          <p className="mt-5 text-sm text-slate-500">
-            Fondo comunitario
-          </p>
-
-          <p
-            className="
-              mt-1
-              text-3xl
-              font-bold
-              text-slate-900
-            "
-          >
-            $
-            {Number(
-              fondoComunitario || 0
-            ).toFixed(2)}
-          </p>
-
-          <p className="mt-1 text-xs text-slate-400">
-            Saldo registrado en el fondo
-          </p>
-
-        </div>
-
-
-        {/* APORTE */}
-
-        <div
-          className="
-            rounded-2xl
-            border
-            border-slate-200
-            bg-white
-            p-6
-            shadow-sm
-            transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transform-none motion-reduce:transition-none
-          "
-        >
-
-          <div
-            className="
-              flex
-              h-11
-              w-11
-              items-center
-              justify-center
-              rounded-xl
-              bg-amber-50
-              text-amber-600
-            "
-          >
-            <Wallet size={22} />
-          </div>
-
-          <p className="mt-5 text-sm text-slate-500">
-            {etiquetaAporte(grupo.aporte_periodicidad)}
-          </p>
-
-          <p
-            className="
-              mt-1
-              text-3xl
-              font-bold
-              text-slate-900
-            "
-          >
-            ${aporteSemanal.toFixed(2)}
-          </p>
-
-          <p className="mt-1 text-xs text-slate-400">
-            Por integrante
-          </p>
-
-        </div>
-
+      <StaggerList className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          title="Recaudado"
+          value={`$${recaudado.toFixed(2)}`}
+          variation={`Meta: $${Number(datos.pozo).toFixed(2)}`}
+          icon={CircleDollarSign}
+          className="min-w-0"
+        />
+        <StatCard
+          title="Pagaron"
+          value={`${datos.totalPagados} / ${capacidad}`}
+          variation={`${datos.pendientes.length} pendientes`}
+          icon={CheckCircle2}
+          className="min-w-0"
+        />
+        <StatCard
+          title="Fondo comunitario"
+          value={`$${Number(fondoComunitario || 0).toFixed(2)}`}
+          variation="Saldo registrado"
+          icon={PiggyBank}
+          className="min-w-0"
+        />
+        <StatCard
+          title={etiquetaAporte(grupo.aporte_periodicidad)}
+          value={`$${aporteSemanal.toFixed(2)}`}
+          variation="Por integrante"
+          icon={Coins}
+          className="min-w-0"
+        />
       </StaggerList>
 
 
@@ -586,26 +363,8 @@ const DashboardTesorero = () => {
           RECAUDACIÓN
       =================================== */}
 
-      <section
-        className="
-          grid
-          grid-cols-1
-          gap-6
-          xl:grid-cols-[1.4fr_0.8fr]
-        "
-      >
-
-        <div
-          className="
-            rounded-3xl
-            border
-            border-slate-200
-            bg-white
-            p-6
-            shadow-sm
-            md:p-7
-          "
-        >
+      <section className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-[1.3fr_0.7fr]">
+        <BentoCard className="min-w-0 p-5 md:p-6">
 
           <div
             className="
@@ -690,28 +449,14 @@ const DashboardTesorero = () => {
               </strong>
             </div>
 
-            <div
-              className="
-                mt-3
-                h-3
-                overflow-hidden
-                rounded-full
-                bg-slate-100
-              "
-            >
-              <div
-                className="
-                  h-full
-                  rounded-full
-                  bg-blue-600
-                  transition-all
-                "
-                style={{
-                  width:
-                    `${porcentaje}%`
-                }}
-              />
-            </div>
+            <ProgressBar
+              value={porcentaje}
+              max={100}
+              label="Porcentaje de recaudación del periodo"
+              className="mt-3 h-3"
+              trackClassName="bg-slate-100"
+              barClassName="bg-[#16835D]"
+            />
 
           </div>
 
@@ -817,22 +562,12 @@ const DashboardTesorero = () => {
 
           )}
 
-        </div>
+        </BentoCard>
 
 
         {/* BENEFICIARIO */}
 
-        <div
-          className="
-            rounded-3xl
-            border
-            border-slate-200
-            bg-white
-            p-6
-            shadow-sm
-            md:p-7
-          "
-        >
+        <BentoCard className="min-w-0 p-5 md:p-6">
 
           <div
             className="
@@ -905,7 +640,7 @@ const DashboardTesorero = () => {
             </p>
           </div>
 
-        </div>
+        </BentoCard>
 
       </section>
 
