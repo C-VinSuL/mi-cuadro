@@ -7,18 +7,18 @@ import MobileBottomNavigation from "./MobileBottomNavigation";
 import MobileAssistant from "./MobileAssistant";
 
 const MainLayout = ({ children }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [mobileAssistantOpen, setMobileAssistantOpen] = useState(false);
   const [desktopAssistantOpen, setDesktopAssistantOpen] = useState(false);
 
   useEffect(() => {
-    if (!mobileMenuOpen && !mobileAssistantOpen) return undefined;
+    if (!mobileMoreOpen && !mobileAssistantOpen) return undefined;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const closeOnEscape = (event) => {
       if (event.key === "Escape") {
-        setMobileMenuOpen(false);
+        setMobileMoreOpen(false);
         setMobileAssistantOpen(false);
       }
     };
@@ -28,7 +28,7 @@ const MainLayout = ({ children }) => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [mobileMenuOpen, mobileAssistantOpen]);
+  }, [mobileMoreOpen, mobileAssistantOpen]);
 
   return (
     <div className="min-h-dvh min-w-0 bg-[#F4F7F5]">
@@ -36,13 +36,13 @@ const MainLayout = ({ children }) => {
         <Sidebar />
       </div>
 
-      <div className="flex min-h-dvh min-w-0 w-full flex-col md:pl-[290px]">
+      <div className="flex min-h-dvh min-w-0 w-full flex-col md:pl-28">
         <Navbar onOpenMobileMenu={() => {
           setMobileAssistantOpen(false);
-          setMobileMenuOpen(true);
+          setMobileMoreOpen(true);
         }} />
-        <main className="w-full flex-1 px-4 py-6 pb-28 sm:px-6 md:px-8 md:pb-6 xl:px-10 2xl:px-12">
-          <div className="mx-auto w-full max-w-[1440px]">
+        <main className="min-w-0 w-full max-w-full flex-1 px-4 py-6 pb-28 sm:px-6 md:px-8 md:pb-6 xl:px-10 2xl:px-12">
+          <div className="mx-auto w-full min-w-0 max-w-[1440px]">
             {children}
           </div>
         </main>
@@ -55,14 +55,20 @@ const MainLayout = ({ children }) => {
 
       <MobileBottomNavigation
         assistantOpen={mobileAssistantOpen}
+        moreOpen={mobileMoreOpen}
         onNavigate={() => {
           setMobileAssistantOpen(false);
-          setMobileMenuOpen(false);
+          setMobileMoreOpen(false);
         }}
         onOpenAssistant={() => {
-          setMobileMenuOpen(false);
+          setMobileMoreOpen(false);
           setMobileAssistantOpen((open) => !open);
         }}
+        onOpenMore={() => {
+          setMobileAssistantOpen(false);
+          setMobileMoreOpen((open) => !open);
+        }}
+        onCloseMore={() => setMobileMoreOpen(false)}
       />
       <div className="fixed bottom-6 right-6 z-40 hidden md:block">
         <AnimatePresence>
@@ -108,34 +114,11 @@ const MainLayout = ({ children }) => {
           >
             <MobileAssistant
               onClose={() => setMobileAssistantOpen(false)}
-              onOpenMenu={() => setMobileMenuOpen(true)}
+              onOpenMenu={() => {
+                setMobileAssistantOpen(false);
+                setMobileMoreOpen(true);
+              }}
             />
-          </motion.div>
-        )}
-        {mobileMenuOpen && (
-          <motion.div
-            className="fixed inset-0 z-[60] bg-slate-950/50 md:hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) setMobileMenuOpen(false);
-            }}
-          >
-            <motion.div
-              className="h-dvh w-[min(88vw,360px)] overflow-hidden shadow-2xl"
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", stiffness: 320, damping: 34 }}
-            >
-              <Sidebar
-                mobile
-                onClose={() => setMobileMenuOpen(false)}
-                onNavigate={() => setMobileAssistantOpen(false)}
-              />
-            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

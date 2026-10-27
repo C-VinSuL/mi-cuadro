@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@theme {
+  --color-flash-forest: #064e3b;
+  --color-flash-emerald: #16835d;
+  --color-flash-deep: #0b6651;
+  --color-flash-background: #f4f7f5;
+  --color-flash-mist: #e8f2ed;
+}
+
 html,
 body,
 #root {
@@ -158,6 +166,38 @@ svg {
   animation: loading-sweep 1.35s ease-in-out infinite;
 }
 
+@keyframes skeleton-shimmer {
+  from {
+    transform: translateX(-120%);
+  }
+
+  to {
+    transform: translateX(280%);
+  }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.skeleton-shimmer::after {
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 55%),
+    transparent
+  );
+  content: "";
+  pointer-events: none;
+  animation: skeleton-shimmer 1.35s ease-in-out infinite;
+}
+
 @keyframes navbar-glass-pop {
   from {
     opacity: 0;
@@ -216,6 +256,10 @@ svg {
     animation: none;
     width: 100%;
     opacity: 0.65;
+  }
+
+  .skeleton-shimmer::after {
+    animation: none;
   }
 
   .navbar-glass-pop {

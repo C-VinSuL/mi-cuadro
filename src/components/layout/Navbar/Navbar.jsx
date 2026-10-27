@@ -374,6 +374,9 @@ const Navbar = ({ onOpenMobileMenu }) => {
   return (
     <header
       className="
+        w-full
+        min-w-0
+        max-w-full
         sticky
         top-0
         z-30
@@ -387,10 +390,11 @@ const Navbar = ({ onOpenMobileMenu }) => {
         ring-0
 
         flex
+        gap-1
         items-center
         justify-between
 
-        px-2
+        px-4
         sm:px-6
         md:px-8
         xl:px-12
@@ -399,20 +403,20 @@ const Navbar = ({ onOpenMobileMenu }) => {
 
       {/* IZQUIERDA */}
 
-      <div className="flex items-center gap-1 lg:gap-3">
+      <div className="flex min-w-0 flex-[1_1_auto] items-center gap-1 lg:gap-3">
         <button
           type="button"
           onClick={onOpenMobileMenu}
           aria-label="Abrir menú de navegación"
-          className="flex size-11 items-center justify-center rounded-xl text-white transition hover:bg-white/10 md:hidden"
+          className="flex size-10 shrink-0 items-center justify-center rounded-xl text-white transition hover:bg-white/10 md:hidden"
         >
           <Menu size={22} />
         </button>
-        <div className="-ml-4 flex items-center md:hidden">
+        <div className="flex min-w-0 items-center md:hidden">
           <img
             src="/flashmonkey-logo.png"
             alt="Logotipo de FlashMonkey con su mascota"
-            className="navbar-mascot-logo h-[78px] w-[180px] shrink-0 object-contain sm:h-[96px] sm:w-[220px]"
+            className="navbar-mascot-logo h-[68px] w-[clamp(6rem,30vw,11rem)] min-w-0 max-w-full shrink object-contain sm:h-[78px] md:h-[96px] md:w-[220px]"
             width="360"
             height="150"
           />
@@ -423,7 +427,7 @@ const Navbar = ({ onOpenMobileMenu }) => {
 
       {/* DERECHA */}
 
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex min-w-0 shrink items-center gap-1 sm:gap-3">
 
         {/* NOTIFICACIONES */}
 
@@ -528,13 +532,14 @@ const Navbar = ({ onOpenMobileMenu }) => {
             setUserMenuOpen((open) => !open);
             setNotificationsOpen(false);
           }}
-          className="flex max-w-[15rem] items-center gap-2 rounded-xl px-2 py-2 text-left transition hover:bg-white/10 sm:gap-3 sm:px-3"
+          className="flex min-w-0 max-w-[38vw] items-center gap-1 rounded-xl px-1 py-2 text-left transition hover:bg-white/10 sm:max-w-[15rem] sm:gap-3 sm:px-3"
         >
 
           <span
           className={`
             flex
-            size-10
+            size-9
+            shrink-0
             overflow-hidden
             rounded-full
             bg-emerald-100
@@ -549,11 +554,13 @@ const Navbar = ({ onOpenMobileMenu }) => {
             : inicial}
           </span>
 
-          <span className="min-w-0 md:block">
+          <span className="block min-w-0 flex-1">
 
             <span
               className="
                 block
+                max-w-full
+                truncate
                 text-sm
                 font-semibold
                 text-white
@@ -593,7 +600,7 @@ const Navbar = ({ onOpenMobileMenu }) => {
 
           <ChevronDown
             size={15}
-            className={`shrink-0 text-emerald-100 transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`}
+            className={`size-3 shrink-0 text-emerald-100 transition-transform duration-200 ${userMenuOpen ? "rotate-180" : ""}`}
           />
 
         </button>
