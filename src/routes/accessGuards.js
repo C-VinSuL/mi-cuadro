@@ -11,6 +11,7 @@ export const evaluateProtectedRoute = ({ loading, user, mfaState, location }) =>
       type: "redirect",
       to: "/login",
       replace: true,
+      state: { from: location },
     };
   }
 

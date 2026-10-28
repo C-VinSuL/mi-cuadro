@@ -10,6 +10,7 @@ const SplashScreen = () => (
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
+        decoding="async"
       />
       <motion.p
         className="mt-5 text-sm font-medium tracking-wide text-emerald-100"

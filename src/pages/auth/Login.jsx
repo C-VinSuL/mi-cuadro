@@ -105,7 +105,8 @@ const Login = () => {
             loop
             muted
             playsInline
-            preload="metadata"
+            preload="none"
+            decoding="async"
             aria-label="Video de bienvenida de FlashMonkey"
             className="block h-auto w-full max-w-[310px] rounded-2xl"
           >

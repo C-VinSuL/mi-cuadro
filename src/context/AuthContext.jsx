@@ -360,48 +360,76 @@ const cargarFondoComunitario =
   // =========================
 
   useEffect(() => {
-    const {
-      data: { subscription }
-    } =
-      supabase.auth.onAuthStateChange(
-        (event, nextSession) => {
-          const nextIdentity = getSessionIdentity(nextSession);
+    const handleAuthSession = async (event, nextSession) => {
+      const nextIdentity = getSessionIdentity(nextSession);
+      const requestId = ++authRequest.current;
 
-          const requestId = ++authRequest.current;
-          if (shouldResetIdentity(identity.current, nextSession)) {
-            identity.current = nextIdentity;
-            clearIdentityData();
+      if (shouldResetIdentity(identity.current, nextSession)) {
+        identity.current = nextIdentity;
+        clearIdentityData();
+      }
+
+      setSession(nextSession);
+      setUser(getSessionUser(nextSession));
+      setLoading(true);
+
+      // Supabase recomienda salir del callback antes de hacer otras consultas.
+      setTimeout(async () => {
+        try {
+          if (!isCurrentRequest(requestId, nextIdentity)) return;
+
+          if (shouldSendWelcomeEmail(event, nextSession)) {
+            try {
+              const { error } = await supabase.functions.invoke("send-welcome-email");
+              if (error) throw error;
+            } catch (error) {
+              console.error("No se pudo enviar el correo de bienvenida:", error);
+            }
           }
 
-          setSession(nextSession);
-          setUser(getSessionUser(nextSession));
-
-          setLoading(true);
-
-          // Supabase recomienda salir del callback antes de hacer otras consultas.
-          setTimeout(async () => {
-            try {
-              if (!isCurrentRequest(requestId, nextIdentity)) return;
-
-              if (shouldSendWelcomeEmail(event, nextSession)) {
-                try {
-                  const { error } = await supabase.functions.invoke("send-welcome-email");
-                  if (error) throw error;
-                } catch (error) {
-                  console.error("No se pudo enviar el correo de bienvenida:", error);
-                }
-              }
-
-              if (!isCurrentRequest(requestId, nextIdentity)) return;
-              await cargarDatosUsuario(nextSession, requestId);
-            } finally {
-              if (requestId === authRequest.current) {
-                setLoading(false);
-              }
-            }
-          }, 0);
+          if (!isCurrentRequest(requestId, nextIdentity)) return;
+          await cargarDatosUsuario(nextSession, requestId);
+        } finally {
+          if (requestId === authRequest.current) {
+            setLoading(false);
+          }
         }
-      );
+      }, 0);
+    };
+
+    const hydrateSession = async () => {
+      try {
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error("Error inicializando sesión:", error);
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
+        if (initialSession) {
+          await handleAuthSession("INITIAL_SESSION", initialSession);
+        } else {
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Error cargando la sesión inicial:", error);
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+      }
+    };
+
+    hydrateSession();
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      handleAuthSession(event, nextSession);
+    });
 
     return () => {
       authRequest.current += 1;

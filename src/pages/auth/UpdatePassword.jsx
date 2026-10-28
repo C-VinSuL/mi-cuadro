@@ -73,7 +73,7 @@ const UpdatePassword = () => {
     <main className="auth-shell flex min-h-screen items-center justify-center px-4 py-6 sm:px-6 sm:py-10">
       <section className="grid w-full max-w-4xl overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-2xl shadow-emerald-950/10 md:h-[700px] md:grid-cols-[0.9fr_1.1fr]">
         <aside className="flex flex-col items-center justify-center bg-[#023a2d] px-6 py-8 text-center sm:py-10 md:px-8 md:py-12">
-          <img src="/flashmonkey-logo.png" alt="FlashMonkey" className="block h-auto w-full max-w-[310px]" />
+          <img src="/flashmonkey-logo.png" alt="FlashMonkey" className="block h-auto w-full max-w-[310px]" decoding="async" />
           <p className="mt-5 max-w-xs text-sm text-emerald-100 md:mt-8 md:text-base md:leading-7">
             Ahorra en comunidad y alcanza tus metas.
           </p>

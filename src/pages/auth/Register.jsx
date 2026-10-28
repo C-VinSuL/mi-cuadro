@@ -105,6 +105,7 @@ const Register = () => {
             initial={{ opacity: 0, y: -18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: "easeOut" }}
+            decoding="async"
           />
           <p className="mt-5 max-w-xs text-sm text-emerald-100 md:mt-8 md:text-base md:leading-7">
             Ahorra en comunidad y alcanza tus metas.

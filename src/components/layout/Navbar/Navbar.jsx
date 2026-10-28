@@ -433,6 +433,7 @@ const Navbar = ({ onOpenMobileMenu }) => {
             className="h-[68px] w-[clamp(6rem,30vw,11rem)] min-w-0 max-w-full shrink object-contain sm:h-[78px] md:h-[76px] md:w-[190px]"
             width="360"
             height="150"
+            decoding="async"
           />
         </div>
 
@@ -659,7 +660,7 @@ const Navbar = ({ onOpenMobileMenu }) => {
         <div className="ui-dialog-backdrop fixed inset-0 z-[1100] flex items-center justify-center bg-slate-950/60 p-4">
           <section role="dialog" aria-modal="true" aria-labelledby="welcome-title" className="ui-dialog-panel w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
             <div className="mx-auto w-full max-w-xs overflow-hidden rounded-xl bg-[#023a2d]">
-              <img src="/flashmonkey-logo.png" alt="FlashMonkey" className="block h-auto w-full" />
+              <img src="/flashmonkey-logo.png" alt="FlashMonkey" className="block h-auto w-full" decoding="async" />
             </div>
             <p className="mt-5 text-center text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Bienvenido a FlashMonkey</p>
             <h2 id="welcome-title" className="mt-2 text-center text-2xl font-bold text-slate-900">¡Qué bueno tenerte aquí!</h2>

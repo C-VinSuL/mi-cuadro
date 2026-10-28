@@ -198,6 +198,7 @@ const Sidebar = ({
                 src="/flashmonkey-logo.png"
                 alt="FlashMonkey, caja comunal"
                 className={`${sheet ? "h-12" : "h-[82px]"} w-auto max-w-full object-contain object-left`}
+                decoding="async"
               />
             </div>
           </div>
