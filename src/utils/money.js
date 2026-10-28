@@ -1,5 +1,8 @@
 const MAX_AMOUNT_WHOLE_UNITS = 9_999_999_999;
 
+export const normalizeAmountInput = (value) =>
+  String(value ?? "").replace(",", ".");
+
 export const parseAmountToCents = (value) => {
   const amount = String(value ?? "").trim();
   const match = amount.match(/^(\d{1,10})(?:\.(\d{1,2}))?$/);

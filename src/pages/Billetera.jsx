@@ -6,6 +6,7 @@ import { supabase } from "../services/supabase";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../hooks/useNotifications";
 import { logOperationalError } from "../utils/logOperationalError";
+import { normalizeAmountInput, parseAmountToCents } from "../utils/money";
 import {
   listarMovimientosBilletera,
   listarSolicitudesBilleteraAdmin,
@@ -96,6 +97,11 @@ const Billetera = () => {
   const enviarDeposito = async (event) => {
     event.preventDefault();
     if (!depositForm.receipt || saving) return;
+    const amountCents = parseAmountToCents(depositForm.amount);
+    if (amountCents === null || amountCents > 10_000_000) {
+      setError("Ingresa un monto válido entre $0.01 y $100,000.00.");
+      return;
+    }
     if (!allowedReceiptTypes.includes(depositForm.receipt.type) || depositForm.receipt.size > 5 * 1024 * 1024) {
       setError("Adjunta un comprobante JPG, PNG o PDF de hasta 5 MB.");
       return;
@@ -124,6 +130,11 @@ const Billetera = () => {
 
   const enviarRetiro = async (event) => {
     event.preventDefault();
+    const amountCents = parseAmountToCents(withdrawAmount);
+    if (amountCents === null || amountCents > Math.round(withdrawableBalance * 100)) {
+      setError("Ingresa un monto válido que no supere el saldo disponible para retirar.");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -334,7 +345,7 @@ const Billetera = () => {
           <p className="text-sm text-slate-600">Adjunta el comprobante de la transferencia realizada por el canal indicado por administración. El saldo no se acredita hasta su aprobación.</p>
           <label className="block text-sm font-medium text-slate-700">
             Monto (USD)
-            <input type="number" min="0.01" max="100000" step="0.01" required value={depositForm.amount} onChange={(event) => setDepositForm((current) => ({ ...current, amount: event.target.value }))} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5" />
+            <input type="text" inputMode="decimal" autoComplete="off" maxLength={13} pattern="[0-9]+([.,][0-9]{1,2})?" placeholder="0.00" required value={depositForm.amount} onChange={(event) => setDepositForm((current) => ({ ...current, amount: normalizeAmountInput(event.target.value) }))} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5" />
           </label>
           <label className="block text-sm font-medium text-slate-700">
             Comprobante (JPG, PNG o PDF; máximo 5 MB)
@@ -348,7 +359,7 @@ const Billetera = () => {
           <p className="text-sm text-slate-600">Los retiros requieren aprobación. La garantía mínima queda protegida y solo puede usarse para cubrir aportes vencidos.</p>
           <label className="block text-sm font-medium text-slate-700">
             Monto (USD)
-            <input type="number" min="0.01" max={withdrawableBalance} step="0.01" required value={withdrawAmount} onChange={(event) => setWithdrawAmount(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5" />
+            <input type="text" inputMode="decimal" autoComplete="off" maxLength={13} pattern="[0-9]+([.,][0-9]{1,2})?" placeholder="0.00" required value={withdrawAmount} onChange={(event) => setWithdrawAmount(normalizeAmountInput(event.target.value))} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5" />
           </label>
           <button type="submit" disabled={saving || loading || withdrawableBalance <= 0} className="rounded-lg border border-emerald-800 px-4 py-2.5 text-sm font-semibold text-emerald-900 hover:bg-emerald-50 disabled:opacity-50">{saving ? "Enviando..." : "Solicitar retiro"}</button>
         </form>

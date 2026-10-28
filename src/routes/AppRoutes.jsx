@@ -33,23 +33,42 @@ import AtencionSocios from "../pages/admin/AtencionSocios";
 import PageTransition from "../components/motion/PageTransition";
 import SplashScreen from "../components/ui/SplashScreen";
 import { useAuth } from "../context/AuthContext";
+import {
+  hasSeenStartupSplash,
+  markStartupSplashShown,
+} from "../utils/startupSplash";
 
 const AppRoutes = () => {
   const location = useLocation();
   const { pathname } = location;
   const { loading } = useAuth();
-  const [minimumSplashElapsed, setMinimumSplashElapsed] = useState(false);
+  const [showStartupSplash, setShowStartupSplash] = useState(() =>
+    !hasSeenStartupSplash(window.sessionStorage)
+  );
+  const [minimumSplashElapsed, setMinimumSplashElapsed] = useState(() =>
+    hasSeenStartupSplash(window.sessionStorage)
+  );
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => setMinimumSplashElapsed(true), 600);
-    return () => window.clearTimeout(timeoutId);
-  }, []);
+    if (!showStartupSplash) return undefined;
 
-  if (loading || !minimumSplashElapsed) {
+    markStartupSplashShown(window.sessionStorage);
+    const timeoutId = window.setTimeout(() => setMinimumSplashElapsed(true), 1800);
+    return () => window.clearTimeout(timeoutId);
+  }, [showStartupSplash]);
+
+  useEffect(() => {
+    if (!showStartupSplash || !minimumSplashElapsed || loading) return undefined;
+
+    const timeoutId = window.setTimeout(() => setShowStartupSplash(false), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [loading, minimumSplashElapsed, showStartupSplash]);
+
+  if (showStartupSplash && (loading || !minimumSplashElapsed)) {
     return <SplashScreen />;
   }
 

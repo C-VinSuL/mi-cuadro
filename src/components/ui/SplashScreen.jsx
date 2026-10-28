@@ -9,14 +9,14 @@ const SplashScreen = () => (
         className="h-auto w-56 max-w-[70vw] object-contain"
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
+        transition={{ duration: 1.2, ease: "easeOut" }}
         decoding="async"
       />
       <motion.p
         className="mt-5 text-sm font-medium tracking-wide text-emerald-100"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.35, delay: 0.35 }}
+        transition={{ duration: 0.8, delay: 0.65, ease: "easeOut" }}
       >
         Ahorra en comunidad y alcanza tus metas.
       </motion.p>

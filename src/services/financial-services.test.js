@@ -24,6 +24,7 @@ const {
 const {
   amountCentsToDecimal,
   formatCurrencyDecimal,
+  normalizeAmountInput,
   parseAmountToCents,
   sumAmountsToCents,
 } = await import("../utils/money.js");
@@ -205,6 +206,9 @@ test("expense service inserts records and totals treasury spend with role-guarde
 });
 
 test("money helpers validate two-decimal amounts and preserve cents exactly", () => {
+  assert.equal(normalizeAmountInput("12,50"), "12.50");
+  assert.equal(normalizeAmountInput("12.50"), "12.50");
+  assert.equal(parseAmountToCents(normalizeAmountInput("12,50")), 1250);
   assert.equal(parseAmountToCents("0.01"), 1);
   assert.equal(parseAmountToCents("1250.4"), 125040);
   assert.equal(parseAmountToCents("9999999999.99"), 999999999999);
