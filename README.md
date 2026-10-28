@@ -280,8 +280,10 @@ Para publicar en Vercel:
    por HTTPS.
 5. En Supabase **Authentication → URL Configuration**, establece el dominio
    principal de Vercel como **Site URL** y añade los dominios usados por
-   Production y Preview a **Redirect URLs**. Limita la lista a dominios
-   controlados por el proyecto.
+   Production y Preview a **Redirect URLs**, incluyendo la ruta
+   `/seguridad/mfa` utilizada como callback de Google. Limita la lista a
+   dominios controlados por el proyecto. Por ejemplo:
+   `https://tu-dominio.vercel.app/seguridad/mfa`.
 6. En los secretos de Supabase Edge Functions, configura `APP_URL` con el
    origen exacto de producción (sin ruta), además de `APP_ALLOWED_ORIGINS` para
    los orígenes de desarrollo o preview que realmente usarás. Configura allí

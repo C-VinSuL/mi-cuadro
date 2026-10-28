@@ -17,7 +17,7 @@ const GoogleAuthButton = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: new URL("/seguridad/mfa", window.location.origin).toString(),
           queryParams: { hl: "es" }
         }
       });

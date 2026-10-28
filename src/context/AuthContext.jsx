@@ -13,6 +13,7 @@ import {
   shouldResetIdentity,
   shouldSendWelcomeEmail,
   shouldClearSessionForInactiveProfile,
+  shouldApplySessionHydration,
   getSessionIdentity,
   getSessionUser,
 } from "./authSession";
@@ -360,6 +361,8 @@ const cargarFondoComunitario =
   // =========================
 
   useEffect(() => {
+    let authStateRevision = 0;
+
     const handleAuthSession = async (event, nextSession) => {
       const nextIdentity = getSessionIdentity(nextSession);
       const requestId = ++authRequest.current;
@@ -397,39 +400,34 @@ const cargarFondoComunitario =
       }, 0);
     };
 
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      authStateRevision += 1;
+      handleAuthSession(event, nextSession);
+    });
+
     const hydrateSession = async () => {
+      const eventRevisionAtStart = authStateRevision;
       try {
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        if (!shouldApplySessionHydration(eventRevisionAtStart, authStateRevision)) return;
+
         if (error) {
           console.error("Error inicializando sesión:", error);
-          setSession(null);
-          setUser(null);
-          setLoading(false);
+          await handleAuthSession("INITIAL_SESSION", null);
           return;
         }
 
-        if (initialSession) {
-          await handleAuthSession("INITIAL_SESSION", initialSession);
-        } else {
-          setSession(null);
-          setUser(null);
-          setLoading(false);
-        }
+        await handleAuthSession("INITIAL_SESSION", initialSession);
       } catch (error) {
+        if (!shouldApplySessionHydration(eventRevisionAtStart, authStateRevision)) return;
         console.error("Error cargando la sesión inicial:", error);
-        setSession(null);
-        setUser(null);
-        setLoading(false);
+        await handleAuthSession("INITIAL_SESSION", null);
       }
     };
 
     hydrateSession();
-
-    const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      handleAuthSession(event, nextSession);
-    });
 
     return () => {
       authRequest.current += 1;

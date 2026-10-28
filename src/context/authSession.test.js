@@ -5,6 +5,7 @@ import {
   getSessionIdentity,
   getSessionUser,
   isProfileActive,
+  shouldApplySessionHydration,
   shouldClearSessionForInactiveProfile,
   shouldResetIdentity,
   shouldSendWelcomeEmail,
@@ -29,6 +30,12 @@ test("identity resets when the auth user changes and stays stable across the sam
   assert.equal(shouldResetIdentity("user-1", { user: { id: "user-2" } }), true);
   assert.equal(shouldResetIdentity("user-2", { user: { id: "user-2" } }), false);
   assert.equal(shouldResetIdentity(null, { user: { id: "user-2" } }), true);
+});
+
+test("session hydration is ignored after an auth-state event has been observed", () => {
+  assert.equal(shouldApplySessionHydration(0, 0), true);
+  assert.equal(shouldApplySessionHydration(0, 1), false);
+  assert.equal(shouldApplySessionHydration(1, 1), false);
 });
 
 test("inactive profiles are blocked and require logout while active profiles remain valid", () => {
