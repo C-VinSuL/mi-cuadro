@@ -13,6 +13,7 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.112.2",
     "@tailwindcss/vite": "^4.3.3",
+    "@vercel/analytics": "^2.0.1",
     "dayjs": "^1.11.21",
     "exceljs": "^4.4.0",
     "lucide-react": "^1.29.0",

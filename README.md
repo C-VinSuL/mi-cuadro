@@ -33,10 +33,15 @@ movimientos financieros desde una interfaz con permisos según el rol.
 La disponibilidad de cada pantalla y operación depende del rol asignado y de
 las políticas configuradas en el backend.
 
+Para recopilar métricas de visitas, habilita **Web Analytics** en el panel del
+proyecto de Vercel. El componente de Analytics solo envía datos en compilaciones
+de producción; en desarrollo local no registra visitas.
+
 ## Tecnologías
 
 - React y Vite
 - Supabase Auth, PostgreSQL, Storage, Realtime y Edge Functions
+- Vercel Web Analytics para métricas de visitas y páginas vistas
 - Tailwind CSS
 - ExcelJS para exportar reportes
 

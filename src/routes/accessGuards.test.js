@@ -32,6 +32,7 @@ test("protected route redirects unauthenticated users to login", () => {
     type: "redirect",
     to: "/login",
     replace: true,
+    state: { from: { pathname: "/grupos" } },
   });
 });
 

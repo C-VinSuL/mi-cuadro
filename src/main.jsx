@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 
 import { BrowserRouter } from "react-router-dom";
 import { MotionConfig } from "motion/react";
+import { Analytics } from "@vercel/analytics/react";
 
 import "./index.css";
 
@@ -142,6 +143,7 @@ if (!supabaseUrl || !supabaseKey) {
                   <App />
                 </NotificationProvider>
               </AuthProvider>
+              <Analytics mode={import.meta.env.PROD ? "production" : "development"} />
             </BrowserRouter>
           </MotionConfig>
         </StartupErrorBoundary>
