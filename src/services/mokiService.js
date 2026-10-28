@@ -1,9 +1,16 @@
 import { supabase } from "./supabase";
 import { createUniqueId } from "../utils/uniqueId";
+import { getStorageUploadErrorMessage, getSupportedDocumentMimeType } from "../utils/fileUpload";
 
 const unwrap = ({ data, error }) => {
   if (error) throw error;
   return data;
+};
+
+const createFileUploadError = (message) => {
+  const error = new Error(message);
+  error.name = "FileUploadError";
+  return error;
 };
 
 export const listarMisConversacionesMoki = async (socioId) => {
@@ -41,12 +48,12 @@ export const enviarMensajeMoki = async (conversacionId, mensaje) => unwrap(await
 }));
 
 export const enviarArchivoMoki = async (conversacionId, file, mensaje = "") => {
-  const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-  if (!allowedTypes.includes(file.type)) {
-    throw new Error("Adjunta una imagen JPG, PNG, WebP o un documento PDF.");
+  const fileType = getSupportedDocumentMimeType(file);
+  if (!fileType) {
+    throw createFileUploadError("Adjunta una imagen JPG, PNG, WebP o un documento PDF.");
   }
   if (file.size > 5 * 1024 * 1024) {
-    throw new Error("El archivo no puede superar 5 MB.");
+    throw createFileUploadError("El archivo no puede superar 5 MB.");
   }
 
   const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -57,15 +64,17 @@ export const enviarArchivoMoki = async (conversacionId, file, mensaje = "") => {
   const objectPath = `${conversacionId}/${user.id}/${createUniqueId()}-${safeName}`;
   const { error: uploadError } = await supabase.storage
     .from("moki-attachments")
-    .upload(objectPath, file, { contentType: file.type, upsert: false });
-  if (uploadError) throw uploadError;
+    .upload(objectPath, file, { contentType: fileType, upsert: false });
+  if (uploadError) {
+    throw createFileUploadError(getStorageUploadErrorMessage(uploadError, "JPG, PNG, WebP o PDF"));
+  }
 
   const { error: messageError } = await supabase.rpc("moki_enviar_mensaje", {
     p_conversacion_id: conversacionId,
     p_mensaje: mensaje.trim() || null,
     p_archivo_path: objectPath,
     p_archivo_nombre: safeName,
-    p_archivo_mime: file.type,
+    p_archivo_mime: fileType,
     p_archivo_tamano: file.size
   });
   if (messageError) {

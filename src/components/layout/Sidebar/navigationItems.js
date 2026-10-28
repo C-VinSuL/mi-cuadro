@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   UserRoundCog,
   FileClock,
+  FileSearch,
   MessageCircle
 } from "lucide-react";
 
@@ -67,6 +68,12 @@ export const menu = [
     icon: FileClock,
     path: "/auditoria",
     permission: "verAuditoria"
+  },
+  {
+    title: "Archivos de auditoría",
+    icon: FileSearch,
+    path: "/admin/archivos",
+    permission: "gestionarUsuarios"
   },
   {
     title: "Socios y roles",

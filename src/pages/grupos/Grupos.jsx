@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import { supabase } from "../../services/supabase";
+import { createUniqueId } from "../../utils/uniqueId";
 
 import {
   AlertTriangle,
@@ -54,13 +56,34 @@ const Grupos = () => {
   }, [can, grupo?.id]);
 
   useEffect(() => {
+    let active = true;
     const timeoutId = window.setTimeout(actualizarParticipantes, 0);
     const intervalId = window.setInterval(actualizarParticipantes, 30000);
+    const channel = grupo?.id
+      ? supabase
+        .channel(`participantes-grupo-${grupo.id}-${createUniqueId()}`)
+        .on("postgres_changes", {
+          event: "INSERT",
+          schema: "public",
+          table: "participantes",
+          filter: `grupo_id=eq.${grupo.id}`
+        }, () => {
+          if (active) void actualizarParticipantes(grupo.id);
+        })
+        .subscribe((status, error) => {
+          if (["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) {
+            logOperationalError("Error en tiempo real de participantes:", error || new Error(status));
+          }
+        })
+      : null;
+
     return () => {
+      active = false;
       window.clearTimeout(timeoutId);
       window.clearInterval(intervalId);
+      if (channel) void supabase.removeChannel(channel);
     };
-  }, [actualizarParticipantes]);
+  }, [actualizarParticipantes, grupo?.id]);
 
   if (!grupo) {
     const puedeGestionarGrupos = can("gestionarGrupo");

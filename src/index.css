@@ -141,6 +141,41 @@ svg {
   animation: loading-sweep 1.35s ease-in-out infinite;
 }
 
+.session-loading-screen {
+  background:
+    radial-gradient(ellipse at 50% 42%, rgb(16 185 129 / 11%), transparent 48%),
+    #f4f7f5;
+}
+
+.session-loading-orbit {
+  animation: session-loading-spin 1.8s linear infinite;
+}
+
+.session-loading-dot {
+  animation: session-loading-bounce 1s ease-in-out infinite;
+}
+
+.session-loading-bar {
+  animation: loading-sweep 1.8s ease-in-out infinite;
+}
+
+@keyframes session-loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes session-loading-bounce {
+  0%, 60%, 100% { opacity: 0.35; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .session-loading-orbit,
+  .session-loading-dot,
+  .session-loading-bar {
+    animation: none;
+  }
+}
+
 @keyframes skeleton-shimmer {
   from {
     transform: translateX(-120%);

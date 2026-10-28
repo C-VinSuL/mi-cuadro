@@ -92,3 +92,8 @@ export const listarAuditoria = (grupoId = null, desde = null, hasta = null) => c
   p_desde: desde || null,
   p_hasta: hasta || null
 });
+
+export const listarArchivosAuditoriaAdministrador = (offset = 0, limit = 100) => callRpc(
+  "listar_archivos_auditoria_administrador",
+  { p_limit: limit, p_offset: offset }
+);

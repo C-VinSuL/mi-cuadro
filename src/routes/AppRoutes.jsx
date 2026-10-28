@@ -27,6 +27,7 @@ import Configuracion from "../pages/Configuracion";
 import Usuarios from "../pages/admin/Usuarios";
 import VerificarDocumentos from "../pages/admin/VerificarDocumentos";
 import Auditoria from "../pages/reportes/Auditoria";
+import ArchivosAuditoria from "../pages/admin/ArchivosAuditoria";
 import Billetera from "../pages/Billetera";
 import Egresos from "../pages/egresos/Egresos";
 import AtencionSocios from "../pages/admin/AtencionSocios";
@@ -294,6 +295,17 @@ const AppRoutes = () => {
           <ProtectedRoute>
             <RoleRoute permission="verAuditoria">
               <MainLayout><Auditoria /></MainLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/archivos"
+        element={
+          <ProtectedRoute>
+            <RoleRoute permission="gestionarUsuarios">
+              <MainLayout><ArchivosAuditoria /></MainLayout>
             </RoleRoute>
           </ProtectedRoute>
         }

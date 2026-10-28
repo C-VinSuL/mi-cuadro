@@ -11,6 +11,7 @@ const MobileBottomNavigation = ({
   onNavigate,
   assistantOpen = false,
   moreOpen = false,
+  notificationCount = 0,
   onOpenMore,
   onCloseMore
 }) => {
@@ -93,7 +94,7 @@ const MobileBottomNavigation = ({
           <button
             type="button"
             onClick={onOpenAssistant}
-            aria-label={assistantOpen ? "Cerrar Moki, asistente FlashMonkey" : "Abrir Moki, asistente FlashMonkey"}
+            aria-label={`${assistantOpen ? "Cerrar Moki, asistente FlashMonkey" : "Abrir Moki, asistente FlashMonkey"}${notificationCount ? `, ${notificationCount} notificaciones sin leer` : ""}`}
             aria-pressed={assistantOpen}
             className="relative flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-0.5 text-[11px] font-medium leading-tight text-white outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
@@ -112,6 +113,14 @@ const MobileBottomNavigation = ({
               aria-hidden="true"
             />
             <span className="relative z-10">Moki</span>
+            {notificationCount > 0 && (
+              <span
+                aria-hidden="true"
+                className="absolute right-2 top-1 z-20 flex min-h-4 min-w-4 items-center justify-center rounded-full border border-[#064E3B] bg-red-500 px-1 text-[9px] font-bold leading-none text-white"
+              >
+                {notificationCount > 9 ? "9+" : notificationCount}
+              </span>
+            )}
           </button>
           <button
             type="button"

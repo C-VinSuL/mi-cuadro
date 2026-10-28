@@ -6,6 +6,7 @@ import { supabase } from "../services/supabase";
 import { useAuth } from "../context/AuthContext";
 import { useNotifications } from "../hooks/useNotifications";
 import { logOperationalError } from "../utils/logOperationalError";
+import { getStorageUploadErrorMessage, getSupportedDocumentMimeType } from "../utils/fileUpload";
 import { normalizeAmountInput, parseAmountToCents } from "../utils/money";
 import {
   listarMovimientosBilletera,
@@ -18,7 +19,6 @@ import {
 } from "../services/walletService";
 
 const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
-const allowedReceiptTypes = ["image/jpeg", "image/png", "application/pdf"];
 
 const Billetera = () => {
   const { user, profile, grupos } = useAuth();
@@ -102,27 +102,33 @@ const Billetera = () => {
       setError("Ingresa un monto válido entre $0.01 y $100,000.00.");
       return;
     }
-    if (!allowedReceiptTypes.includes(depositForm.receipt.type) || depositForm.receipt.size > 5 * 1024 * 1024) {
+    const receiptType = getSupportedDocumentMimeType(depositForm.receipt);
+    if (!receiptType || depositForm.receipt.size > 5 * 1024 * 1024) {
       setError("Adjunta un comprobante JPG, PNG o PDF de hasta 5 MB.");
       return;
     }
     setSaving(true);
     setError("");
+    let uploadingReceipt = false;
     try {
-      const extension = depositForm.receipt.type === "application/pdf" ? "pdf" : depositForm.receipt.type.split("/")[1];
+      const extension = receiptType === "application/pdf" ? "pdf" : receiptType.split("/")[1];
       const path = `${user.id}/${createUniqueId()}.${extension}`;
+      uploadingReceipt = true;
       const { error: uploadError } = await supabase.storage.from("wallet-receipts").upload(path, depositForm.receipt, {
-        contentType: depositForm.receipt.type,
+        contentType: receiptType,
         upsert: false
       });
       if (uploadError) throw uploadError;
+      uploadingReceipt = false;
       await solicitarDepositoBilletera(depositForm.amount, path);
       setDepositForm({ amount: "", receipt: null });
       notify({ title: "Depósito enviado a revisión", message: "El saldo se actualizará después de que administración o tesorería confirme el comprobante.", type: "success" });
       await loadWallet();
     } catch (submitError) {
       logOperationalError("Error solicitando depósito:", submitError);
-      setError("No se pudo enviar el depósito. Verifica los datos e inténtalo nuevamente.");
+      setError(uploadingReceipt
+        ? getStorageUploadErrorMessage(submitError)
+        : "No se pudo enviar el depósito. Verifica los datos e inténtalo nuevamente.");
     } finally {
       setSaving(false);
     }
@@ -347,10 +353,40 @@ const Billetera = () => {
             Monto (USD)
             <input type="text" inputMode="decimal" autoComplete="off" maxLength={13} pattern="[0-9]+([.,][0-9]{1,2})?" placeholder="0.00" required value={depositForm.amount} onChange={(event) => setDepositForm((current) => ({ ...current, amount: normalizeAmountInput(event.target.value) }))} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5" />
           </label>
-          <label className="block text-sm font-medium text-slate-700">
-            Comprobante (JPG, PNG o PDF; máximo 5 MB)
-            <input type="file" accept="image/jpeg,image/png,application/pdf" required onChange={(event) => setDepositForm((current) => ({ ...current, receipt: event.target.files?.[0] || null }))} className="mt-1.5 block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:font-semibold file:text-emerald-800" />
-          </label>
+          <div className="block text-sm font-medium text-slate-700">
+            <p>Comprobante (JPG, PNG o PDF; máximo 5 MB)</p>
+            <label className="relative mt-1.5 inline-flex min-h-11 cursor-pointer items-center overflow-hidden rounded-lg border border-emerald-700 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50">
+              {depositForm.receipt ? "Cambiar archivo" : "Elegir archivo"}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf"
+                required
+                aria-label="Elegir comprobante JPG, PNG o PDF"
+                onChange={(event) => {
+                  const receipt = event.target.files?.[0] || null;
+                  const receiptType = getSupportedDocumentMimeType(
+                    receipt,
+                    new Set(["image/jpeg", "image/png", "application/pdf"])
+                  );
+                  if (receipt && (!receiptType || receipt.size > 5 * 1024 * 1024)) {
+                    setDepositForm((current) => ({ ...current, receipt: null }));
+                    setError("Adjunta un comprobante JPG, PNG o PDF de hasta 5 MB.");
+                    event.target.value = "";
+                    return;
+                  }
+                  setDepositForm((current) => ({ ...current, receipt }));
+                  if (receipt) setError("");
+                  else setError("No se recibió ningún archivo. Vuelve a elegirlo desde el teléfono.");
+                }}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              />
+            </label>
+            <span role="status" className="mt-1 block break-all text-xs font-normal text-slate-500">
+              {depositForm.receipt
+                ? `Seleccionado: ${depositForm.receipt.name} (${(depositForm.receipt.size / (1024 * 1024)).toFixed(2)} MB)`
+                : "Ningún archivo seleccionado"}
+            </span>
+          </div>
           <button type="submit" disabled={saving || loading} className="rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-50">{saving ? "Enviando..." : "Enviar a revisión"}</button>
         </form>
 

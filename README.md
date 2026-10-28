@@ -133,6 +133,26 @@ Aplica las migraciones de `supabase/migrations` en orden. La migración
 notificaciones y las notificaciones automáticas para las solicitudes de ingreso
 a grupos. Las notificaciones quedan asociadas a la cuenta, se sincronizan entre
 sesiones y cada usuario solo puede leer, marcar o eliminar las propias.
+La migración `202610280002_group_invitation_acceptance_notifications.sql`
+identifica la aceptación de una invitación en el aviso de solicitud de grupo
+existente, sin crear un aviso duplicado, y la presenta en el resumen de Moki.
+La migración `202610280003_audit_request_metadata.sql` registra en eventos
+nuevos la IP y el agente de usuario recibidos por PostgREST, cuando el proxy de
+Supabase los proporciona. No puede completar retroactivamente eventos previos.
+La migración `202610280004_admin_file_audit.sql` agrega un listado central de
+archivos que solo puede consultar un administrador con MFA desde
+`/admin/archivos`; los archivos privados se abren con URL firmada de 60 segundos.
+
+Los archivos se guardan en **Supabase Storage**, no en Vercel. Los buckets
+`identity-documents`, `wallet-receipts`, `contribution-receipts` y
+`moki-attachments` son privados y sus políticas limitan lectura y escritura
+según propietario, rol y MFA. Los comprobantes se revisan desde sus pantallas
+de administración; el documento de identidad se revisa desde Verificación
+documental. `profile-avatars` es público para poder mostrar los avatares; no
+debe usarse para identificaciones ni comprobantes. El panel Storage del
+proyecto Supabase permite a los miembros autorizados del proyecto administrar
+archivos; el rol de administrador de la aplicación no equivale por sí mismo a
+ser miembro del proyecto Supabase.
 
 La migración `202610070002_groups_invitations_profiles_audit.sql` agrega el
 directorio e invitaciones de grupos, datos privados de perfil, roles, auditoría,
@@ -181,6 +201,9 @@ con validación de rol, MFA, pertenencia del socio y duplicados.
 La migración `202610220004_treasury_expenses.sql` agrega el registro y consulta
 protegidos de egresos para administración y tesorería, con suma acumulada y
 permisos de lectura/escritura validados mediante MFA.
+La migración `202610280001_enable_realtime_for_group_participants.sql` publica
+la tabla de participantes en Supabase Realtime para actualizar los conteos y
+la lista del grupo al aprobar una incorporación.
 
 Los proyectos Supabase nuevos no tienen las tablas base de `perfiles`, `grupos`,
 `participantes` y `aportes`: las migraciones del repositorio son incrementales

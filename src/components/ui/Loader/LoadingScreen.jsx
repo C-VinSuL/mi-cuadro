@@ -1,37 +1,31 @@
-import { LoaderCircle } from "lucide-react";
-import Skeleton from "../Skeleton";
-
 const LoadingScreen = ({ message = "Preparando tu espacio..." }) => (
   <main
-    className="min-h-screen bg-[#F4F7F5] px-4 py-6 sm:px-6 sm:py-8"
+    className="session-loading-screen grid min-h-dvh place-items-center overflow-hidden px-5 py-8"
     role="status"
     aria-live="polite"
   >
-    <div className="mx-auto w-full max-w-5xl">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-800">
-          <LoaderCircle className="motion-safe:animate-spin" size={22} aria-hidden="true" />
-        </div>
-        <p className="text-sm font-semibold text-slate-700">{message}</p>
+    <section className="w-full max-w-sm rounded-3xl border border-white/80 bg-white/90 p-8 text-center shadow-xl shadow-emerald-950/10 backdrop-blur sm:p-10">
+      <div className="session-loading-emblem relative mx-auto grid size-24 place-items-center rounded-full bg-emerald-50">
+        <span className="session-loading-orbit absolute inset-0 rounded-full border-2 border-emerald-100 border-t-emerald-700" aria-hidden="true" />
+        <span className="grid size-[4.25rem] place-items-center rounded-full bg-white shadow-sm">
+          <img src="/flashmonkey.svg" alt="" className="size-12 object-contain" />
+        </span>
       </div>
-      <div className="space-y-5" aria-hidden="true">
-        <Skeleton className="h-36 w-full rounded-3xl" />
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }, (_, index) => (
-            <Skeleton key={index} className="h-32 w-full rounded-2xl" />
+      <div className="mt-7 flex items-center justify-center gap-2">
+        <h1 className="text-base font-semibold text-slate-900">{message}</h1>
+        <span className="flex items-center gap-1" aria-hidden="true">
+          {[0, 1, 2].map((dot) => (
+            <span key={dot} className="session-loading-dot size-1.5 rounded-full bg-emerald-600" style={{ animationDelay: `${dot * 160}ms` }} />
           ))}
-        </div>
-        <Skeleton className="h-52 w-full rounded-3xl" />
+        </span>
       </div>
-      <div
-        className="mt-6 h-1.5 overflow-hidden rounded-full bg-emerald-100"
-        role="progressbar"
-        aria-label={message}
-        aria-valuetext="En progreso"
-      >
-        <div className="loading-progress h-full w-2/5 rounded-full bg-emerald-600" />
+      <p className="mt-2 text-sm leading-6 text-slate-500">
+        Estamos preparando tu espacio seguro.
+      </p>
+      <div className="mt-7 h-1.5 overflow-hidden rounded-full bg-emerald-100" aria-hidden="true">
+        <div className="session-loading-bar h-full w-2/5 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-800" />
       </div>
-    </div>
+    </section>
   </main>
 );
 

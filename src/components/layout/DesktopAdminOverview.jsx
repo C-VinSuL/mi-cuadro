@@ -12,6 +12,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
+import { useNotifications } from "../../hooks/useNotifications";
 import { usePermissions } from "../../hooks/usePermissions";
 import { listarDocumentosPendientes } from "../../services/adminService";
 import { listarBandejaMoki } from "../../services/mokiService";
@@ -22,7 +23,11 @@ import { createUniqueId } from "../../utils/uniqueId";
 const DesktopAdminOverview = ({ onClose }) => {
   const navigate = useNavigate();
   const { grupos } = useAuth();
+  const { notifications, markRead } = useNotifications();
   const { can } = usePermissions();
+  const acceptedGroupInvitations = notifications.filter(
+    (notification) => notification.title === "Invitación de grupo aceptada" && !notification.read
+  );
   const groupIds = useMemo(() => (grupos || []).map((group) => group.id).filter(Boolean), [grupos]);
   const [counts, setCounts] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -123,7 +128,21 @@ const DesktopAdminOverview = ({ onClose }) => {
     navigate(path);
   };
 
+  const goToAcceptedGroupInvitations = async () => {
+    await Promise.all(acceptedGroupInvitations.map((notification) => markRead(notification.id)));
+    goTo("/grupo");
+  };
+
   const tasks = [
+    can("gestionarGrupo") && {
+      title: "Aceptaciones de grupo",
+      description: "Avisos nuevos sobre invitaciones aceptadas",
+      count: acceptedGroupInvitations.length,
+      icon: Users,
+      path: "/grupo",
+      onClick: goToAcceptedGroupInvitations,
+      emphasis: acceptedGroupInvitations.length > 0
+    },
     can("gestionarAtencionSocios") && {
       title: "Atención a socios",
       description: counts
@@ -191,11 +210,11 @@ const DesktopAdminOverview = ({ onClose }) => {
       )}
 
       <div className="space-y-2">
-        {tasks.map(({ title, description, count, icon: Icon, path, emphasis }) => (
+        {tasks.map(({ title, description, count, icon: Icon, path, onClick, emphasis }) => (
           <button
             key={path}
             type="button"
-            onClick={() => goTo(path)}
+            onClick={onClick || (() => goTo(path))}
             className="group flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-emerald-700/30 hover:bg-emerald-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700"
           >
             <span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${emphasis ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>

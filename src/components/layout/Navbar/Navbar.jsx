@@ -17,6 +17,7 @@ import { supabase } from "../../../services/supabase";
 import { useNotifications } from "../../../hooks/useNotifications";
 import { createUniqueId } from "../../../utils/uniqueId";
 import { logOperationalError } from "../../../utils/logOperationalError";
+import { getStorageUploadErrorMessage, getSupportedDocumentMimeType } from "../../../utils/fileUpload";
 
 const Navbar = ({ onOpenMobileMenu }) => {
 
@@ -263,8 +264,8 @@ const Navbar = ({ onOpenMobileMenu }) => {
   const cargarDocumentoIdentidad = async (event) => {
     const file = event.target.files?.[0];
     if (!file || !user?.id) return;
-    const allowedTypes = ["image/jpeg", "image/png", "application/pdf"];
-    if (!allowedTypes.includes(file.type) || file.size > 5 * 1024 * 1024) {
+    const fileType = getSupportedDocumentMimeType(file);
+    if (!fileType || file.size > 5 * 1024 * 1024) {
       notify({
         title: "Documento no válido",
         message: "Carga una imagen JPG, PNG o un PDF de hasta 5 MB.",
@@ -274,14 +275,17 @@ const Navbar = ({ onOpenMobileMenu }) => {
       return;
     }
     setUploadingIdentityDocument(true);
+    let uploadingDocument = false;
     try {
-      const extension = file.type === "application/pdf" ? "pdf" : file.type.split("/")[1];
+      const extension = fileType === "application/pdf" ? "pdf" : fileType.split("/")[1];
       const objectPath = `${user.id}/${createUniqueId()}.${extension}`;
+      uploadingDocument = true;
       const { error: uploadError } = await supabase.storage.from("identity-documents").upload(objectPath, file, {
-        contentType: file.type,
+        contentType: fileType,
         upsert: false
       });
       if (uploadError) throw uploadError;
+      uploadingDocument = false;
       const { error: pathError } = await supabase.rpc("guardar_documento_identidad", {
         p_object_path: objectPath
       });
@@ -297,7 +301,9 @@ const Navbar = ({ onOpenMobileMenu }) => {
       logOperationalError("Error cargando documento de identidad:", uploadError);
       notify({
         title: "No se pudo cargar el documento",
-        message: "Verifica tu conexión e inténtalo nuevamente.",
+        message: uploadingDocument
+          ? getStorageUploadErrorMessage(uploadError)
+          : "No se pudo registrar el documento. Verifica tu conexión e inténtalo nuevamente.",
         type: "error"
       });
     } finally {
@@ -315,25 +321,35 @@ const Navbar = ({ onOpenMobileMenu }) => {
   const cargarAvatar = async (event) => {
     const file = event.target.files?.[0];
     if (!file || !profile?.id) return;
-    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 2 * 1024 * 1024) {
+    const fileType = getSupportedDocumentMimeType(file, new Set(["image/jpeg", "image/png", "image/webp"]));
+    if (!fileType || file.size > 2 * 1024 * 1024) {
       notify({ title: "Imagen no válida", message: "Usa JPG, PNG o WebP de hasta 2 MB.", type: "error" });
       event.target.value = "";
       return;
     }
     setUploadingAvatar(true);
+    let uploadingImage = false;
     try {
-      const extension = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
+      const extension = fileType === "image/jpeg" ? "jpg" : fileType.split("/")[1];
       const objectPath = `${profile.id}/${createUniqueId()}.${extension}`;
+      uploadingImage = true;
       const { error } = await supabase.storage.from("profile-avatars").upload(objectPath, file, {
-        contentType: file.type,
+        contentType: fileType,
         upsert: false
       });
       if (error) throw error;
+      uploadingImage = false;
       const { data } = supabase.storage.from("profile-avatars").getPublicUrl(objectPath);
       setProfileForm((current) => ({ ...current, avatarUrl: data.publicUrl }));
     } catch (uploadError) {
       logOperationalError("Error cargando avatar:", uploadError);
-      notify({ title: "No se pudo cargar la imagen", message: "Verifica tu conexión e inténtalo nuevamente.", type: "error" });
+      notify({
+        title: "No se pudo cargar la imagen",
+        message: uploadingImage
+          ? getStorageUploadErrorMessage(uploadError)
+          : "No se pudo preparar la imagen para el perfil. Inténtalo nuevamente.",
+        type: "error"
+      });
     } finally {
       setUploadingAvatar(false);
       event.target.value = "";
@@ -699,7 +715,7 @@ const Navbar = ({ onOpenMobileMenu }) => {
                 </span>
                 <label className="text-sm font-semibold text-emerald-800">
                   {uploadingAvatar ? "Cargando imagen..." : "Subir foto o avatar"}
-                  <input type="file" accept="image/png,image/jpeg,image/webp" onChange={cargarAvatar} disabled={uploadingAvatar || savingProfile} className="mt-1 block max-w-full text-xs font-normal text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:font-semibold file:text-emerald-800" />
+                  <input type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" onChange={cargarAvatar} disabled={uploadingAvatar || savingProfile} className="mt-1 block min-h-11 max-w-full text-xs font-normal text-slate-600 file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:font-semibold file:text-emerald-800" />
                   <span className="mt-1 block text-xs font-normal text-slate-500">JPG, PNG o WebP; máximo 2 MB.</span>
                 </label>
               </div>
@@ -737,9 +753,9 @@ const Navbar = ({ onOpenMobileMenu }) => {
               <div className="rounded-xl border border-slate-200 p-4">
                 <p className="text-sm font-semibold text-slate-800">Documento de identidad</p>
                 <p className="mt-1 text-xs text-slate-500">Carga una imagen JPG/PNG o un PDF, máximo 5 MB. Solo tú y el personal que verifica documentos podrán acceder al archivo.</p>
-                <label className="mt-3 inline-flex cursor-pointer items-center rounded-lg border border-emerald-700 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50">
+                <label className="relative mt-3 inline-flex min-h-11 cursor-pointer items-center overflow-hidden rounded-lg border border-emerald-700 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50">
                   {uploadingIdentityDocument ? "Cargando documento..." : identityDocumentPath ? "Reemplazar documento" : "Cargar documento"}
-                  <input type="file" accept="image/jpeg,image/png,application/pdf" onChange={cargarDocumentoIdentidad} disabled={uploadingIdentityDocument || savingProfile} className="sr-only" />
+                  <input type="file" accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf" onChange={cargarDocumentoIdentidad} disabled={uploadingIdentityDocument || savingProfile} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
                 </label>
                 <p className={`mt-2 text-xs ${identityDocumentVerified ? "font-semibold text-emerald-700" : identityDocumentPath ? "text-blue-700" : "text-amber-700"}`}>
                   {identityDocumentVerified ? "Documento verificado" : identityDocumentPath ? "Documento cargado; pendiente de revisión" : "Aún no has cargado tu documento"}

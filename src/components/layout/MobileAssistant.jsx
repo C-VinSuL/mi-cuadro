@@ -18,6 +18,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
+import { useNotifications } from "../../hooks/useNotifications";
 import { usePermissions } from "../../hooks/usePermissions";
 import { createUniqueId } from "../../utils/uniqueId";
 import DesktopAdminOverview from "./DesktopAdminOverview";
@@ -36,6 +37,7 @@ import {
   restaurarConversacionMoki
 } from "../../services/mokiService";
 import { getVisibleMenu } from "./Sidebar/navigationItems";
+import { getSupportedDocumentMimeType } from "../../utils/fileUpload";
 
 const QUICK_HELP = {
   socio: [
@@ -81,6 +83,7 @@ const CHAT_EMOJIS = ["😀", "😊", "👍", "🙏", "🎉", "❤️", "📎", "
 const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { notifications, markRead } = useNotifications();
   const { can, rol } = usePermissions();
   const items = getVisibleMenu(can, rol);
   const isMember = rol === "socio";
@@ -110,6 +113,9 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
   const [sending, setSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const adminInbox = isAdministrator && ["inbox", "archived"].includes(adminView);
+  const acceptedGroupInvitations = notifications.filter(
+    (notification) => notification.title === "Invitación de grupo aceptada" && !notification.read
+  );
   const activeConversation = isAdministrator ? selectedConversation : memberConversation;
   const listedConversations = adminView === "archived" ? archivedConversations : conversations;
   const chatMessages = [...messages, ...localMessages];
@@ -118,6 +124,11 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
   const goTo = (path) => {
     onClose();
     navigate(path);
+  };
+
+  const goToAcceptedGroupInvitations = async () => {
+    await Promise.all(acceptedGroupInvitations.map((notification) => markRead(notification.id)));
+    goTo("/grupo");
   };
 
   useEffect(() => {
@@ -275,7 +286,9 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
       }
     } catch (error) {
       console.error("Error enviando mensaje de Moki:", error);
-      setErrorMessage("No se pudo enviar el mensaje. Revisa tu conexión e inténtalo de nuevo.");
+      setErrorMessage(error?.name === "FileUploadError"
+        ? error.message
+        : "No se pudo enviar el mensaje. Revisa tu conexión e inténtalo de nuevo.");
     } finally {
       setLoading(false);
       setSending(false);
@@ -284,9 +297,12 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
 
   const selectAttachment = (event) => {
     const file = event.target.files?.[0];
-    if (!file) return;
-    const validTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-    if (!validTypes.includes(file.type)) {
+    if (!file) {
+      setErrorMessage("No se recibió ningún archivo. Vuelve a elegirlo desde el teléfono.");
+      return;
+    }
+    const fileType = getSupportedDocumentMimeType(file);
+    if (!fileType) {
       setErrorMessage("Adjunta una imagen JPG, PNG, WebP o un documento PDF.");
       event.target.value = "";
       return;
@@ -603,6 +619,30 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
             aria-live="polite"
             className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-5"
           >
+            {!desktop && can("gestionarGrupo") && adminView === "chat" && acceptedGroupInvitations.length > 0 && (
+              <section aria-label="Aceptaciones recientes de grupo" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <div className="flex items-start gap-3">
+                  <Users size={20} className="mt-0.5 shrink-0 text-emerald-800" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-emerald-950">
+                      {acceptedGroupInvitations.length === 1
+                        ? "Nueva aceptación de grupo"
+                        : `${acceptedGroupInvitations.length} aceptaciones de grupo`}
+                    </p>
+                    <p className="mt-1 text-xs leading-relaxed text-emerald-900">
+                      {acceptedGroupInvitations[0].message}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={goToAcceptedGroupInvitations}
+                      className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-900 underline underline-offset-2"
+                    >
+                      Revisar en Grupos <ArrowUpRight size={14} />
+                    </button>
+                  </div>
+                </div>
+              </section>
+            )}
             {!adminInbox && (
               <div className="flex items-end gap-2">
                 <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white">
@@ -691,26 +731,22 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
                   ))}
                 </div>
               )}
-              <input
-                ref={attachmentInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,application/pdf"
-                onChange={selectAttachment}
-                className="sr-only"
-                tabIndex={-1}
-                aria-label="Seleccionar imagen o PDF"
-              />
               <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => attachmentInputRef.current?.click()}
-                  aria-label="Adjuntar archivo"
+                <label
                   title="Adjuntar imagen o PDF (máximo 5 MB)"
-                  disabled={sending || (isAdministrator && !selectedConversation)}
-                  className="flex size-10 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-emerald-800 disabled:opacity-50"
+                  className={`relative flex size-10 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-100 hover:text-emerald-800 ${(sending || (isAdministrator && !selectedConversation)) ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
                 >
                   <Plus size={20} />
-                </button>
+                  <input
+                    ref={attachmentInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf"
+                    onChange={selectAttachment}
+                    disabled={sending || (isAdministrator && !selectedConversation)}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                    aria-label="Adjuntar imagen o PDF"
+                  />
+                </label>
                 <button
                   type="button"
                   onClick={() => setEmojiPickerOpen((open) => !open)}

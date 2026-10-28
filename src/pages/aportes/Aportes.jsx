@@ -25,6 +25,7 @@ import AportesAdmin from "./AportesAdmin";
 import { etiquetaPeriodo, etiquetaPeriodoMinuscula } from "../../services/grupoService";
 import { createUniqueId } from "../../utils/uniqueId";
 import { logOperationalError } from "../../utils/logOperationalError";
+import { getStorageUploadErrorMessage, getSupportedDocumentMimeType } from "../../utils/fileUpload";
 
 const obtenerAportesSocio = async (participantId) => {
   const { data, error } = await supabase
@@ -194,8 +195,11 @@ const AportesSocio = () => {
         return;
       }
 
-      const tiposPermitidos = ["image/jpeg", "image/png", "application/pdf"];
-      if (!tiposPermitidos.includes(comprobante.type) || comprobante.size > 5 * 1024 * 1024) {
+      const comprobanteType = getSupportedDocumentMimeType(
+        comprobante,
+        new Set(["image/jpeg", "image/png", "application/pdf"])
+      );
+      if (!comprobanteType || comprobante.size > 5 * 1024 * 1024) {
         setMensaje("Adjunta un comprobante JPG, PNG o PDF de hasta 5 MB.");
         return;
       }
@@ -204,21 +208,24 @@ const AportesSocio = () => {
       setMensaje("");
 
       let objectPath = null;
+      let uploadingReceipt = false;
       const comprobanteAnterior = aporteSemanaActual?.estado_revision === "rechazado"
         ? aporteSemanaActual.comprobante_path
         : null;
       try {
-        const extension = comprobante.type === "application/pdf"
+        const extension = comprobanteType === "application/pdf"
           ? "pdf"
-          : comprobante.type.split("/")[1];
+          : comprobanteType.split("/")[1];
         objectPath = `${user.id}/${createUniqueId()}.${extension}`;
+        uploadingReceipt = true;
         const { error: uploadError } = await supabase.storage
           .from("contribution-receipts")
           .upload(objectPath, comprobante, {
-            contentType: comprobante.type,
+            contentType: comprobanteType,
             upsert: false
           });
         if (uploadError) throw uploadError;
+        uploadingReceipt = false;
 
         const { error } = await supabase.rpc("registrar_aporte_propio", {
           p_participante_id: participant.id,
@@ -247,7 +254,9 @@ const AportesSocio = () => {
         await cargarAportes();
       } catch (error) {
         logOperationalError("Error registrando aporte:", error);
-        setMensaje("No se pudo registrar el aporte. Verifica los datos e inténtalo nuevamente.");
+        setMensaje(uploadingReceipt
+          ? getStorageUploadErrorMessage(error)
+          : "No se pudo registrar el aporte. Verifica los datos e inténtalo nuevamente.");
         if (objectPath) {
           const { error: cleanupError } = await supabase.storage
             .from("contribution-receipts")
@@ -524,17 +533,40 @@ const AportesSocio = () => {
           <div className="w-full space-y-3 lg:max-w-sm">
             {(!aporteSemanaActual || aporteSemanaActual.estado_revision === "rechazado") && (
               <>
-                <label className="block text-sm font-semibold text-white" htmlFor="aporte-comprobante">
-                  Comprobante (JPG, PNG o PDF; máximo 5 MB)
+                <div className="block text-sm font-semibold text-white">
+                  <p>Comprobante (JPG, PNG o PDF; máximo 5 MB)</p>
+                  <label className="relative mt-1.5 inline-flex min-h-11 cursor-pointer items-center overflow-hidden rounded-lg border border-white/60 bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/20">
+                    {comprobante ? "Cambiar archivo" : "Elegir archivo"}
                   <input
                     key={comprobanteInputKey}
                     id="aporte-comprobante"
                     type="file"
-                    accept="image/jpeg,image/png,application/pdf"
-                    onChange={(event) => setComprobante(event.target.files?.[0] || null)}
-                    className="mt-1.5 block w-full rounded-lg bg-white/10 p-2 text-xs file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:font-semibold file:text-emerald-800"
+                    accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf"
+                    aria-label="Elegir comprobante JPG, PNG o PDF"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] || null;
+                      const fileType = getSupportedDocumentMimeType(
+                        file,
+                        new Set(["image/jpeg", "image/png", "application/pdf"])
+                      );
+                      if (file && (!fileType || file.size > 5 * 1024 * 1024)) {
+                        setComprobante(null);
+                        setMensaje("Adjunta un comprobante JPG, PNG o PDF de hasta 5 MB.");
+                        event.target.value = "";
+                        return;
+                      }
+                      setComprobante(file);
+                      setMensaje(file ? "" : "No se recibió ningún archivo. Vuelve a elegirlo desde el teléfono.");
+                    }}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                   />
-                </label>
+                  </label>
+                  <span role="status" className="mt-1 block break-all text-xs font-normal text-white/80">
+                    {comprobante
+                      ? `Seleccionado: ${comprobante.name} (${(comprobante.size / (1024 * 1024)).toFixed(2)} MB)`
+                      : "Ningún archivo seleccionado"}
+                  </span>
+                </div>
                 <button
                   onClick={registrarAporte}
                   disabled={registrando || !grupoActivo || !comprobante}

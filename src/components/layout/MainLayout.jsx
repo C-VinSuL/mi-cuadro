@@ -5,8 +5,10 @@ import Sidebar from "./Sidebar/Sidebar";
 import Navbar from "./Navbar/Navbar";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 import MobileAssistant from "./MobileAssistant";
+import { useNotifications } from "../../hooks/useNotifications";
 
 const MainLayout = ({ children }) => {
+  const { unreadCount } = useNotifications();
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [mobileAssistantOpen, setMobileAssistantOpen] = useState(false);
   const [desktopAssistantOpen, setDesktopAssistantOpen] = useState(false);
@@ -56,6 +58,7 @@ const MainLayout = ({ children }) => {
       <MobileBottomNavigation
         assistantOpen={mobileAssistantOpen}
         moreOpen={mobileMoreOpen}
+        notificationCount={unreadCount}
         onNavigate={() => {
           setMobileAssistantOpen(false);
           setMobileMoreOpen(false);
@@ -91,14 +94,22 @@ const MainLayout = ({ children }) => {
         <button
           type="button"
           onClick={() => setDesktopAssistantOpen((open) => !open)}
-          aria-label={desktopAssistantOpen ? "Cerrar chat de Moki" : "Abrir chat de Moki"}
+          aria-label={`${desktopAssistantOpen ? "Cerrar chat de Moki" : "Abrir chat de Moki"}${unreadCount ? `, ${unreadCount} notificaciones sin leer` : ""}`}
           aria-expanded={desktopAssistantOpen}
-          className="flex size-14 items-center justify-center rounded-full bg-[#064E3B] text-white shadow-lg shadow-emerald-950/25 transition hover:scale-105 hover:bg-[#0B6651] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300"
+          className="relative flex size-14 items-center justify-center rounded-full bg-[#064E3B] text-white shadow-lg shadow-emerald-950/25 transition hover:scale-105 hover:bg-[#0B6651] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300"
         >
           {desktopAssistantOpen ? <X size={23} /> : (
             <span className="relative flex size-11 items-center justify-center overflow-hidden rounded-full bg-white">
               <img src="/flashmonkey-mascot.png" alt="" className="h-full w-full object-cover object-top" />
               <MessageCircle className="absolute bottom-0 right-0 rounded-full bg-[#16835D] p-0.5 text-white" size={17} />
+            </span>
+          )}
+          {unreadCount > 0 && (
+            <span
+              aria-hidden="true"
+              className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-600 px-1 text-[10px] font-bold leading-none text-white"
+            >
+              {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
         </button>
