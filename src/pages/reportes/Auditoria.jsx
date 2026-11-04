@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Download, Eye, FileDown, Printer, ShieldCheck, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Download, Eye, FileDown, Printer, Search, ShieldCheck, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { listarAuditoria } from "../../services/adminService";
 import { logOperationalError } from "../../utils/logOperationalError";
@@ -10,6 +10,10 @@ const EVENT_LABELS = {
   aporte_comprobante_rechazado: "Comprobante de aporte rechazado",
   aporte_cubierto_desde_billetera: "Aporte cubierto desde la billetera",
   aporte_socio_registrado: "Aporte registrado",
+  auditoria_hallazgo_actualizado: "Seguimiento de hallazgo actualizado",
+  auditoria_hallazgo_creado: "Hallazgo de auditoría registrado",
+  auditoria_hallazgo_respondido: "Hallazgo respondido",
+  auditoria_revision_actualizada: "Plan de revisión actualizado",
   configuracion_grupo_actualizada: "Configuración del grupo actualizada",
   desactivacion_usuario: "Cuenta desactivada",
   documento_personal_verificado: "Documento de identidad verificado",
@@ -48,6 +52,7 @@ const DETAIL_LABELS = {
   estado: "Estado",
   estado_anterior: "Estado anterior",
   estado_nuevo: "Estado nuevo",
+  hallazgo_id: "Identificador del hallazgo",
   fecha: "Fecha",
   fecha_revision: "Fecha de revisión",
   garantia_utilizada: "Se utilizó la garantía",
@@ -63,11 +68,15 @@ const DETAIL_LABELS = {
   observacion: "Observación",
   periodicidad: "Periodicidad del aporte",
   periodo: "Periodo",
+  periodo_desde: "Periodo desde",
+  periodo_hasta: "Periodo hasta",
   referencia: "Referencia",
   resultado: "Resultado",
   rol_anterior: "Rol anterior",
   rol_nuevo: "Rol nuevo",
   solicitud_id: "Identificador de la solicitud",
+  revision_id: "Identificador de la revisión",
+  severidad: "Importancia",
   tipo: "Tipo",
   usuario_correo: "Correo de la cuenta",
   usuario_nombre: "Nombre de la cuenta",
@@ -80,9 +89,12 @@ const VALUE_LABELS = {
   auditor: "Auditor",
   aprobada: "Aprobada",
   aprobado: "Aprobado",
+  aclaracion_solicitada: "Aclaración solicitada",
   aprobados: "Aprobados",
   desactivada: "Desactivada",
   eliminada: "Eliminada",
+  en_revision: "En revisión",
+  en_seguimiento: "En seguimiento",
   false: "No",
   mensual: "Mensual",
   pendiente: "Pendiente",
@@ -93,6 +105,14 @@ const VALUE_LABELS = {
   socio: "Socio",
   tesorero: "Tesorero",
   true: "Sí",
+  completada: "Completada",
+  cerrada: "Cerrada",
+  critica: "Crítica",
+  alta: "Alta",
+  media: "Media",
+  baja: "Baja",
+  abierta: "Abierta",
+  abierto: "Abierto",
   verificado: "Verificado"
 };
 
@@ -101,6 +121,12 @@ const formatLabel = (value) => String(value)
   .replace(/\b\w/g, (character) => character.toLocaleUpperCase("es-EC"));
 
 const formatEventName = (eventName) => EVENT_LABELS[eventName] || formatLabel(eventName);
+const toDateInputValue = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 const formatDetailValue = (key, value) => {
   if (value === null || value === undefined || value === "") return "No especificado";
@@ -122,7 +148,7 @@ const formatDetailValue = (key, value) => {
 
   const stringValue = String(value);
   if (VALUE_LABELS[stringValue.toLowerCase()]) return VALUE_LABELS[stringValue.toLowerCase()];
-  if (["aceptada_en", "fecha", "fecha_revision", "vencido_en"].includes(key)) {
+  if (["aceptada_en", "fecha", "fecha_revision", "vencido_en", "periodo_desde", "periodo_hasta"].includes(key)) {
     const date = new Date(stringValue);
     if (!Number.isNaN(date.getTime())) return date.toLocaleString("es-EC");
   }
@@ -151,15 +177,41 @@ const Auditoria = () => {
   const [groupId, setGroupId] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [search, setSearch] = useState("");
+  const [eventType, setEventType] = useState("");
   const [events, setEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const eventTypes = useMemo(
+    () => [...new Set(events.map((event) => event.evento).filter(Boolean))].sort(),
+    [events]
+  );
+  const visibleEvents = useMemo(() => {
+    const normalizedSearch = search.trim().toLocaleLowerCase("es-EC");
+    return events.filter((event) => {
+      if (eventType && event.evento !== eventType) return false;
+      if (!normalizedSearch) return true;
+      const searchableText = [
+        event.actor,
+        event.objetivo,
+        event.grupo_nombre,
+        formatEventName(event.evento),
+        JSON.stringify(event.detalles || {})
+      ].join(" ").toLocaleLowerCase("es-EC");
+      return searchableText.includes(normalizedSearch);
+    });
+  }, [events, eventType, search]);
+
   const loadEvents = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
+      if (fromDate && toDate && fromDate > toDate) {
+        setError("La fecha inicial no puede ser posterior a la fecha final.");
+        return;
+      }
       const until = toDate ? new Date(`${toDate}T00:00:00`).getTime() + 86400000 : null;
       const rows = await listarAuditoria(
         groupId,
@@ -174,6 +226,18 @@ const Auditoria = () => {
       setLoading(false);
     }
   }, [groupId, fromDate, toDate]);
+
+  const applyDateShortcut = (period) => {
+    const today = new Date();
+    const start = period === "month"
+      ? new Date(today.getFullYear(), today.getMonth(), 1)
+      : new Date(today);
+    if (period === "week") {
+      start.setDate(start.getDate() - 6);
+    }
+    setFromDate(toDateInputValue(start));
+    setToDate(toDateInputValue(today));
+  };
 
   useEffect(() => {
     const timeoutId = window.setTimeout(loadEvents, 0);
@@ -219,7 +283,7 @@ const Auditoria = () => {
       worksheet.getCell("A1").alignment = { vertical: "middle", horizontal: "center" };
       worksheet.getRow(1).height = 34;
       worksheet.mergeCells("A2:H2");
-      worksheet.getCell("A2").value = `Generado el ${new Date().toLocaleString("es-EC")} · ${events.length} eventos`;
+      worksheet.getCell("A2").value = `Generado el ${new Date().toLocaleString("es-EC")} · ${visibleEvents.length} eventos`;
       worksheet.getCell("A2").font = { name: "Aptos", size: 10, italic: true, color: { argb: "FF475569" } };
       worksheet.getCell("A2").alignment = { horizontal: "center" };
       worksheet.mergeCells("A3:H3");
@@ -237,7 +301,7 @@ const Auditoria = () => {
         cell.border = { bottom: { style: "medium", color: { argb: "FFF2B544" } } };
       });
 
-      events.forEach((event, index) => {
+      visibleEvents.forEach((event, index) => {
         const detailText = getAuditDetails(event.detalles, event.evento)
           .map(([key, value]) => `${DETAIL_LABELS[key] || formatLabel(key)}: ${formatDetailValue(key, value)}`)
           .join("\n") || "Sin detalles adicionales";
@@ -331,10 +395,28 @@ const Auditoria = () => {
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Consulta las acciones realizadas en la plataforma. Cada evento muestra quién lo realizó, a quién afectó y sus detalles en un formato fácil de entender; el motivo de las eliminaciones también queda registrado.</p>
         </div>
         <div className="flex gap-2 print:hidden">
-          <button type="button" onClick={exportExcel} disabled={events.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><Download size={16} /> Exportar Excel</button>
-          <button type="button" onClick={() => window.print()} disabled={events.length === 0} className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-50"><Printer size={16} /> Guardar PDF</button>
+          <button type="button" onClick={exportExcel} disabled={visibleEvents.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><Download size={16} /> Exportar Excel</button>
+          <button type="button" onClick={() => window.print()} disabled={visibleEvents.length === 0} className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-3 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-50"><Printer size={16} /> Guardar PDF</button>
         </div>
       </header>
+
+      <div className="flex flex-wrap items-center gap-2 print:hidden" aria-label="Períodos rápidos">
+        <span className="mr-1 text-sm font-medium text-slate-600">Período:</span>
+        {[
+          ["today", "Hoy"],
+          ["week", "Últimos 7 días"],
+          ["month", "Este mes"]
+        ].map(([period, label]) => (
+          <button
+            key={period}
+            type="button"
+            onClick={() => applyDateShortcut(period)}
+            className="min-h-10 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       <form onSubmit={(event) => { event.preventDefault(); loadEvents(); }} className="flex flex-wrap items-end gap-3 print:hidden">
         <label className="text-sm font-medium text-slate-700">
@@ -352,6 +434,26 @@ const Auditoria = () => {
           Hasta
           <input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="mt-1 block rounded-lg border border-slate-300 px-3 py-2" />
         </label>
+        <label className="text-sm font-medium text-slate-700">
+          Tipo de evento
+          <select value={eventType} onChange={(event) => setEventType(event.target.value)} className="mt-1 block min-w-48 rounded-lg border border-slate-300 bg-white px-3 py-2.5">
+            <option value="">Todos los eventos</option>
+            {eventTypes.map((type) => <option key={type} value={type}>{formatEventName(type)}</option>)}
+          </select>
+        </label>
+        <label className="text-sm font-medium text-slate-700">
+          Buscar usuario o acción
+          <span className="mt-1 flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3">
+            <Search size={16} className="shrink-0 text-slate-400" />
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Nombre, grupo o detalle"
+              className="min-w-48 border-0 bg-transparent py-2 text-sm outline-none"
+            />
+          </span>
+        </label>
         <button disabled={loading} className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"><FileDown size={16} /> {loading ? "Consultando..." : "Aplicar filtros"}</button>
       </form>
 
@@ -359,11 +461,16 @@ const Auditoria = () => {
       <section className="audit-print overflow-hidden rounded-xl border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="font-semibold text-slate-900">Registro de eventos</h2>
-          <p className="mt-1 text-sm text-slate-500">{events.length} eventos · máximo 5.000 por consulta</p>
+          <p className="mt-1 text-sm text-slate-500">
+            {visibleEvents.length === events.length
+              ? `${events.length} eventos`
+              : `${visibleEvents.length} de ${events.length} eventos`}
+            {" · máximo 5.000 por consulta"}
+          </p>
         </div>
         {loading ? (
           <p className="px-5 py-8 text-sm text-slate-500" role="status">Cargando registro...</p>
-        ) : events.length === 0 ? (
+        ) : visibleEvents.length === 0 ? (
           <p className="px-5 py-8 text-sm text-slate-500">No hay eventos para estos filtros.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -381,7 +488,7 @@ const Auditoria = () => {
                         </div>
                       </div>
                       <div className="audit-print-meta text-slate-600">
-                        <p className="font-semibold text-slate-800">{events.length} eventos registrados</p>
+                        <p className="font-semibold text-slate-800">{visibleEvents.length} eventos registrados</p>
                         <p>Generado: {new Date().toLocaleString("es-EC")}</p>
                         <p>Grupo: {groupId ? (grupos.find((group) => group.id === groupId)?.nombre || "Seleccionado") : "Todos"}</p>
                         {(fromDate || toDate) && <p>Periodo: {fromDate || "Inicio"} — {toDate || "Actualidad"}</p>}
@@ -401,7 +508,7 @@ const Auditoria = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {events.map((event) => (
+                {visibleEvents.map((event) => (
                   <tr key={event.id}>
                     <td className="whitespace-nowrap px-4 py-3 text-slate-600">{new Date(event.ocurrido_en).toLocaleString("es-EC")}</td>
                     <td className="px-4 py-3 text-slate-700">{event.grupo_nombre || "—"}</td>
