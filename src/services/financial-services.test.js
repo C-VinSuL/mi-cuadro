@@ -82,6 +82,7 @@ const createQueryBuilder = (result) => ({
   then: (resolve) => resolve({ data: result, error: null }),
   in: () => createQueryBuilder(result),
   order: () => createQueryBuilder(result),
+  range: () => createQueryBuilder(result),
   limit: async () => ({ data: result, error: null }),
   select: () => createQueryBuilder(result),
   single: async () => ({ data: result, error: null }),

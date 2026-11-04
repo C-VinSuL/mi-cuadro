@@ -97,3 +97,58 @@ export const listarArchivosAuditoriaAdministrador = (offset = 0, limit = 100) =>
   "listar_archivos_auditoria_administrador",
   { p_limit: limit, p_offset: offset }
 );
+
+export const obtenerResumenAuditoriaGrupos = () => callRpc("auditoria_resumen_grupos", {});
+
+export const listarMovimientosBilleteraAuditoria = (grupoId = null, limite = 100, desplazamiento = 0) => callRpc(
+  "auditoria_listar_movimientos_billetera",
+  {
+    p_grupo_id: grupoId || null,
+    p_limite: limite,
+    p_desplazamiento: desplazamiento
+  }
+);
+
+export const listarRevisionesAuditoria = () => callRpc("auditoria_listar_revisiones", {});
+
+export const guardarRevisionAuditoria = ({ grupoId, desde, hasta, estado, notas }) => callRpc(
+  "auditoria_guardar_revision",
+  {
+    p_grupo_id: grupoId,
+    p_periodo_desde: desde,
+    p_periodo_hasta: hasta,
+    p_estado: estado,
+    p_notas: notas
+  }
+);
+
+export const listarHallazgosAuditoria = (grupoId = null) => callRpc("auditoria_listar_hallazgos", {
+  p_grupo_id: grupoId || null
+});
+
+export const crearHallazgoAuditoria = ({ grupoId, titulo, descripcion, evidencia, severidad, estado }) => callRpc(
+  "auditoria_crear_hallazgo",
+  {
+    p_grupo_id: grupoId,
+    p_titulo: titulo,
+    p_descripcion: descripcion,
+    p_evidencia: evidencia,
+    p_severidad: severidad,
+    p_estado: estado
+  }
+);
+
+export const actualizarHallazgoAuditoria = ({ hallazgoId, estado, descripcion, evidencia }) => callRpc(
+  "auditoria_actualizar_hallazgo",
+  {
+    p_hallazgo_id: hallazgoId,
+    p_estado: estado,
+    p_descripcion: descripcion,
+    p_evidencia: evidencia
+  }
+);
+
+export const responderHallazgoAuditoria = (hallazgoId, respuesta) => callRpc("auditoria_responder_hallazgo", {
+  p_hallazgo_id: hallazgoId,
+  p_respuesta: respuesta
+});
