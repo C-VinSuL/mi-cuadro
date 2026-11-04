@@ -19,6 +19,13 @@ test("permission checks grant access only to the matching role scopes", () => {
   assert.equal(getPermissionsForRole("administrador").gestionarUsuarios, true);
   assert.equal(getPermissionsForRole("tesorero").gestionarEgresos, true);
   assert.equal(getPermissionsForRole("auditor").verAuditoria, true);
+  assert.equal(getPermissionsForRole("auditor").verSeguimientoAuditoria, true);
+  assert.equal(getPermissionsForRole("auditor").gestionarEgresos, false);
+  assert.equal(getPermissionsForRole("auditor").verEgresos, true);
+  assert.equal(getPermissionsForRole("auditor").verAportes, true);
+  assert.equal(getPermissionsForRole("auditor").verHistorialCompleto, true);
+  assert.equal(getPermissionsForRole("auditor").gestionarBilletera, false);
+  assert.equal(getPermissionsForRole("auditor").gestionarUsuarios, false);
   assert.equal(getPermissionsForRole("socio").verBilletera, true);
 
   assert.equal(canAccessPermission("administrador", "gestionarUsuarios"), true);

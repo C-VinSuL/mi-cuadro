@@ -22,6 +22,7 @@ import {
 } from "../../context/AuthContext";
 import { useNotifications } from "../../hooks/useNotifications";
 import AportesAdmin from "./AportesAdmin";
+import AportesAuditoria from "./AportesAuditoria";
 import { etiquetaPeriodo, etiquetaPeriodoMinuscula } from "../../services/grupoService";
 import { createUniqueId } from "../../utils/uniqueId";
 import { logOperationalError } from "../../utils/logOperationalError";
@@ -962,6 +963,7 @@ const AportesSocio = () => {
 
 const Aportes = () => {
   const { profile } = useAuth();
+  if (profile?.rol?.toLowerCase() === "auditor") return <AportesAuditoria />;
   return ["administrador", "tesorero"].includes(profile?.rol?.toLowerCase())
     ? <AportesAdmin />
     : <AportesSocio />;

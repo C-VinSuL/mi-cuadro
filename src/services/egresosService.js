@@ -45,15 +45,21 @@ export const registrarEgreso = async ({ grupoId, concepto, categoria, monto, fec
 export const listarEgresosRecientes = async (grupoIds) => {
   if (!grupoIds.length) return [];
 
-  const { data, error } = await supabase
-    .from("egresos")
-    .select("id, grupo_id, concepto, categoria, monto, fecha, created_at")
-    .in("grupo_id", grupoIds)
-    .order("fecha", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(100);
+  const data = [];
+  const pageSize = 1000;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data: page, error } = await supabase
+      .from("egresos")
+      .select("id, grupo_id, concepto, categoria, monto, fecha, created_at")
+      .in("grupo_id", grupoIds)
+      .order("fecha", { ascending: false })
+      .order("created_at", { ascending: false })
+      .range(offset, offset + pageSize - 1);
 
-  if (error) throw error;
+    if (error) throw error;
+    data.push(...(page || []));
+    if (!page || page.length < pageSize) break;
+  }
 
   const { data: grupos, error: gruposError } = await supabase
     .from("grupos")
@@ -62,7 +68,7 @@ export const listarEgresosRecientes = async (grupoIds) => {
   if (gruposError) throw gruposError;
 
   const nombresGrupo = new Map((grupos || []).map((grupo) => [grupo.id, grupo.nombre]));
-  return (data || []).map((egreso) => ({
+  return data.map((egreso) => ({
     ...egreso,
     grupo: nombresGrupo.get(egreso.grupo_id) || "Grupo"
   }));

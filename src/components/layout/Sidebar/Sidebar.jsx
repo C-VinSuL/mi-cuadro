@@ -4,7 +4,6 @@ import {
   LogOut,
   Pin,
   PiggyBank,
-  ReceiptText,
   Wallet
 } from "lucide-react";
 
@@ -108,11 +107,7 @@ const Sidebar = ({
       : 0;
 
 
-  const menuVisible = getVisibleMenu(can, rol).flatMap((item) => (
-    item.path === "/aportes" && can("gestionarEgresos")
-      ? [item, { title: "Egresos", icon: ReceiptText, path: "/egresos" }]
-      : [item]
-  ));
+  const menuVisible = getVisibleMenu(can, rol);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
