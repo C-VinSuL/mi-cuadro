@@ -387,7 +387,7 @@ const HistorialSocio = () => {
         icon={HistoryIcon}
         eyebrow="Movimientos del grupo"
         title="Historial financiero"
-        description={`Consulta los movimientos del fondo comunitario de ${grupo.nombre}.`}
+        description={`Consulta los movimientos, ingresos, egresos y saldo del fondo comunitario de ${grupo.nombre}.`}
       />
 
       {error && (

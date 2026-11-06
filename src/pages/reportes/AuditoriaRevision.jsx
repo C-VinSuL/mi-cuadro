@@ -371,7 +371,7 @@ const AuditoriaRevision = () => {
         icon={ClipboardCheck}
         eyebrow="Control independiente"
         title="Revisión de grupos"
-        description="Consulta indicadores financieros de todos los grupos, planifica revisiones y registra hallazgos sin modificar las operaciones originales."
+        description="Consulta indicadores financieros de todos los grupos, planifica revisiones y da seguimiento a hallazgos."
       />
 
       {error && <p role="alert" className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}

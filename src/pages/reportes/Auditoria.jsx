@@ -392,7 +392,7 @@ const Auditoria = () => {
         <div>
           <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700"><ShieldCheck size={17} /> Control y trazabilidad</p>
           <h1 className="audit-screen-title mt-1 text-3xl font-bold text-slate-900">Auditoría</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Consulta las acciones realizadas en la plataforma. Cada evento muestra quién lo realizó, a quién afectó y sus detalles en un formato fácil de entender; el motivo de las eliminaciones también queda registrado.</p>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Consulta, filtra y exporta las acciones realizadas en la plataforma, con detalles de quién las realizó, a quién afectaron y cuándo ocurrieron.</p>
         </div>
         <div className="flex gap-2 print:hidden">
           <button type="button" onClick={exportExcel} disabled={visibleEvents.length === 0} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"><Download size={16} /> Exportar Excel</button>
