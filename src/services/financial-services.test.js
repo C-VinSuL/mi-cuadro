@@ -82,6 +82,7 @@ const createQueryBuilder = (result) => ({
   then: (resolve) => resolve({ data: result, error: null }),
   in: () => createQueryBuilder(result),
   order: () => createQueryBuilder(result),
+  range: () => createQueryBuilder(result),
   limit: async () => ({ data: result, error: null }),
   select: () => createQueryBuilder(result),
   single: async () => ({ data: result, error: null }),
@@ -116,6 +117,7 @@ supabase.from = (table) => {
         monto: 1250,
         fecha: "2026-10-20",
         created_at: "2026-10-20T12:00:00Z",
+        comprobante_path: null,
       },
     ]),
   };
@@ -173,6 +175,7 @@ test("expense service inserts records and totals treasury spend with role-guarde
     categoria: "Operativo",
     monto: "1250.00",
     fecha: "2026-10-20",
+    comprobante_path: null,
   });
   assert.deepEqual(lastExpenses, [{
     id: "egreso-1",
@@ -182,6 +185,7 @@ test("expense service inserts records and totals treasury spend with role-guarde
     monto: 1250,
     fecha: "2026-10-20",
     created_at: "2026-10-20T12:00:00Z",
+    comprobante_path: null,
     grupo: "Grupo prueba",
   }]);
   assert.equal(total, "4100");

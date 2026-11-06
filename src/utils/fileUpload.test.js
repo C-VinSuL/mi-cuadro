@@ -30,5 +30,5 @@ test("rejects unsupported MIME types and extensions", () => {
 test("explains storage permission, size, and format errors", () => {
   assert.match(getStorageUploadErrorMessage({ statusCode: "403" }), /MFA/);
   assert.match(getStorageUploadErrorMessage({ statusCode: "413" }), /5 MB/);
-  assert.match(getStorageUploadErrorMessage({ statusCode: "415" }), /JPG\/PNG/);
+  assert.match(getStorageUploadErrorMessage({ statusCode: "415" }), /JPG, PNG/);
 });

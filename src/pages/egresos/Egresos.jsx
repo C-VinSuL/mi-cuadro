@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Search, TrendingDown, Wallet } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, ExternalLink, Search, TrendingDown, Wallet } from "lucide-react";
 import StaggerList from "../../components/motion/StaggerList";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../hooks/useNotifications";
+import { usePermissions } from "../../hooks/usePermissions";
 import {
   listarEgresosRecientes,
   obtenerTotalEgresos,
@@ -10,6 +11,8 @@ import {
 } from "../../services/egresosService";
 import { logOperationalError } from "../../utils/logOperationalError";
 import { formatCurrencyDecimal, parseAmountToCents } from "../../utils/money";
+import { getStorageUploadErrorMessage } from "../../utils/fileUpload";
+import { supabase } from "../../services/supabase";
 
 const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
 const categories = ["Suministros", "Eventos", "Servicios", "Transporte", "Otros"];
@@ -21,15 +24,22 @@ const emptyForm = { grupoId: "", concepto: "", categoria: "", monto: "", fecha: 
 const Egresos = () => {
   const { grupos } = useAuth();
   const { notify } = useNotifications();
+  const { can } = usePermissions();
+  const canManageExpenses = can("gestionarEgresos");
   const [form, setForm] = useState(emptyForm);
   const [egresos, setEgresos] = useState([]);
   const [categoriaFiltro, setCategoriaFiltro] = useState("todas");
+  const [grupoFiltro, setGrupoFiltro] = useState("");
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
+  const [receiptError, setReceiptError] = useState("");
+  const receiptInputRef = useRef(null);
 
   const gruposId = useMemo(() => grupos.map((grupo) => grupo.id), [grupos]);
   const categoriasFiltro = useMemo(() => (
@@ -76,6 +86,8 @@ const Egresos = () => {
 
     return egresos.filter((egreso) => {
       const matchesCategory = categoriaFiltro === "todas" || egreso.categoria === categoriaFiltro;
+      const matchesGroup = !grupoFiltro || egreso.grupo_id === grupoFiltro;
+      const matchesDate = (!desde || egreso.fecha >= desde) && (!hasta || egreso.fecha <= hasta);
       const matchesQuery = !query || [
         egreso.grupo,
         egreso.concepto,
@@ -85,9 +97,9 @@ const Egresos = () => {
         formatCurrencyDecimal(egreso.monto, currency)
       ].some((value) => String(value ?? "").toLocaleLowerCase("es").includes(query));
 
-      return matchesCategory && matchesQuery;
+      return matchesCategory && matchesGroup && matchesDate && matchesQuery;
     });
-  }, [egresos, categoriaFiltro, busqueda]);
+  }, [egresos, categoriaFiltro, grupoFiltro, desde, hasta, busqueda]);
 
   const cambiarCampo = (event) => {
     const { name, value } = event.target;
@@ -119,9 +131,11 @@ const Egresos = () => {
         concepto,
         categoria: form.categoria,
         monto: form.monto,
-        fecha: form.fecha
+        fecha: form.fecha,
+        comprobante: form.comprobante || null
       });
-      setForm({ ...emptyForm, grupoId: grupoInicialId });
+      setForm({ ...emptyForm, grupoId: grupoInicialId, comprobante: null });
+      if (receiptInputRef.current) receiptInputRef.current.value = "";
       notify({
         title: "Gasto registrado",
         message: `${formatCurrencyDecimal(form.monto, currency)} se guardó correctamente.`,
@@ -130,18 +144,43 @@ const Egresos = () => {
       await cargarEgresos();
     } catch (submitError) {
       logOperationalError("Error registrando egreso:", submitError);
-      setError("No se pudo guardar el gasto. Verifica los datos e inténtalo nuevamente.");
+      setError(submitError instanceof TypeError
+        ? submitError.message
+        : form.comprobante
+          ? getStorageUploadErrorMessage(submitError)
+          : "No se pudo guardar el gasto. Verifica los datos e inténtalo nuevamente.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openReceipt = async (path) => {
+    const receiptWindow = window.open("about:blank", "_blank");
+    if (!receiptWindow) {
+      setReceiptError("Permite las ventanas emergentes para abrir el comprobante.");
+      return;
+    }
+    receiptWindow.opener = null;
+    setReceiptError("");
+    try {
+      const { data, error: signedUrlError } = await supabase.storage
+        .from("expense-receipts")
+        .createSignedUrl(path, 120);
+      if (signedUrlError) throw signedUrlError;
+      receiptWindow.location.href = data.signedUrl;
+    } catch (openError) {
+      receiptWindow.close();
+      logOperationalError("Error abriendo comprobante del egreso:", openError);
+      setReceiptError("No se pudo abrir el comprobante. Verifica tu sesión y vuelve a intentarlo.");
     }
   };
 
   return (
     <div className="space-y-7">
       <header className="rounded-3xl border border-emerald-100 bg-gradient-to-br from-white to-emerald-50 p-6 md:p-8">
-        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-emerald-700">FlashMonkey · Tesorería</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-emerald-700">FlashMonkey · {canManageExpenses ? "Tesorería" : "Auditoría"}</p>
         <h1 className="mt-3 text-3xl font-bold text-slate-900 md:text-4xl">Egresos y gastos</h1>
-        <p className="mt-2 max-w-2xl text-slate-600">Registra y consulta los gastos de tus grupos en un solo lugar.</p>
+        <p className="mt-2 max-w-2xl text-slate-600">{canManageExpenses ? "Registra y consulta los gastos de tus grupos en un solo lugar." : "Consulta los gastos registrados en todos los grupos."}</p>
       </header>
 
       {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
@@ -151,14 +190,15 @@ const Egresos = () => {
         <Metric tone="blue" icon={<TrendingDown size={20} />} label="Gastos recientes" value={egresos.length} />
       </StaggerList>
 
-      <section className="overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-xl shadow-emerald-950/5">
-        <header className="flex items-center gap-3 border-b border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-teal-50 px-5 py-5 sm:px-6">
-          <span className="flex size-11 items-center justify-center rounded-2xl bg-emerald-700 text-white shadow-lg shadow-emerald-900/15"><TrendingDown size={20} /></span>
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">Registrar un gasto</h2>
-            <p className="mt-1 text-sm text-slate-600">El registro quedará asociado al grupo elegido.</p>
-          </div>
-        </header>
+      {canManageExpenses ? (
+        <section className="overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-xl shadow-emerald-950/5">
+          <header className="flex items-center gap-3 border-b border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-teal-50 px-5 py-5 sm:px-6">
+            <span className="flex size-11 items-center justify-center rounded-2xl bg-emerald-700 text-white shadow-lg shadow-emerald-900/15"><TrendingDown size={20} /></span>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Registrar un gasto</h2>
+              <p className="mt-1 text-sm text-slate-600">El registro quedará asociado al grupo elegido.</p>
+            </div>
+          </header>
         {grupos.length === 0 ? (
           <p className="m-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 sm:m-6" role="status">No hay grupos disponibles para registrar gastos.</p>
         ) : (
@@ -188,6 +228,19 @@ const Egresos = () => {
               Fecha
               <input name="fecha" type="date" value={form.fecha} onChange={cambiarCampo} required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 font-normal shadow-sm outline-none transition hover:border-emerald-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 motion-reduce:transition-none" />
             </label>
+            <label className="text-sm font-medium text-slate-700 sm:col-span-2">
+              Comprobante de respaldo (opcional)
+              <input
+                id="expense-receipt"
+                name="comprobante"
+                type="file"
+                ref={receiptInputRef}
+                accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"
+                onChange={(event) => setForm((current) => ({ ...current, comprobante: event.target.files?.[0] || null }))}
+                className="mt-1.5 block min-h-11 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              />
+              <span className="mt-1 block text-xs font-normal text-slate-500">PDF, JPG o PNG; máximo 5 MB. Puedes registrar el gasto sin adjunto.</span>
+            </label>
             <div className="sm:col-span-2">
               <button type="submit" disabled={saving} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 to-teal-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/15 transition hover:-translate-y-0.5 hover:from-emerald-800 hover:to-teal-700 hover:shadow-xl disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-400 disabled:shadow-none motion-reduce:transform-none motion-reduce:transition-none">
                 {!saving && <Check size={17} />}
@@ -197,15 +250,16 @@ const Egresos = () => {
             {error && <p className="sm:col-span-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
           </form>
         )}
-      </section>
+        </section>
+      ) : null}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
           <div>
             <h2 className="font-semibold text-slate-900">Gastos recientes</h2>
-            <p className="mt-1 text-sm text-slate-500">Últimos 100 gastos registrados.</p>
+            <p className="mt-1 text-sm text-slate-500">{egresos.length} gastos cargados de todos los grupos disponibles.</p>
           </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto">
             <label className="relative">
               <span className="sr-only">Buscar egresos</span>
               <Search size={16} aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -215,6 +269,18 @@ const Egresos = () => {
               <option value="todas">Todas las categorías</option>
               {categoriasFiltro.map((category) => <option key={category} value={category}>{category}</option>)}
             </select>
+            <select value={grupoFiltro} onChange={(event) => setGrupoFiltro(event.target.value)} aria-label="Filtrar egresos por grupo" className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 motion-reduce:transition-none">
+              <option value="">Todos los grupos</option>
+              {grupos.map((grupo) => <option key={grupo.id} value={grupo.id}>{grupo.nombre}</option>)}
+            </select>
+            <label>
+              <span className="sr-only">Egresos desde</span>
+              <input type="date" aria-label="Egresos desde" value={desde} onChange={(event) => setDesde(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 motion-reduce:transition-none" />
+            </label>
+            <label>
+              <span className="sr-only">Egresos hasta</span>
+              <input type="date" aria-label="Egresos hasta" value={hasta} onChange={(event) => setHasta(event.target.value)} className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 motion-reduce:transition-none" />
+            </label>
           </div>
         </div>
         {loading ? (
@@ -225,7 +291,7 @@ const Egresos = () => {
           <p className="px-5 py-8 text-sm text-slate-500">No hay gastos para mostrar con este filtro.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px] text-left text-sm">
+            <table className="w-full min-w-[850px] text-left text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Fecha</th>
@@ -233,6 +299,7 @@ const Egresos = () => {
                   <th className="px-5 py-3 font-semibold">Concepto</th>
                   <th className="px-5 py-3 font-semibold">Categoría</th>
                   <th className="px-5 py-3 text-right font-semibold">Monto</th>
+                  <th className="px-5 py-3 font-semibold">Respaldo</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -243,6 +310,13 @@ const Egresos = () => {
                     <td className="max-w-xs px-5 py-3 text-slate-700">{egreso.concepto}</td>
                     <td className="px-5 py-3 text-slate-700">{egreso.categoria}</td>
                     <td className="whitespace-nowrap px-5 py-3 text-right font-semibold text-slate-900">{formatCurrencyDecimal(egreso.monto, currency)}</td>
+                    <td className="px-5 py-3">
+                      {egreso.comprobante_path ? (
+                        <button type="button" onClick={() => openReceipt(egreso.comprobante_path)} className="inline-flex items-center gap-1 font-semibold text-emerald-800 hover:underline">
+                          Abrir <ExternalLink size={14} />
+                        </button>
+                      ) : <span className="text-slate-400">Sin adjunto</span>}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -250,6 +324,7 @@ const Egresos = () => {
           </div>
         )}
       </section>
+      {receiptError && <p role="alert" className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800">{receiptError}</p>}
     </div>
   );
 };

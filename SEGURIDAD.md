@@ -32,6 +32,10 @@ configuración de seguridad del proyecto Supabase o del proveedor de hosting.
   permisos; crea cuentas y grupos ficticios en un proyecto separado.
 - Protege los comprobantes y documentos personales con almacenamiento privado
   y acceso autorizado.
+- Mantén también privada la evidencia de auditoría. La carga debe limitarse a
+  personal auditor activo con MFA; la lectura requiere MFA y rol autorizado.
+  Los enlaces firmados deben tener expiración breve y no compartirse fuera del
+  expediente.
 
 ## Configuración de entornos
 

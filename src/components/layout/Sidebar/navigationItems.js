@@ -11,6 +11,8 @@ import {
   UserRoundCog,
   FileClock,
   FileSearch,
+  ReceiptText,
+  ClipboardCheck,
   MessageCircle
 } from "lucide-react";
 
@@ -44,6 +46,12 @@ export const menu = [
     icon: CircleDollarSign,
     path: "/aportes",
     permission: "verAportes"
+  },
+  {
+    title: "Egresos",
+    icon: ReceiptText,
+    path: "/egresos",
+    permission: "verEgresos"
   },
   {
     title: "Cuadro rotativo",
@@ -80,6 +88,12 @@ export const menu = [
     icon: FileSearch,
     path: "/admin/archivos",
     permission: "gestionarUsuarios"
+  },
+  {
+    title: "Revisión de grupos",
+    icon: ClipboardCheck,
+    path: "/revision-auditoria",
+    permission: "verSeguimientoAuditoria"
   },
   {
     title: "Socios y roles",
