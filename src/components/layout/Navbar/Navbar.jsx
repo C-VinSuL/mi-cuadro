@@ -7,7 +7,7 @@ import {
   CheckCheck,
   Trash2
 } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useNavigate } from "react-router-dom";
@@ -76,6 +76,64 @@ const Navbar = ({ onOpenMobileMenu }) => {
   const welcomeOpen = profile?.rol?.toLowerCase() === "socio"
     && profile?.bienvenida_completada === false
     && welcomeDismissedFor !== profile.id;
+
+  const sincronizarBienvenida = useCallback(async (profileToCheck) => {
+    if (
+      profileToCheck?.rol?.toLowerCase() !== "socio"
+      || profileToCheck.bienvenida_completada !== false
+      || user?.id !== profileToCheck.id
+    ) return false;
+
+    const [{ data: privateData, error: privateError }, { data: documentData, error: documentError }] = await Promise.all([
+      supabase.rpc("obtener_datos_personales"),
+      supabase.rpc("estado_documento_propio")
+    ]);
+    if (privateError) throw privateError;
+    if (documentError) throw documentError;
+
+    const details = privateData?.[0];
+    const document = documentData?.[0];
+    const profileComplete = [
+      profileToCheck.nombre,
+      profileToCheck.telefono,
+      details?.cedula,
+      details?.direccion,
+      document?.documento_identidad_path
+    ].every((value) => typeof value === "string" && value.trim());
+    if (!profileComplete || user?.id !== profileToCheck.id) return false;
+
+    const { error: welcomeError } = await supabase.rpc("completar_bienvenida_flashmonkey");
+    if (welcomeError) throw welcomeError;
+    await cargarPerfil(profileToCheck.id);
+    return true;
+  }, [cargarPerfil, user?.id]);
+
+  useEffect(() => {
+    if (
+      profile?.rol?.toLowerCase() !== "socio"
+      || profile.bienvenida_completada !== false
+      || !user?.id
+    ) return undefined;
+
+    let active = true;
+    Promise.resolve().then(async () => {
+      try {
+        await sincronizarBienvenida(profile);
+      } catch (error) {
+        if (!active) return;
+        logOperationalError("No se pudo actualizar el estado de bienvenida:", error);
+        notify({
+          title: "No se pudo actualizar la bienvenida",
+          message: "Tus datos siguen guardados. Vuelve a intentarlo más tarde.",
+          type: "error"
+        });
+      }
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [profile, user?.id, notify, sincronizarBienvenida]);
 
   const handleMarkAllRead = async () => {
     try {
@@ -226,11 +284,6 @@ const Navbar = ({ onOpenMobileMenu }) => {
       });
 
       if (error) throw error;
-      if (completingWelcome) {
-        const { error: welcomeError } = await supabase.rpc("completar_bienvenida_flashmonkey");
-        if (welcomeError) throw welcomeError;
-      }
-
       await cargarPerfil(profile.id);
       setProfileEditorOpen(false);
       setCompletingWelcome(false);
