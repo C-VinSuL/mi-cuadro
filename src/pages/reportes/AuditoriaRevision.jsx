@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import SectionPageTitle from "../../components/ui/SectionPageTitle";
 import { supabase } from "../../services/supabase";
+import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../hooks/usePermissions";
 import {
   actualizarHallazgoAuditoria,
@@ -74,6 +75,7 @@ const severityLabels = {
 };
 
 const AuditoriaRevision = () => {
+  const { profile } = useAuth();
   const { can, rol } = usePermissions();
   const isAuditor = rol === "auditor";
   const [groups, setGroups] = useState([]);
@@ -215,7 +217,25 @@ const AuditoriaRevision = () => {
   const reviewDeadline = reviewDraft.key === reviewKey
     ? reviewDraft.fechaLimite
     : currentReview?.fecha_limite || "";
-  const auditorResponsables = responsables.filter((person) => person.rol === "auditor");
+  const auditorResponsables = useMemo(() => {
+    const auditors = responsables.filter((person) => person.rol === "auditor");
+    if (
+      profile?.rol?.toLowerCase() !== "auditor"
+      || !profile.id
+      || auditors.some((person) => person.perfil_id === profile.id)
+    ) {
+      return auditors;
+    }
+
+    return [
+      ...auditors,
+      {
+        perfil_id: profile.id,
+        nombre: [profile.nombre, profile.apellido].filter(Boolean).join(" ").trim() || "Auditor actual",
+        rol: "auditor"
+      }
+    ];
+  }, [responsables, profile]);
   const financeResponsables = responsables.filter((person) => ["administrador", "tesorero"].includes(person.rol));
   const reviewAssignee = reviewDraft.key === reviewKey
     ? reviewDraft.responsableId || auditorResponsables[0]?.perfil_id || ""
