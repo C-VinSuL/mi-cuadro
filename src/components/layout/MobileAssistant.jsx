@@ -400,7 +400,7 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
           <img
             src="/flashmonkey-mascot.png"
             alt=""
-            className="h-full w-full object-cover object-top"
+            className="h-full w-full object-contain"
           />
         </div>
         <div className="min-w-0 flex-1">
@@ -638,7 +638,7 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
             {!adminInbox && (
               <div className="flex items-end gap-2">
                 <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white">
-                  <img src="/flashmonkey-mascot.png" alt="" className="h-full w-full object-cover object-top" />
+                  <img src="/flashmonkey-mascot.png" alt="" className="h-full w-full object-contain" />
                 </div>
                 <div className="max-w-[88%] rounded-2xl rounded-bl-sm bg-white px-4 py-3 text-sm leading-relaxed text-slate-700 shadow-sm">
                   ¡Hola! Soy Moki, el asistente de FlashMonkey. Puedo orientarte con las secciones de tu cuenta o enviar tu consulta al equipo administrador.
@@ -648,7 +648,7 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
             {isAdministrator && adminView === "chat" && (
               <div className="flex items-end gap-2">
                 <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white">
-                  <img src="/flashmonkey-mascot.png" alt="" className="h-full w-full object-cover object-top" />
+                  <img src="/flashmonkey-mascot.png" alt="" className="h-full w-full object-contain" />
                 </div>
                 <div className="max-w-[88%] rounded-2xl rounded-bl-sm bg-white px-4 py-3 text-sm leading-relaxed text-slate-700 shadow-sm">
                   Hola. Desde aquí puedes acceder a tareas administrativas y revisar en Bandeja las consultas de los socios.
@@ -661,7 +661,7 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
                 <div key={message.id} className={`flex ${fromStaff ? "items-end gap-2" : "justify-end"}`}>
                   {fromStaff && (
                     <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white">
-                      <img src="/flashmonkey-mascot.png" alt="" className="h-full w-full object-cover object-top" />
+                      <img src="/flashmonkey-mascot.png" alt="" className="h-full w-full object-contain" />
                     </div>
                   )}
                   <div className={`max-w-[84%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${fromStaff ? "rounded-bl-sm bg-white text-slate-700" : "rounded-br-sm bg-[#DDF3E8] text-slate-800"}`}>

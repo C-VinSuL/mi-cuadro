@@ -130,7 +130,7 @@ const Sidebar = ({
       className={`text-white ${
         mobile
           ? `flex w-full flex-col bg-[#064E3B] ${sheet ? "max-h-[75dvh] overflow-y-auto overscroll-contain rounded-t-[2rem] pb-[calc(4.25rem+env(safe-area-inset-bottom))]" : "h-full min-h-0 overflow-hidden"}`
-          : "pointer-events-none fixed inset-y-4 left-4 z-40 w-[240px] overflow-visible"
+          : "pointer-events-none fixed bottom-4 left-4 top-[7.5rem] z-40 w-[240px] overflow-visible"
       }`}
       id={mobile ? "mobile-navigation" : "desktop-navigation"}
       ref={mobile ? navigationRef : undefined}

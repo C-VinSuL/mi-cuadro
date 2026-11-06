@@ -112,7 +112,7 @@ const MainLayout = ({ children }) => {
         >
           {desktopAssistantOpen ? <X size={23} /> : (
             <span className="relative flex size-11 items-center justify-center overflow-hidden rounded-full bg-white">
-              <img src="/flashmonkey-mascot.png" alt="" className="h-full w-full object-cover object-top" />
+              <img src="/flashmonkey-mascot.png" alt="" className="h-full w-full object-contain" />
               <MessageCircle className="absolute bottom-0 right-0 rounded-full bg-[#16835D] p-0.5 text-white" size={17} />
             </span>
           )}

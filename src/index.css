@@ -375,7 +375,7 @@ svg {
   }
 }
 
-[data-role="socio"] {
+[data-role] {
   --role-accent: #286b48;
   --role-accent-strong: #1d593a;
   --role-highlight: #e0f0e5;
@@ -383,56 +383,18 @@ svg {
   --role-header-end: #28764e;
 }
 
-[data-role="tesorero"] {
-  --role-accent: #075a68;
-  --role-accent-strong: #064653;
-  --role-highlight: #dceff2;
-  --role-header-start: #064653;
-  --role-header-end: #0c6a78;
-}
-
-[data-role="administrador"] {
-  --role-accent: #3b416f;
-  --role-accent-strong: #2b315b;
-  --role-highlight: #e6e8f4;
-  --role-header-start: #2b315b;
-  --role-header-end: #414978;
-}
-
 .role-badge {
   display: inline-flex;
   min-height: 1.25rem;
   align-items: center;
-  border: 1px solid transparent;
+  border: 1px solid #b8ddc4;
   border-radius: 9999px;
   padding: 0.125rem 0.5rem;
   font-size: 0.625rem;
   font-weight: 700;
   line-height: 1rem;
-}
-
-.role-badge-socio {
-  border-color: #b8ddc4;
   background: #e4f2e8;
   color: #174b2f;
-}
-
-.role-badge-tesorero {
-  border-color: #b5dce2;
-  background: #e1f1f3;
-  color: #064653;
-}
-
-.role-badge-administrador {
-  border-color: #c9cce6;
-  background: #e9eaf5;
-  color: #2b315b;
-}
-
-.role-badge-auditor {
-  border-color: #d1d5db;
-  background: #f1f5f9;
-  color: #334155;
 }
 
 [data-role] .app-navbar {
