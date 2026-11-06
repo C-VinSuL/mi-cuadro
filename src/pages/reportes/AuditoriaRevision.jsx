@@ -31,6 +31,7 @@ import {
   responderHallazgoAuditoria
 } from "../../services/adminService";
 import { logOperationalError } from "../../utils/logOperationalError";
+import AuditoriaControlFinanciero from "./AuditoriaControlFinanciero";
 
 const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
 const dateValue = (date) => {
@@ -1020,6 +1021,11 @@ const AuditoriaRevision = () => {
 
       {isAuditor && (
         <>
+          <AuditoriaControlFinanciero
+            grupoId={groupFilter || null}
+            desde={period.from}
+            hasta={period.to}
+          />
           <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
             <h2 className="text-lg font-semibold text-slate-900">Plan anual de auditorías</h2>
             <p className="mt-1 text-sm text-slate-600">Programa auditorías por grupo, objetivo, alcance, fechas y responsable.</p>

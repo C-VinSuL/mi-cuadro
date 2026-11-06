@@ -138,6 +138,56 @@ export const listarMovimientosBilleteraAuditoria = (grupoId = null, limite = 100
   }
 );
 
+export const listarResumenControlFinancieroAuditoria = (grupoId = null, desde = null, hasta = null) => callRpc(
+  "auditoria_resumen_control_financiero",
+  {
+    p_grupo_id: grupoId || null,
+    p_desde: desde || null,
+    p_hasta: hasta || null
+  }
+);
+
+export const listarEgresosControlAuditoria = (grupoId = null, desde = null, hasta = null) => callRpc(
+  "auditoria_listar_egresos_control",
+  {
+    p_grupo_id: grupoId || null,
+    p_desde: desde || null,
+    p_hasta: hasta || null
+  }
+);
+
+export const listarEntregasRondaAuditoria = (grupoId = null, desde = null, hasta = null) => callRpc(
+  "auditoria_listar_entregas_ronda",
+  {
+    p_grupo_id: grupoId || null,
+    p_desde: desde || null,
+    p_hasta: hasta || null
+  }
+);
+
+export const listarPrestamosControlAuditoria = (grupoId = null, desde = null, hasta = null) => callRpc(
+  "auditoria_listar_prestamos_control",
+  {
+    p_grupo_id: grupoId || null,
+    p_desde: desde || null,
+    p_hasta: hasta || null
+  }
+);
+
+export const agregarEvidenciaEntregaAuditoria = ({
+  entregaId,
+  ruta,
+  nombreArchivo,
+  tipoContenido,
+  bytes
+}) => callRpc("auditoria_agregar_evidencia_entrega", {
+  p_entrega_id: entregaId,
+  p_ruta: ruta,
+  p_nombre_archivo: nombreArchivo,
+  p_tipo_contenido: tipoContenido,
+  p_bytes: bytes
+});
+
 export const listarRevisionesAuditoria = () => callRpc("auditoria_listar_revisiones_v3", {});
 
 export const listarResponsablesAuditoria = () => callRpc("auditoria_listar_responsables", {});
