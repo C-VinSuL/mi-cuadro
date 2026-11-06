@@ -238,10 +238,10 @@ const AuditoriaRevision = () => {
   }, [responsables, profile]);
   const financeResponsables = responsables.filter((person) => ["administrador", "tesorero"].includes(person.rol));
   const reviewAssignee = reviewDraft.key === reviewKey
-    ? reviewDraft.responsableId || auditorResponsables[0]?.perfil_id || ""
+    ? reviewDraft.responsableId
     : auditorResponsables.some((person) => person.perfil_id === currentReview?.responsable_id)
       ? currentReview.responsable_id
-      : auditorResponsables[0]?.perfil_id || "";
+      : "";
   const reviewConclusion = reviewDraft.key === reviewKey
     ? reviewDraft.conclusion
     : currentReview?.conclusion || "";
