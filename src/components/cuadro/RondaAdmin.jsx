@@ -313,8 +313,13 @@ const puedeAdministrar =
     if (error) {
       logOperationalError("Error cerrando ronda:", error);
 
+      const backendMessage = error.code === "P0001" && typeof error.message === "string"
+        ? error.message.trim()
+        : "";
       setMensaje(
-        "No se pudo cerrar la ronda."
+        backendMessage && backendMessage.length <= 240
+          ? `No se pudo cerrar la ronda: ${backendMessage}`
+          : `No se pudo cerrar la ronda. Código: ${error.code || "no disponible"}.`
       );
 
       setTipoMensaje("error");

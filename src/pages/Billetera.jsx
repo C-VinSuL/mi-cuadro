@@ -427,7 +427,15 @@ const Billetera = () => {
           <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white px-5">
             {movements.map((movement) => (
               <article key={movement.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
-                <span className="text-slate-700">{movement.tipo === "aporte_programado" ? `Aporte automático · ${grupos.find((group) => group.id === movement.grupo_id)?.nombre || "Grupo"} · periodo ${movement.periodo}` : movement.tipo} · {new Date(movement.creado_en).toLocaleString("es-EC")}</span>
+                <span className="text-slate-700">
+                  {movement.tipo === "aporte_programado"
+                    ? `Aporte automático · ${grupos.find((group) => group.id === movement.grupo_id)?.nombre || "Grupo"} · periodo ${movement.periodo}`
+                    : movement.tipo === "entrega_cuadro"
+                      ? `Entrega recibida · ${grupos.find((group) => group.id === movement.grupo_id)?.nombre || "Grupo"} · ronda ${movement.periodo}`
+                      : movement.tipo}
+                  {" · "}
+                  {new Date(movement.creado_en).toLocaleString("es-EC")}
+                </span>
                 <span className={`font-bold ${Number(movement.delta) < 0 ? "text-red-700" : "text-emerald-700"}`}>{Number(movement.delta) > 0 ? "+" : ""}{currency.format(movement.delta)}</span>
               </article>
             ))}
