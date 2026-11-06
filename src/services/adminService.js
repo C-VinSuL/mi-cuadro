@@ -165,7 +165,7 @@ export const guardarRevisionAuditoria = ({
   }
 );
 
-export const listarHallazgosAuditoria = (grupoId = null) => callRpc("auditoria_listar_hallazgos_v2", {
+export const listarHallazgosAuditoria = (grupoId = null) => callRpc("auditoria_listar_hallazgos_v3", {
   p_grupo_id: grupoId || null
 });
 
@@ -177,9 +177,10 @@ export const crearHallazgoAuditoria = ({
   severidad,
   estado,
   fechaLimite,
-  responsableId
+  responsableId,
+  revisionId
 }) => callRpc(
-  "auditoria_crear_hallazgo_v2",
+  "auditoria_crear_hallazgo_v3",
   {
     p_grupo_id: grupoId,
     p_titulo: titulo,
@@ -188,7 +189,8 @@ export const crearHallazgoAuditoria = ({
     p_severidad: severidad,
     p_estado: estado,
     p_fecha_limite: fechaLimite || null,
-    p_responsable_id: responsableId || null
+    p_responsable_id: responsableId || null,
+    p_revision_id: revisionId || null
   }
 );
 
@@ -198,16 +200,18 @@ export const actualizarHallazgoAuditoria = ({
   descripcion,
   evidencia,
   fechaLimite,
-  responsableId
+  responsableId,
+  revisionId
 }) => callRpc(
-  "auditoria_actualizar_hallazgo_v2",
+  "auditoria_actualizar_hallazgo_v3",
   {
     p_hallazgo_id: hallazgoId,
     p_estado: estado,
     p_descripcion: descripcion,
     p_evidencia: evidencia,
     p_fecha_limite: fechaLimite || null,
-    p_responsable_id: responsableId || null
+    p_responsable_id: responsableId || null,
+    p_revision_id: revisionId || null
   }
 );
 

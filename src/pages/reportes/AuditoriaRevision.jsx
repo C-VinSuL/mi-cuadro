@@ -101,6 +101,7 @@ const AuditoriaRevision = () => {
   });
   const [findingForm, setFindingForm] = useState({
     grupoId: "",
+    revisionId: "",
     titulo: "",
     descripcion: "",
     evidencia: "",
@@ -136,6 +137,7 @@ const AuditoriaRevision = () => {
           descripcion: finding.descripcion,
           evidencia: finding.evidencia,
           fechaLimite: finding.fecha_limite || "",
+          revisionId: finding.revision_id || "",
           responsableId: responsibleRows?.some((person) => (
             person.perfil_id === finding.responsable_id
             && ["administrador", "tesorero"].includes(person.rol)
@@ -147,6 +149,7 @@ const AuditoriaRevision = () => {
       setFindingForm((current) => ({
         ...current,
         grupoId: current.grupoId || groupRows?.[0]?.grupo_id || "",
+        revisionId: current.revisionId || "",
         responsableId: current.responsableId
           || responsibleRows?.find((person) => ["administrador", "tesorero"].includes(person.rol))?.perfil_id
           || ""
@@ -252,6 +255,8 @@ const AuditoriaRevision = () => {
   const filteredFindings = useMemo(() => (
     findings.filter((finding) => !groupFilter || finding.grupo_id === groupFilter)
   ), [findings, groupFilter]);
+  const findingReviews = reviews.filter((review) => review.grupo_id === findingForm.grupoId);
+  const unassignedFindingCount = filteredFindings.filter((finding) => !finding.revision_id).length;
 
   const updateReview = async (event) => {
     event.preventDefault();
@@ -307,6 +312,7 @@ const AuditoriaRevision = () => {
         severidad: "media",
         estado: "abierto",
         fechaLimite: "",
+        revisionId: "",
         responsableId: ""
       }));
       setNotice("Hallazgo registrado con trazabilidad.");
@@ -332,7 +338,8 @@ const AuditoriaRevision = () => {
         descripcion: draft.descripcion.trim(),
         evidencia: draft.evidencia.trim(),
         fechaLimite: draft.fechaLimite,
-        responsableId: draft.responsableId
+        responsableId: draft.responsableId,
+        revisionId: draft.revisionId
       });
       setNotice("Seguimiento del hallazgo actualizado.");
       await loadData();
@@ -456,7 +463,7 @@ const AuditoriaRevision = () => {
         { field: "Alcance y notas", value: currentReview.notas || "Sin notas" },
         { field: "Conclusión", value: currentReview.conclusion },
         { field: "Evidencia de la revisión", value: (currentReview.evidencias || []).map((item) => item.nombre_archivo).join("\n") || "Sin archivos adjuntos" },
-        { field: "Alcance de hallazgos", value: "Todos los hallazgos registrados para el grupo; no se limitan a las fechas del período revisado." },
+        { field: "Alcance de hallazgos", value: "Solo incluye los hallazgos vinculados a esta revisión." },
         { field: "Completada", value: currentReview.completada_en ? new Date(currentReview.completada_en) : "—" },
         { field: "Generado", value: new Date() }
       ]);
@@ -466,8 +473,8 @@ const AuditoriaRevision = () => {
       overview.getColumn(1).font = { bold: true };
       overview.getRow(11).getCell(2).numFmt = "dd/mm/yyyy hh:mm";
 
-      const reportFindings = findings.filter((finding) => finding.grupo_id === currentReview.grupo_id);
-      const findingsSheet = workbook.addWorksheet("Hallazgos del grupo");
+      const reportFindings = findings.filter((finding) => finding.revision_id === currentReview.id);
+      const findingsSheet = workbook.addWorksheet("Hallazgos de revisión");
       findingsSheet.columns = [
         { header: "Hallazgo", key: "title", width: 32 },
         { header: "Importancia", key: "severity", width: 14 },
@@ -897,10 +904,22 @@ const AuditoriaRevision = () => {
             <form onSubmit={createFinding} className="mt-5 grid gap-4 md:grid-cols-2">
               <label className="text-sm font-medium text-slate-700">
                 Grupo
-                <select required value={findingForm.grupoId} onChange={(event) => setFindingForm((current) => ({ ...current, grupoId: event.target.value }))} className="mt-1 block min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2">
+                <select required value={findingForm.grupoId} onChange={(event) => setFindingForm((current) => ({ ...current, grupoId: event.target.value, revisionId: "" }))} className="mt-1 block min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2">
                   <option value="">Selecciona un grupo</option>
                   {groups.map((group) => <option key={group.grupo_id} value={group.grupo_id}>{group.grupo_nombre}</option>)}
                 </select>
+              </label>
+              <label className="text-sm font-medium text-slate-700">
+                Revisión relacionada
+                <select value={findingForm.revisionId} onChange={(event) => setFindingForm((current) => ({ ...current, revisionId: event.target.value }))} className="mt-1 block min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2">
+                  <option value="">Sin revisión asignada</option>
+                  {findingReviews.map((review) => (
+                    <option key={review.id} value={review.id}>
+                      {dateLabel(review.periodo_desde)} – {dateLabel(review.periodo_hasta)} · {statusLabels[review.estado]}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-xs font-normal text-slate-500">El informe final solo incluirá los hallazgos vinculados a su revisión.</span>
               </label>
               <label className="text-sm font-medium text-slate-700">
                 Importancia
@@ -974,6 +993,11 @@ const AuditoriaRevision = () => {
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Hallazgos y aclaraciones</h2>
           <p className="mt-1 text-sm text-slate-600">Las respuestas de administración o tesorería quedan adjuntas al hallazgo.</p>
+          {isAuditor && unassignedFindingCount > 0 && (
+            <p className="mt-1 text-sm text-amber-800">
+              {unassignedFindingCount} hallazgo{unassignedFindingCount === 1 ? "" : "s"} sin revisión relacionada. Puedes asignarla desde el seguimiento.
+            </p>
+          )}
         </div>
         {loading ? (
           <p role="status" className="rounded-xl border border-slate-200 bg-white px-5 py-6 text-sm text-slate-500">Cargando hallazgos...</p>
@@ -984,14 +1008,24 @@ const AuditoriaRevision = () => {
             const draft = findingDrafts[finding.id] || {
               estado: finding.estado,
               descripcion: finding.descripcion,
-              evidencia: finding.evidencia
+              evidencia: finding.evidencia,
+              fechaLimite: finding.fecha_limite || "",
+              responsableId: finding.responsable_id || "",
+              revisionId: finding.revision_id || ""
             };
+            const relatedReview = reviews.find((review) => review.id === finding.revision_id);
+            const findingReviewChoices = reviews.filter((review) => review.grupo_id === finding.grupo_id);
             return (
               <article key={finding.id} className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">{finding.grupo_nombre} · {severityLabels[finding.severidad]}</p>
                     <h3 className="mt-1 text-base font-bold text-slate-900">{finding.titulo}</h3>
+                    <p className="mt-1 text-xs font-medium text-slate-600">
+                      Revisión relacionada: {relatedReview
+                        ? `${dateLabel(relatedReview.periodo_desde)} – ${dateLabel(relatedReview.periodo_hasta)}`
+                        : "Sin revisión asignada"}
+                    </p>
                     <p className="mt-1 text-xs text-slate-500">
                       Registrado por {finding.creado_por_nombre} · {new Date(finding.creado_en).toLocaleString("es-EC")}
                       {" · Responsable: "}{finding.responsable_nombre || "Sin asignar"}
@@ -1010,6 +1044,17 @@ const AuditoriaRevision = () => {
                       </select>
                     </label>
                     <div className="grid gap-3 md:grid-cols-2">
+                      <label className="text-sm font-medium text-slate-700 md:col-span-2">
+                        Revisión relacionada
+                        <select value={draft.revisionId} onChange={(event) => updateFindingDraft(finding.id, "revisionId", event.target.value)} className="mt-1 block min-h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2">
+                          <option value="">Sin revisión asignada</option>
+                          {findingReviewChoices.map((review) => (
+                            <option key={review.id} value={review.id}>
+                              {dateLabel(review.periodo_desde)} – {dateLabel(review.periodo_hasta)} · {statusLabels[review.estado]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                       <label className="text-sm font-medium text-slate-700">
                         Fecha límite
                         <input type="date" value={draft.fechaLimite} onChange={(event) => updateFindingDraft(finding.id, "fechaLimite", event.target.value)} className="mt-1 block min-h-10 w-full rounded-lg border border-slate-300 px-3 py-2" />
