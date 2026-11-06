@@ -18,12 +18,16 @@ import {
   actualizarHallazgoAuditoria,
   agregarEvidenciaAuditoria,
   crearHallazgoAuditoria,
+  enviarInformeAuditoriaAprobacion,
+  guardarPlanAnualAuditoria,
   guardarRevisionAuditoria,
   listarHallazgosAuditoria,
   listarMovimientosBilleteraAuditoria,
+  listarPlanesAnualesAuditoria,
   listarResponsablesAuditoria,
   listarRevisionesAuditoria,
   obtenerResumenAuditoriaGrupos,
+  resolverAprobacionInformeAuditoria,
   responderHallazgoAuditoria
 } from "../../services/adminService";
 import { logOperationalError } from "../../utils/logOperationalError";
@@ -55,6 +59,13 @@ const isOverdue = (date, status) => Boolean(
 );
 const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024;
 const EVIDENCE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+const STANDARD_CHECKLIST = [
+  { id: "records", texto: "Los registros del período están completos y conciliados.", estado: "pendiente", notas: "" },
+  { id: "receipts", texto: "Los comprobantes y respaldos corresponden a las operaciones registradas.", estado: "pendiente", notas: "" },
+  { id: "approvals", texto: "Las operaciones revisadas cuentan con la autorización requerida.", estado: "pendiente", notas: "" },
+  { id: "balances", texto: "Los saldos y movimientos revisados son consistentes.", estado: "pendiente", notas: "" },
+  { id: "exceptions", texto: "Las excepciones y observaciones fueron documentadas y asignadas.", estado: "pendiente", notas: "" }
+];
 
 const statusLabels = {
   pendiente: "Pendiente",
@@ -66,6 +77,18 @@ const statusLabels = {
   aclaracion_solicitada: "Aclaración solicitada",
   en_seguimiento: "En seguimiento",
   cerrado: "Cerrado"
+};
+const checklistStatusLabels = {
+  pendiente: "Pendiente",
+  conforme: "Conforme",
+  observacion: "Observación",
+  no_aplica: "No aplica"
+};
+const reportStatusLabels = {
+  borrador: "Borrador",
+  pendiente_aprobacion: "Pendiente de aprobación",
+  devuelto: "Devuelto para ajustes",
+  aprobado: "Aprobado"
 };
 const severityLabels = {
   baja: "Baja",
@@ -80,6 +103,7 @@ const AuditoriaRevision = () => {
   const isAuditor = rol === "auditor";
   const [groups, setGroups] = useState([]);
   const [reviews, setReviews] = useState([]);
+  const [annualPlans, setAnnualPlans] = useState([]);
   const [findings, setFindings] = useState([]);
   const [responsables, setResponsables] = useState([]);
   const [walletMovements, setWalletMovements] = useState([]);
@@ -93,13 +117,29 @@ const AuditoriaRevision = () => {
   const [notice, setNotice] = useState("");
   const [groupFilter, setGroupFilter] = useState("");
   const [period, setPeriod] = useState(monthBounds);
+  const [annualPlanForm, setAnnualPlanForm] = useState(() => {
+    const now = new Date();
+    return {
+      id: "",
+      anio: String(now.getFullYear()),
+      grupoId: "",
+      objetivo: "",
+      alcance: "",
+      fechaInicio: `${now.getFullYear()}-01-01`,
+      fechaFin: `${now.getFullYear()}-12-31`,
+      responsableId: ""
+    };
+  });
+  const [approvalNotes, setApprovalNotes] = useState({});
   const [reviewDraft, setReviewDraft] = useState({
     key: "",
     estado: "pendiente",
     notas: "",
     fechaLimite: "",
     responsableId: "",
-    conclusion: ""
+    conclusion: "",
+    checklist: [],
+    planAnualId: ""
   });
   const [findingForm, setFindingForm] = useState({
     grupoId: "",
@@ -122,16 +162,18 @@ const AuditoriaRevision = () => {
     setLoading(true);
     setError("");
     try {
-      const [groupRows, reviewRows, findingRows, responsibleRows] = await Promise.all([
+      const [groupRows, reviewRows, findingRows, responsibleRows, planRows] = await Promise.all([
         obtenerResumenAuditoriaGrupos(),
         listarRevisionesAuditoria(),
         listarHallazgosAuditoria(),
-        listarResponsablesAuditoria()
+        listarResponsablesAuditoria(),
+        listarPlanesAnualesAuditoria()
       ]);
       setGroups(groupRows || []);
       setReviews(reviewRows || []);
       setFindings(findingRows || []);
       setResponsables(responsibleRows || []);
+      setAnnualPlans(planRows || []);
       setFindingDrafts(Object.fromEntries((findingRows || []).map((finding) => [
         finding.id,
         {
@@ -154,6 +196,13 @@ const AuditoriaRevision = () => {
         revisionId: current.revisionId || "",
         responsableId: current.responsableId
           || responsibleRows?.find((person) => ["administrador", "tesorero"].includes(person.rol))?.perfil_id
+          || ""
+      }));
+      setAnnualPlanForm((current) => ({
+        ...current,
+        grupoId: current.grupoId || groupRows?.[0]?.grupo_id || "",
+        responsableId: current.responsableId
+          || responsibleRows?.find((person) => person.rol === "auditor")?.perfil_id
           || ""
       }));
     } catch (loadError) {
@@ -217,6 +266,14 @@ const AuditoriaRevision = () => {
   const reviewDeadline = reviewDraft.key === reviewKey
     ? reviewDraft.fechaLimite
     : currentReview?.fecha_limite || "";
+  const reviewChecklist = reviewDraft.key === reviewKey
+    ? reviewDraft.checklist
+    : currentReview?.checklist?.length
+      ? currentReview.checklist
+      : STANDARD_CHECKLIST.map((item) => ({ ...item }));
+  const selectedAnnualPlanId = reviewDraft.key === reviewKey
+    ? reviewDraft.planAnualId
+    : annualPlans.find((plan) => plan.revision_id === currentReview?.id)?.id || "";
   const auditorResponsables = useMemo(() => {
     const auditors = responsables.filter((person) => person.rol === "auditor");
     if (
@@ -252,18 +309,22 @@ const AuditoriaRevision = () => {
     && (review.evidencias || []).length > 0
   ));
 
+  const getCurrentReviewDraft = (current = reviewDraft) => current.key === reviewKey
+    ? current
+    : {
+      key: reviewKey,
+      estado: reviewStatus,
+      notas: reviewNotes,
+      fechaLimite: reviewDeadline,
+      responsableId: reviewAssignee,
+      conclusion: reviewConclusion,
+      checklist: reviewChecklist,
+      planAnualId: selectedAnnualPlanId
+    };
+
   const setReviewField = (field, value) => {
     setReviewDraft((current) => ({
-      ...(current.key === reviewKey
-        ? current
-        : {
-          key: reviewKey,
-          estado: reviewStatus,
-          notas: reviewNotes,
-          fechaLimite: reviewDeadline,
-          responsableId: reviewAssignee,
-          conclusion: reviewConclusion
-        }),
+      ...getCurrentReviewDraft(current),
       [field]: value
     }));
   };
@@ -285,6 +346,14 @@ const AuditoriaRevision = () => {
       setError("Agrega una conclusión final de al menos 3 caracteres antes de completar la revisión.");
       return;
     }
+    if (reviewChecklist.some((item) => item.texto.trim().length < 3)) {
+      setError("Cada punto de la lista de verificación debe tener una descripción de al menos 3 caracteres.");
+      return;
+    }
+    if (reviewStatus === "completada" && reviewChecklist.some((item) => item.estado === "pendiente")) {
+      setError("Marca cada punto de la lista de verificación antes de completar la revisión.");
+      return;
+    }
     setSaving(true);
     setError("");
     setNotice("");
@@ -297,13 +366,139 @@ const AuditoriaRevision = () => {
         notas: reviewNotes.trim(),
         fechaLimite: reviewDeadline,
         responsableId: reviewAssignee,
-        conclusion: reviewConclusion.trim()
+        conclusion: reviewConclusion.trim(),
+        checklist: reviewChecklist,
+        planAnualId: selectedAnnualPlanId
       });
       setNotice("Plan de revisión guardado.");
       await loadData();
     } catch (saveError) {
       logOperationalError("Error guardando el plan de auditoría:", saveError);
       setError("No se pudo guardar el plan. Revisa el período e inténtalo nuevamente.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveAnnualPlan = async (event) => {
+    event.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      await guardarPlanAnualAuditoria({
+        ...annualPlanForm,
+        id: annualPlanForm.id || null,
+        anio: Number(annualPlanForm.anio),
+        objetivo: annualPlanForm.objetivo.trim(),
+        alcance: annualPlanForm.alcance.trim()
+      });
+      setAnnualPlanForm((current) => ({
+        ...current,
+        id: "",
+        objetivo: "",
+        alcance: ""
+      }));
+      setNotice("Plan anual guardado.");
+      await loadData();
+    } catch (saveError) {
+      logOperationalError("Error guardando el plan anual de auditoría:", saveError);
+      setError("No se pudo guardar el plan anual. Verifica los datos e inténtalo nuevamente.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const startAnnualPlanReview = (plan) => {
+    setGroupFilter(plan.grupo_id);
+    setPeriod({ from: plan.fecha_inicio, to: plan.fecha_fin });
+    setReviewDraft({
+      key: `${plan.grupo_id}:${plan.fecha_inicio}:${plan.fecha_fin}`,
+      estado: "pendiente",
+      notas: `${plan.objetivo}\n\nAlcance: ${plan.alcance}`,
+      fechaLimite: plan.fecha_fin,
+      responsableId: plan.responsable_id,
+      conclusion: "",
+      checklist: STANDARD_CHECKLIST.map((item) => ({ ...item })),
+      planAnualId: plan.id
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const updateChecklistItem = (itemId, key, value) => {
+    setReviewDraft((current) => {
+      const currentDraft = getCurrentReviewDraft(current);
+      return {
+        ...currentDraft,
+        checklist: currentDraft.checklist.map((item) => item.id === itemId ? { ...item, [key]: value } : item)
+      };
+    });
+  };
+
+  const addChecklistItem = () => {
+    setReviewDraft((current) => {
+      const currentDraft = getCurrentReviewDraft(current);
+      return {
+        ...currentDraft,
+        checklist: [
+        ...currentDraft.checklist,
+        {
+          id: crypto.randomUUID(),
+          texto: "",
+          estado: "pendiente",
+          notas: ""
+        }
+        ]
+      };
+    });
+  };
+
+  const removeChecklistItem = (itemId) => {
+    setReviewDraft((current) => {
+      const currentDraft = getCurrentReviewDraft(current);
+      return {
+        ...currentDraft,
+        checklist: currentDraft.checklist.filter((item) => item.id !== itemId)
+      };
+    });
+  };
+
+  const sendReportForApproval = async (reviewId) => {
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      await enviarInformeAuditoriaAprobacion(reviewId);
+      setNotice("Informe enviado a administración para aprobación.");
+      await loadData();
+    } catch (sendError) {
+      logOperationalError("Error enviando informe de auditoría a aprobación:", sendError);
+      setError("No se pudo enviar el informe a aprobación.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resolveReportApproval = async (reviewId, approve) => {
+    const notes = approvalNotes[reviewId]?.trim() || "";
+    if (!approve && notes.length < 3) {
+      setError("Escribe observaciones para devolver el informe a la auditora.");
+      return;
+    }
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      await resolverAprobacionInformeAuditoria(reviewId, approve, notes);
+      setApprovalNotes((current) => ({ ...current, [reviewId]: "" }));
+      setNotice(approve ? "Informe aprobado." : "Informe devuelto con observaciones.");
+      await loadData();
+    } catch (approvalError) {
+      logOperationalError("Error resolviendo aprobación del informe de auditoría:", approvalError);
+      setError("No se pudo actualizar la aprobación del informe.");
     } finally {
       setSaving(false);
     }
@@ -460,7 +655,7 @@ const AuditoriaRevision = () => {
   };
 
   const exportReviewReport = async () => {
-    if (!currentReview || currentReview.estado !== "completada") return;
+    if (!currentReview || currentReview.estado !== "completada" || currentReview.informe_estado !== "aprobado") return;
     try {
       const { default: ExcelJS } = await import("exceljs");
       const workbook = new ExcelJS.Workbook();
@@ -480,6 +675,10 @@ const AuditoriaRevision = () => {
         { field: "Estado", value: statusLabels[currentReview.estado] },
         { field: "Fecha límite", value: currentReview.fecha_limite || "No definida" },
         { field: "Responsable", value: currentReview.responsable_nombre || "No asignado" },
+        { field: "Aprobación", value: reportStatusLabels[currentReview.informe_estado] || "Borrador" },
+        { field: "Aprobado por", value: currentReview.informe_aprobado_por_nombre || "—" },
+        { field: "Fecha de aprobación", value: currentReview.informe_aprobado_en ? new Date(currentReview.informe_aprobado_en) : "—" },
+        { field: "Observaciones de aprobación", value: currentReview.informe_observaciones || "Sin observaciones" },
         { field: "Alcance y notas", value: currentReview.notas || "Sin notas" },
         { field: "Conclusión", value: currentReview.conclusion },
         { field: "Evidencia de la revisión", value: (currentReview.evidencias || []).map((item) => item.nombre_archivo).join("\n") || "Sin archivos adjuntos" },
@@ -491,7 +690,25 @@ const AuditoriaRevision = () => {
       overview.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF065F46" } };
       overview.getColumn(2).alignment = { vertical: "top", wrapText: true };
       overview.getColumn(1).font = { bold: true };
-      overview.getRow(11).getCell(2).numFmt = "dd/mm/yyyy hh:mm";
+      overview.getRow(8).getCell(2).numFmt = "dd/mm/yyyy hh:mm";
+      overview.getRow(14).getCell(2).numFmt = "dd/mm/yyyy hh:mm";
+
+      const checklistSheet = workbook.addWorksheet("Lista de verificación");
+      checklistSheet.columns = [
+        { header: "Punto de control", key: "texto", width: 65 },
+        { header: "Resultado", key: "estado", width: 22 },
+        { header: "Notas", key: "notas", width: 70 }
+      ];
+      (currentReview.checklist || []).forEach((item) => checklistSheet.addRow({
+        texto: item.texto,
+        estado: checklistStatusLabels[item.estado] || item.estado,
+        notas: item.notas || "—"
+      }));
+      checklistSheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      checklistSheet.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF047857" } };
+      checklistSheet.eachRow((row) => row.eachCell((cell) => {
+        cell.alignment = { vertical: "top", wrapText: true };
+      }));
 
       const reportFindings = findings.filter((finding) => finding.revision_id === currentReview.id);
       const findingsSheet = workbook.addWorksheet("Hallazgos de revisión");
@@ -804,11 +1021,101 @@ const AuditoriaRevision = () => {
       {isAuditor && (
         <>
           <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+            <h2 className="text-lg font-semibold text-slate-900">Plan anual de auditorías</h2>
+            <p className="mt-1 text-sm text-slate-600">Programa auditorías por grupo, objetivo, alcance, fechas y responsable.</p>
+            <form onSubmit={saveAnnualPlan} className="mt-4 grid gap-4 md:grid-cols-2">
+              <label className="text-sm font-medium text-slate-700">
+                Año
+                <input required type="number" min="2000" max="2200" value={annualPlanForm.anio} onChange={(event) => setAnnualPlanForm((current) => ({
+                  ...current,
+                  anio: event.target.value,
+                  fechaInicio: `${event.target.value}-01-01`,
+                  fechaFin: `${event.target.value}-12-31`
+                }))} className="mt-1 block min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2" />
+              </label>
+              <label className="text-sm font-medium text-slate-700">
+                Grupo
+                <select required value={annualPlanForm.grupoId} onChange={(event) => setAnnualPlanForm((current) => ({ ...current, grupoId: event.target.value }))} className="mt-1 block min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2">
+                  <option value="">Selecciona un grupo</option>
+                  {groups.map((group) => <option key={group.grupo_id} value={group.grupo_id}>{group.grupo_nombre}</option>)}
+                </select>
+              </label>
+              <label className="text-sm font-medium text-slate-700">
+                Objetivo
+                <input required minLength={3} maxLength={500} value={annualPlanForm.objetivo} onChange={(event) => setAnnualPlanForm((current) => ({ ...current, objetivo: event.target.value }))} className="mt-1 block min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2" />
+              </label>
+              <label className="text-sm font-medium text-slate-700">
+                Auditor responsable
+                <select required value={annualPlanForm.responsableId} onChange={(event) => setAnnualPlanForm((current) => ({ ...current, responsableId: event.target.value }))} className="mt-1 block min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2">
+                  <option value="">Selecciona un auditor</option>
+                  {auditorResponsables.map((person) => <option key={person.perfil_id} value={person.perfil_id}>{person.nombre}</option>)}
+                </select>
+              </label>
+              <label className="text-sm font-medium text-slate-700">
+                Fecha de inicio
+                <input required type="date" value={annualPlanForm.fechaInicio} onChange={(event) => setAnnualPlanForm((current) => ({ ...current, fechaInicio: event.target.value }))} className="mt-1 block min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2" />
+              </label>
+              <label className="text-sm font-medium text-slate-700">
+                Fecha de fin
+                <input required type="date" value={annualPlanForm.fechaFin} onChange={(event) => setAnnualPlanForm((current) => ({ ...current, fechaFin: event.target.value }))} className="mt-1 block min-h-11 w-full rounded-lg border border-slate-300 px-3 py-2" />
+              </label>
+              <label className="text-sm font-medium text-slate-700 md:col-span-2">
+                Alcance
+                <textarea required minLength={3} maxLength={4000} rows={3} value={annualPlanForm.alcance} onChange={(event) => setAnnualPlanForm((current) => ({ ...current, alcance: event.target.value }))} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2" />
+              </label>
+              <div className="flex flex-wrap gap-2 md:col-span-2">
+                <button type="submit" disabled={saving || groups.length === 0 || !annualPlanForm.responsableId} className="min-h-11 rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-50">
+                  {saving ? "Guardando..." : annualPlanForm.id ? "Actualizar plan" : "Agregar al plan anual"}
+                </button>
+                {annualPlanForm.id && (
+                  <button type="button" onClick={() => setAnnualPlanForm((current) => ({ ...current, id: "", objetivo: "", alcance: "" }))} className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">
+                    Cancelar edición
+                  </button>
+                )}
+              </div>
+            </form>
+            {annualPlans.length > 0 && (
+              <ul className="mt-5 divide-y divide-slate-100 border-t border-slate-200">
+                {annualPlans.map((plan) => (
+                  <li key={plan.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
+                    <div>
+                      <p className="font-semibold text-slate-800">{plan.anio} · {plan.grupo_nombre} · {plan.objetivo}</p>
+                      <p className="text-slate-500">{dateLabel(plan.fecha_inicio)} – {dateLabel(plan.fecha_fin)} · {plan.responsable_nombre || "Sin responsable"} · {plan.estado.replaceAll("_", " ")}</p>
+                      <p className="mt-1 text-slate-600">{plan.alcance}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      {!plan.revision_id && (
+                        <>
+                          <button type="button" onClick={() => setAnnualPlanForm({
+                            id: plan.id,
+                            anio: String(plan.anio),
+                            grupoId: plan.grupo_id,
+                            objetivo: plan.objetivo,
+                            alcance: plan.alcance,
+                            fechaInicio: plan.fecha_inicio,
+                            fechaFin: plan.fecha_fin,
+                            responsableId: plan.responsable_id
+                          })} className="min-h-9 rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700">
+                            Editar
+                          </button>
+                          <button type="button" onClick={() => startAnnualPlanReview(plan)} className="min-h-9 rounded-lg border border-emerald-300 px-3 py-1 text-xs font-semibold text-emerald-800">
+                            Iniciar revisión
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
             <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-900">
               <ShieldCheck size={19} className="text-emerald-700" />
-              Plan de revisión por grupo y período
+              Revisión de grupo y lista de verificación
             </h2>
-            <p className="mt-1 text-sm text-slate-600">Guarda el alcance, avance y notas de cada revisión. Completar una revisión actualiza la fecha de última revisión del grupo.</p>
+            <p className="mt-1 text-sm text-slate-600">Documenta el trabajo realizado con una lista estándar editable antes de completar la revisión.</p>
             <form onSubmit={updateReview} className="mt-5 grid gap-4 md:grid-cols-2">
               <label className="text-sm font-medium text-slate-700">
                 Período desde
@@ -837,6 +1144,15 @@ const AuditoriaRevision = () => {
                   {auditorResponsables.map((person) => <option key={person.perfil_id} value={person.perfil_id}>{person.nombre}</option>)}
                 </select>
               </label>
+              <label className="text-sm font-medium text-slate-700">
+                Plan anual asociado
+                <select value={selectedAnnualPlanId} onChange={(event) => setReviewField("planAnualId", event.target.value)} className="mt-1 block min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 py-2">
+                  <option value="">Sin plan anual</option>
+                  {annualPlans
+                    .filter((plan) => plan.grupo_id === groupFilter && Number(plan.anio) === Number(period.from.slice(0, 4)))
+                    .map((plan) => <option key={plan.id} value={plan.id}>{plan.anio} · {plan.objetivo}</option>)}
+                </select>
+              </label>
               <label className="text-sm font-medium text-slate-700 md:col-span-2">
                 Alcance y notas de auditoría
                 <textarea maxLength={4000} rows={4} value={reviewNotes} onChange={(event) => setReviewField("notas", event.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2" placeholder="Indica qué se revisó, documentación consultada y tareas pendientes." />
@@ -845,14 +1161,59 @@ const AuditoriaRevision = () => {
                 Conclusión final
                 <textarea maxLength={4000} rows={4} value={reviewConclusion} onChange={(event) => setReviewField("conclusion", event.target.value)} className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2" placeholder="Obligatoria para marcar la revisión como completada." />
               </label>
+              <div className="space-y-3 md:col-span-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="font-semibold text-slate-900">Lista estándar de verificación</h3>
+                    <p className="text-xs text-slate-500">Personaliza los puntos para esta revisión y registra el resultado y las notas.</p>
+                  </div>
+                  <button type="button" onClick={addChecklistItem} disabled={reviewChecklist.length >= 40} className="min-h-9 rounded-lg border border-emerald-300 px-3 py-1 text-xs font-semibold text-emerald-800 disabled:opacity-50">
+                    Agregar punto
+                  </button>
+                </div>
+                {reviewChecklist.map((item, index) => (
+                  <div key={item.id} className="grid gap-2 rounded-xl border border-slate-200 p-3 md:grid-cols-[minmax(0,2fr)_minmax(150px,1fr)_auto]">
+                    <label className="text-xs font-medium text-slate-600">
+                      Punto {index + 1}
+                      <input maxLength={300} value={item.texto} onChange={(event) => updateChecklistItem(item.id, "texto", event.target.value)} className="mt-1 block min-h-10 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800" />
+                    </label>
+                    <label className="text-xs font-medium text-slate-600">
+                      Resultado
+                      <select value={item.estado} onChange={(event) => updateChecklistItem(item.id, "estado", event.target.value)} className="mt-1 block min-h-10 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800">
+                        {Object.entries(checklistStatusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                      </select>
+                    </label>
+                    <button type="button" onClick={() => removeChecklistItem(item.id)} disabled={reviewChecklist.length <= 1} className="self-end min-h-10 rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-600 disabled:opacity-40">
+                      Quitar
+                    </button>
+                    <label className="text-xs font-medium text-slate-600 md:col-span-3">
+                      Notas / referencia
+                      <input maxLength={1000} value={item.notas} onChange={(event) => updateChecklistItem(item.id, "notas", event.target.value)} className="mt-1 block min-h-10 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-800" />
+                    </label>
+                  </div>
+                ))}
+              </div>
               <div className="flex flex-wrap items-center gap-3 md:col-span-2">
                 <button type="submit" disabled={saving || !groupFilter || !period.from || !period.to || auditorResponsables.length === 0} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-50">
                   <Save size={16} />
                   {saving ? "Guardando..." : currentReview ? "Actualizar revisión" : "Crear revisión"}
                 </button>
-                <button type="button" onClick={exportReviewReport} disabled={currentReview?.estado !== "completada"} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-emerald-300 px-4 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 disabled:opacity-50">
+                <button type="button" onClick={exportReviewReport} disabled={currentReview?.informe_estado !== "aprobado"} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-emerald-300 px-4 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 disabled:opacity-50">
                   <Download size={16} /> Exportar informe final
                 </button>
+                {currentReview?.estado === "completada"
+                  && ["borrador", "devuelto", undefined].includes(currentReview.informe_estado)
+                  && currentReview.responsable_id === profile?.id && (
+                    <button type="button" onClick={() => sendReportForApproval(currentReview.id)} disabled={saving} className="min-h-11 rounded-lg border border-amber-300 px-4 py-2 text-sm font-semibold text-amber-900 disabled:opacity-50">
+                      Enviar informe a aprobación
+                    </button>
+                )}
+                {currentReview?.informe_estado && (
+                  <span className="text-sm text-slate-600">
+                    Informe: {reportStatusLabels[currentReview.informe_estado] || currentReview.informe_estado}
+                    {currentReview.informe_observaciones && ` · ${currentReview.informe_observaciones}`}
+                  </span>
+                )}
                 {!groupFilter && <span className="ml-3 text-sm text-slate-500">Selecciona un grupo para registrar una revisión.</span>}
                 {auditorResponsables.length === 0 && <span className="text-sm text-amber-800">No hay auditores activos disponibles para asignar.</span>}
               </div>
@@ -909,6 +1270,7 @@ const AuditoriaRevision = () => {
                       <span className="font-medium text-slate-800">{review.grupo_nombre} · {dateLabel(review.periodo_desde)} – {dateLabel(review.periodo_hasta)}</span>
                       <span className="text-slate-500">
                         {statusLabels[review.estado]} · responsable: {review.responsable_nombre || "Sin asignar"} · límite: {deadlineLabel(review.fecha_limite)}
+                        {review.informe_estado && ` · informe: ${reportStatusLabels[review.informe_estado] || review.informe_estado}`}
                         {isOverdue(review.fecha_limite, review.estado) && <strong className="ml-2 text-amber-800">Vencida</strong>}
                       </span>
                     </li>
@@ -979,6 +1341,67 @@ const AuditoriaRevision = () => {
             </form>
           </section>
         </>
+      )}
+
+      {rol === "administrador" && (
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6">
+          <h2 className="text-lg font-semibold text-slate-900">Aprobación de informes de auditoría</h2>
+          <p className="mt-1 text-sm text-slate-600">Revisa los informes completados que la auditora envió a aprobación. Si los devuelves, registra observaciones concretas.</p>
+          {reviews.filter((review) => review.informe_estado === "pendiente_aprobacion").length === 0 ? (
+            <p className="mt-4 rounded-xl bg-slate-50 p-4 text-sm text-slate-600">No hay informes pendientes de aprobación.</p>
+          ) : (
+            <ul className="mt-4 space-y-4">
+              {reviews.filter((review) => review.informe_estado === "pendiente_aprobacion").map((review) => (
+                <li key={review.id} className="rounded-xl border border-slate-200 p-4">
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <div>
+                      <h3 className="font-semibold text-slate-900">{review.grupo_nombre} · {dateLabel(review.periodo_desde)} – {dateLabel(review.periodo_hasta)}</h3>
+                      <p className="mt-1 text-sm text-slate-600">Auditora: {review.responsable_nombre || "Sin asignar"} · Enviado: {review.informe_enviado_en ? new Date(review.informe_enviado_en).toLocaleString("es-EC") : "—"}</p>
+                    </div>
+                    <span className="h-fit rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-900">{reportStatusLabels[review.informe_estado]}</span>
+                  </div>
+                  <p className="mt-3 whitespace-pre-wrap text-sm text-slate-700"><strong>Conclusión:</strong> {review.conclusion}</p>
+                  <p className="mt-2 text-sm text-slate-700"><strong>Alcance:</strong> {review.notas || "Sin notas"}</p>
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="w-full min-w-[560px] text-left text-xs">
+                      <thead className="bg-slate-50 text-slate-600">
+                        <tr><th className="px-3 py-2">Punto de control</th><th className="px-3 py-2">Resultado</th><th className="px-3 py-2">Notas</th></tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {(review.checklist || []).map((item) => (
+                          <tr key={item.id}>
+                            <td className="px-3 py-2">{item.texto}</td>
+                            <td className="px-3 py-2">{checklistStatusLabels[item.estado] || item.estado}</td>
+                            <td className="px-3 py-2">{item.notas || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <label className="mt-3 block text-sm font-medium text-slate-700">
+                    Observaciones para la auditora
+                    <textarea
+                      maxLength={2000}
+                      rows={2}
+                      value={approvalNotes[review.id] || ""}
+                      onChange={(event) => setApprovalNotes((current) => ({ ...current, [review.id]: event.target.value }))}
+                      className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2"
+                      placeholder="Obligatorias si devuelves el informe."
+                    />
+                  </label>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => resolveReportApproval(review.id, true)} disabled={saving} className="min-h-10 rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                      Aprobar informe
+                    </button>
+                    <button type="button" onClick={() => resolveReportApproval(review.id, false)} disabled={saving || (approvalNotes[review.id] || "").trim().length < 3} className="min-h-10 rounded-lg border border-amber-300 px-4 py-2 text-sm font-semibold text-amber-900 disabled:opacity-50">
+                      Devolver con observaciones
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       )}
 
       {!isAuditor && can("verSeguimientoAuditoria") && reviewsWithEvidence.length > 0 && (

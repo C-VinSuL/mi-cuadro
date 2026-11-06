@@ -24,9 +24,11 @@ movimientos financieros desde una interfaz con permisos según el rol.
 - **Administración:** gestión de grupos, cuentas, roles, documentos, solicitudes,
   configuración financiera y revisión de auditoría.
 - **Auditoría:** planes con responsables y fechas límite, evidencia en archivos
-  privados, seguimiento de hallazgos, informes finales y consulta paginada del
-  registro de eventos. El auditor consulta el estado de conciliación sin poder
-  marcar movimientos; esa acción sigue reservada a tesorería y administración.
+  privados, seguimiento de hallazgos, planificación anual por grupo, listas de
+  verificación editables y aprobación administrativa de informes. También
+  incluye consulta paginada del registro de eventos. El auditor consulta el
+  estado de conciliación sin poder marcar movimientos; esa acción sigue
+  reservada a tesorería y administración.
 - **Notificaciones:** avisos de actividad y seguimiento de solicitudes dentro
   de la aplicación.
 - **Reportes:** consulta de movimientos, filtros y exportación a Excel o PDF

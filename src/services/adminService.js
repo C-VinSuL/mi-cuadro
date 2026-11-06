@@ -138,9 +138,31 @@ export const listarMovimientosBilleteraAuditoria = (grupoId = null, limite = 100
   }
 );
 
-export const listarRevisionesAuditoria = () => callRpc("auditoria_listar_revisiones_v2", {});
+export const listarRevisionesAuditoria = () => callRpc("auditoria_listar_revisiones_v3", {});
 
 export const listarResponsablesAuditoria = () => callRpc("auditoria_listar_responsables", {});
+
+export const listarPlanesAnualesAuditoria = () => callRpc("auditoria_listar_planes_anuales", {});
+
+export const guardarPlanAnualAuditoria = ({
+  id,
+  anio,
+  grupoId,
+  objetivo,
+  alcance,
+  fechaInicio,
+  fechaFin,
+  responsableId
+}) => callRpc("auditoria_guardar_plan_anual", {
+  p_id: id || null,
+  p_anio: anio,
+  p_grupo_id: grupoId,
+  p_objetivo: objetivo,
+  p_alcance: alcance,
+  p_fecha_inicio: fechaInicio,
+  p_fecha_fin: fechaFin,
+  p_responsable_id: responsableId
+});
 
 export const guardarRevisionAuditoria = ({
   grupoId,
@@ -150,9 +172,11 @@ export const guardarRevisionAuditoria = ({
   notas,
   fechaLimite,
   responsableId,
-  conclusion
+  conclusion,
+  checklist,
+  planAnualId
 }) => callRpc(
-  "auditoria_guardar_revision_v2",
+  "auditoria_guardar_revision_v3",
   {
     p_grupo_id: grupoId,
     p_periodo_desde: desde,
@@ -161,7 +185,23 @@ export const guardarRevisionAuditoria = ({
     p_notas: notas,
     p_fecha_limite: fechaLimite || null,
     p_responsable_id: responsableId || null,
-    p_conclusion: conclusion
+    p_conclusion: conclusion,
+    p_checklist: checklist || [],
+    p_plan_anual_id: planAnualId || null
+  }
+);
+
+export const enviarInformeAuditoriaAprobacion = (revisionId) => callRpc(
+  "auditoria_enviar_informe_aprobacion",
+  { p_revision_id: revisionId }
+);
+
+export const resolverAprobacionInformeAuditoria = (revisionId, aprobar, observaciones = "") => callRpc(
+  "auditoria_resolver_aprobacion_informe",
+  {
+    p_revision_id: revisionId,
+    p_aprobar: aprobar,
+    p_observaciones: observaciones
   }
 );
 
