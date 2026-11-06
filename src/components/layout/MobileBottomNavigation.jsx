@@ -1,5 +1,4 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { MoreHorizontal } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 import { usePermissions } from "../../hooks/usePermissions";
@@ -12,20 +11,18 @@ const MobileBottomNavigation = ({
   assistantOpen = false,
   moreOpen = false,
   notificationCount = 0,
-  chatUnreadCount = 0,
-  onOpenMore,
   onCloseMore
 }) => {
   const { can, rol } = usePermissions();
   const reduceMotion = useReducedMotion();
   const items = getVisibleMenu(can, rol);
   const preferredPaths = rol === "socio"
-    ? ["/", "/chat", "/aportes", "/billetera"]
+    ? ["/", "/aportes", "/billetera", "/grupo"]
     : rol === "auditor"
       ? ["/", "/auditoria", "/historial"]
       : rol === "tesorero"
-        ? ["/", "/chat", "/aportes", "/cuadro"]
-        : ["/", "/chat", "/grupo", "/aportes"];
+        ? ["/", "/aportes", "/cuadro", "/grupo"]
+        : ["/", "/grupo", "/aportes", "/cuadro"];
   const primaryItems = preferredPaths
     .map((path) => items.find((item) => item.path === path))
     .filter(Boolean)
@@ -38,7 +35,6 @@ const MobileBottomNavigation = ({
 
   const mobileTitles = {
     "/": "Inicio",
-    "/chat": "Chat",
     "/grupo": "Grupo",
     "/aportes": "Aportes",
     "/billetera": "Billetera",
@@ -57,7 +53,7 @@ const MobileBottomNavigation = ({
     <>
       <nav
         aria-label="Navegación principal"
-        className="mobile-bottom-navigation fixed inset-x-2 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[55] mx-auto max-w-xl rounded-[1.75rem] bg-[#064E3B] p-1 text-white shadow-xl shadow-emerald-950/25 md:hidden"
+        className="mobile-bottom-navigation fixed inset-x-2 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[55] mx-auto max-w-xl rounded-[1.75rem] bg-flash-forest p-1 text-white shadow-xl shadow-emerald-950/25 md:hidden"
       >
         <div className="flex min-h-[60px] items-stretch justify-around">
           {primaryItems.map((item) => {
@@ -87,11 +83,6 @@ const MobileBottomNavigation = ({
                       <span className="relative z-10 max-w-full whitespace-nowrap">
                         {mobileTitles[item.path] || item.title}
                       </span>
-                      {item.path === "/chat" && chatUnreadCount > 0 && (
-                        <span className="absolute right-1 top-1 z-20 flex min-h-4 min-w-4 items-center justify-center rounded-full border border-[#064E3B] bg-red-500 px-1 text-[9px] font-bold leading-none text-white">
-                          {chatUnreadCount > 9 ? "9+" : chatUnreadCount}
-                        </span>
-                      )}
                     </>
                   );
                 }}
@@ -123,30 +114,11 @@ const MobileBottomNavigation = ({
             {notificationCount > 0 && (
               <span
                 aria-hidden="true"
-                className="absolute right-2 top-1 z-20 flex min-h-4 min-w-4 items-center justify-center rounded-full border border-[#064E3B] bg-red-500 px-1 text-[9px] font-bold leading-none text-white"
+                className="absolute right-2 top-1 z-20 flex min-h-4 min-w-4 items-center justify-center rounded-full border border-flash-forest bg-red-500 px-1 text-[9px] font-bold leading-none text-white"
               >
                 {notificationCount > 9 ? "9+" : notificationCount}
               </span>
             )}
-          </button>
-          <button
-            type="button"
-            onClick={onOpenMore}
-            aria-label="Más opciones de navegación"
-            aria-expanded={moreOpen}
-            aria-haspopup="dialog"
-            className="relative flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-0.5 text-[11px] font-medium leading-tight text-white outline-none focus-visible:ring-2 focus-visible:ring-white"
-          >
-            {moreOpen && (
-              <motion.span
-                layoutId="mobile-navigation-active"
-                initial={false}
-                transition={transition}
-                className="absolute inset-0 rounded-2xl bg-white/15"
-              />
-            )}
-            <MoreHorizontal className="relative z-10 shrink-0" size={19} aria-hidden="true" />
-            <span className="relative z-10">Más</span>
           </button>
         </div>
       </nav>

@@ -1,11 +1,22 @@
 @import "tailwindcss";
 
 @theme {
-  --color-flash-forest: #064e3b;
-  --color-flash-emerald: #16835d;
-  --color-flash-deep: #0b6651;
+  --color-emerald-50: #eaf3f0;
+  --color-emerald-100: #d5e7e1;
+  --color-emerald-200: #abd0c3;
+  --color-emerald-300: #81b9a5;
+  --color-emerald-400: #57a287;
+  --color-emerald-500: #2d8b69;
+  --color-emerald-600: #24775a;
+  --color-emerald-700: #1a634b;
+  --color-emerald-800: #11503c;
+  --color-emerald-900: #023a2d;
+  --color-emerald-950: #01291f;
+  --color-flash-forest: #023a2d;
+  --color-flash-emerald: #2d8b69;
+  --color-flash-deep: #11503c;
   --color-flash-background: #f4f7f5;
-  --color-flash-mist: #e8f2ed;
+  --color-flash-mist: #eaf3f0;
 }
 
 html,
@@ -376,25 +387,25 @@ svg {
 }
 
 [data-role] {
-  --role-accent: #286b48;
-  --role-accent-strong: #1d593a;
-  --role-highlight: #e0f0e5;
-  --role-header-start: #205e3d;
-  --role-header-end: #28764e;
+  --role-accent: #24775a;
+  --role-accent-strong: #023a2d;
+  --role-highlight: #d5e7e1;
+  --role-header-start: #023a2d;
+  --role-header-end: #023a2d;
 }
 
 .role-badge {
   display: inline-flex;
   min-height: 1.25rem;
   align-items: center;
-  border: 1px solid #b8ddc4;
+  border: 1px solid #abd0c3;
   border-radius: 9999px;
   padding: 0.125rem 0.5rem;
   font-size: 0.625rem;
   font-weight: 700;
   line-height: 1rem;
-  background: #e4f2e8;
-  color: #174b2f;
+  background: #eaf3f0;
+  color: #023a2d;
 }
 
 [data-role] .app-navbar {

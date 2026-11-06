@@ -5,12 +5,12 @@ import {
   ALLOWED_NOTIFICATION_TYPES,
   getNotificationType,
   isAllowedNotification,
+  isIncomingSocioMessage,
   NOTIFICATION_TYPES
 } from "./notificationStore.js";
 
-test("the allowlist contains only attention-worthy events and incoming chat messages", () => {
+test("the allowlist contains only attention-worthy notifications", () => {
   assert.deepEqual(ALLOWED_NOTIFICATION_TYPES, [
-    "chat_message",
     "group_access_request",
     "contribution_receipt",
     "wallet_request",
@@ -21,7 +21,6 @@ test("the allowlist contains only attention-worthy events and incoming chat mess
 
 test("notification sources map to their approved categories", () => {
   const allowedSources = [
-    ["chat-mensaje:channel-1", NOTIFICATION_TYPES.CHAT_MESSAGE],
     ["solicitud-grupo:request-1:pendiente:2026-01-01", NOTIFICATION_TYPES.GROUP_ACCESS_REQUEST],
     ["invitacion-grupo:request-2:pendiente", NOTIFICATION_TYPES.GROUP_ACCESS_REQUEST],
     ["aporte-pendiente:receipt-1:2026-01-01", NOTIFICATION_TYPES.CONTRIBUTION_RECEIPT],
@@ -35,6 +34,13 @@ test("notification sources map to their approved categories", () => {
     assert.equal(getNotificationType({ source }), category);
     assert.equal(isAllowedNotification({ source }), true);
   }
+});
+
+test("only incoming messages from socios trigger administrator message alerts", () => {
+  assert.equal(isIncomingSocioMessage({ remitente_rol: "socio" }, "administrador"), true);
+  assert.equal(isIncomingSocioMessage({ remitente_rol: "moki" }, "administrador"), false);
+  assert.equal(isIncomingSocioMessage({ remitente_rol: "administrador" }, "administrador"), false);
+  assert.equal(isIncomingSocioMessage({ remitente_rol: "socio" }, "tesorero"), false);
 });
 
 test("notifications for sessions, new accounts, own decisions, and system events are hidden", () => {

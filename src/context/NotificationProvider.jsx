@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import {
   getNotificationType,
+  isIncomingSocioMessage,
   isAllowedNotification,
   NotificationContext
 } from "./notificationStore";
@@ -29,10 +31,12 @@ const toNotification = (row) => ({
 
 const NotificationProvider = ({ children }) => {
   const { user, profile, grupos } = useAuth();
+  const navigate = useNavigate();
   const [notificationState, setNotificationState] = useState({ userId: null, items: [] });
   const [groupRequests, setGroupRequests] = useState([]);
   const [groupRequestsError, setGroupRequestsError] = useState("");
-  const realtimeNotificationIdsRef = useRef(new Map());
+  const messageAudioContextRef = useRef(null);
+  const seenSupportMessageIdsRef = useRef(new Set());
   const notifications = useMemo(
     () => notificationState.userId === user?.id ? notificationState.items : [],
     [notificationState, user?.id]
@@ -43,6 +47,55 @@ const NotificationProvider = ({ children }) => {
       userId,
       items: update(current.userId === userId ? current.items : [])
     }));
+  }, []);
+
+  const playIncomingMessageSound = useCallback(() => {
+    const audioContext = messageAudioContextRef.current;
+    if (!audioContext || audioContext.state !== "running") return;
+
+    try {
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      const startAt = audioContext.currentTime;
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(880, startAt);
+      oscillator.frequency.setValueAtTime(660, startAt + 0.12);
+      gain.gain.setValueAtTime(0.0001, startAt);
+      gain.gain.exponentialRampToValueAtTime(0.16, startAt + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.3);
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start(startAt);
+      oscillator.stop(startAt + 0.31);
+    } catch (error) {
+      logOperationalError("No se pudo reproducir el sonido de mensaje nuevo:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    const enableMessageSound = () => {
+      if (!window.AudioContext || messageAudioContextRef.current) return;
+
+      try {
+        const audioContext = new window.AudioContext();
+        messageAudioContextRef.current = audioContext;
+        if (audioContext.state === "suspended") {
+          void audioContext.resume().catch((error) => {
+            logOperationalError("No se pudo habilitar el sonido de mensajes:", error);
+          });
+        }
+      } catch (error) {
+        logOperationalError("No se pudo preparar el sonido de mensajes:", error);
+      }
+    };
+
+    window.addEventListener("pointerdown", enableMessageSound, { once: true });
+    window.addEventListener("keydown", enableMessageSound, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", enableMessageSound);
+      window.removeEventListener("keydown", enableMessageSound);
+    };
   }, []);
 
   useEffect(() => {
@@ -90,24 +143,10 @@ const NotificationProvider = ({ children }) => {
           if (payload.eventType === "INSERT") {
             const notification = toNotification(payload.new);
             if (!isAllowedNotification(notification)) return;
-            const now = Date.now();
-            for (const [id, seenAt] of realtimeNotificationIdsRef.current) {
-              if (now - seenAt > TOAST_DURATION) realtimeNotificationIdsRef.current.delete(id);
-            }
-            if (realtimeNotificationIdsRef.current.has(notification.id)) return;
-            realtimeNotificationIdsRef.current.set(notification.id, now);
 
             updateNotifications(user.id, (current) => current.some((item) => item.id === notification.id)
               ? current
               : [notification, ...current]);
-
-            toast.custom((toastItem) => (
-              <NotificationToast
-                notification={notification}
-                visible={toastItem.visible}
-                onDismiss={() => toast.dismiss(toastItem.id)}
-              />
-            ), { duration: TOAST_DURATION, id: `notification-${notification.id}` });
           } else if (payload.eventType === "UPDATE") {
             const notification = toNotification(payload.new);
             updateNotifications(user.id, (current) => isAllowedNotification(notification)
@@ -123,6 +162,65 @@ const NotificationProvider = ({ children }) => {
       supabase.removeChannel(channel);
     };
   }, [user, updateNotifications]);
+
+  useEffect(() => {
+    if (!user?.id || profile?.rol?.toLowerCase() !== "administrador") {
+      return undefined;
+    }
+
+    let active = true;
+    const seenMessageIds = seenSupportMessageIdsRef.current;
+    const channel = supabase
+      .channel(`moki-incoming-messages-${user.id}-${createUniqueId()}`)
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "moki_mensajes"
+      }, (payload) => {
+        if (!active) return;
+        const message = payload.new;
+        if (!isIncomingSocioMessage(message, profile?.rol)) return;
+        if (!message?.id || seenMessageIds.has(message.id)) return;
+
+        seenMessageIds.add(message.id);
+        if (seenMessageIds.size > 500) {
+          seenMessageIds.delete(seenMessageIds.values().next().value);
+        }
+
+        const content = typeof message.contenido === "string" ? message.contenido.trim() : "";
+        const notification = {
+          title: "Nuevo mensaje de socio",
+          message: content ? content.slice(0, 160) : "El socio envió un mensaje.",
+          type: "info",
+          actionPath: "/atencion-socios",
+          actionLabel: "Abrir Atención a socios"
+        };
+
+        toast.custom((toastItem) => (
+          <NotificationToast
+            notification={notification}
+            visible={toastItem.visible}
+            onDismiss={() => toast.dismiss(toastItem.id)}
+            onAction={() => {
+              toast.dismiss(toastItem.id);
+              navigate(notification.actionPath);
+            }}
+          />
+        ), { duration: 8000, id: `moki-message-${message.id}` });
+        playIncomingMessageSound();
+      })
+      .subscribe((status, subscriptionError) => {
+        if (!active || !["CHANNEL_ERROR", "TIMED_OUT", "CLOSED"].includes(status)) return;
+        if (subscriptionError) {
+          logOperationalError("Se perdió la actualización Realtime de los mensajes de socios:", subscriptionError);
+        }
+      });
+
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
+  }, [navigate, playIncomingMessageSound, profile?.rol, user?.id]);
 
   const notify = useCallback(async ({
     title,

@@ -7,7 +7,7 @@ import {
   CheckCheck,
   Trash2
 } from "lucide-react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useNavigate } from "react-router-dom";
@@ -15,7 +15,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { supabase } from "../../../services/supabase";
 import { useNotifications } from "../../../hooks/useNotifications";
-import { useChatUnread } from "../../../context/chatUnreadStore";
 import { createUniqueId } from "../../../utils/uniqueId";
 import { logOperationalError } from "../../../utils/logOperationalError";
 import { getStorageUploadErrorMessage, getSupportedDocumentMimeType } from "../../../utils/fileUpload";
@@ -64,24 +63,8 @@ const Navbar = ({ onOpenMobileMenu }) => {
     clearNotifications,
     notify
   } = useNotifications();
-  const {
-    chatNotifications,
-    unreadCount: chatUnreadCount,
-    markRead: markChatRead,
-    markAllRead: markAllChatRead
-  } = useChatUnread();
-  const allNotifications = useMemo(() => [
-    ...notifications,
-    ...chatNotifications.map((item) => ({
-      ...item,
-      type: "info",
-      actionLabel: "Abrir chat"
-    }))
-  ].sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0)), [
-    chatNotifications,
-    notifications
-  ]);
-  const unreadCount = notificationUnreadCount + chatUnreadCount;
+  const allNotifications = notifications;
+  const unreadCount = notificationUnreadCount;
 
   const {
     user,
@@ -96,7 +79,7 @@ const Navbar = ({ onOpenMobileMenu }) => {
 
   const handleMarkAllRead = async () => {
     try {
-      await Promise.all([markAllRead(), markAllChatRead()]);
+      await markAllRead();
     } catch (error) {
       logOperationalError("No se pudieron marcar todas las notificaciones como leídas:", error);
       notify({
@@ -109,7 +92,7 @@ const Navbar = ({ onOpenMobileMenu }) => {
 
   const handleClearAllNotifications = async () => {
     try {
-      await Promise.all([clearNotifications(), markAllChatRead()]);
+      await clearNotifications();
     } catch (error) {
       logOperationalError("No se pudieron limpiar las notificaciones:", error);
       notify({
@@ -121,20 +104,7 @@ const Navbar = ({ onOpenMobileMenu }) => {
   };
 
   const handleOpenNotification = async (item) => {
-    if (item.channelId) {
-      try {
-        await markChatRead(item.channelId);
-      } catch (error) {
-        logOperationalError("No se pudo marcar el chat como leído desde notificaciones:", error);
-        notify({
-          title: "No se pudo actualizar el chat",
-          message: "La conversación se abrirá y podrás intentarlo de nuevo.",
-          type: "error"
-        });
-      }
-    } else {
-      void markRead(item.id);
-    }
+    void markRead(item.id);
     if (item.actionPath) navigate(item.actionPath);
     setNotificationsOpen(false);
   };
@@ -471,11 +441,7 @@ const Navbar = ({ onOpenMobileMenu }) => {
         min-h-[82px]
         md:min-h-[108px]
 
-        bg-[#064E3B]
-        md:bg-gradient-to-r
-        md:from-[#064E3B]
-        md:via-[#0B6651]
-        md:to-[#16835D]
+        bg-flash-forest
         backdrop-blur
         border-0
         md:border
@@ -597,17 +563,15 @@ const Navbar = ({ onOpenMobileMenu }) => {
                           </time>
                         )}
                       </div>
-                      {!item.channelId && (
-                        <button
-                          type="button"
-                          onClick={() => deleteNotification(item.id)}
-                          title="Eliminar notificación"
-                          aria-label={`Eliminar notificación: ${item.title}`}
-                          className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-700"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => deleteNotification(item.id)}
+                        title="Eliminar notificación"
+                        aria-label={`Eliminar notificación: ${item.title}`}
+                        className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-700"
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     </div>
                   </article>
                 ))}
@@ -744,7 +708,7 @@ const Navbar = ({ onOpenMobileMenu }) => {
       {welcomeOpen && createPortal(
         <div className="ui-dialog-backdrop fixed inset-0 z-[1100] flex items-center justify-center bg-slate-950/60 p-4">
           <section role="dialog" aria-modal="true" aria-labelledby="welcome-title" className="ui-dialog-panel w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
-            <div className="mx-auto w-full max-w-xs overflow-hidden rounded-xl bg-[#023a2d]">
+            <div className="mx-auto w-full max-w-xs overflow-hidden rounded-xl bg-flash-forest">
               <img src="/flashmonkey-logo.png" alt="FlashMonkey" className="block h-auto w-full" decoding="async" />
             </div>
             <p className="mt-5 text-center text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Bienvenido a FlashMonkey</p>

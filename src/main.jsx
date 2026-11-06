@@ -130,8 +130,7 @@ if (!supabaseUrl || !supabaseKey) {
     import("./App"),
     import("./context/AuthContext"),
     import("./context/NotificationProvider"),
-    import("./context/ChatUnreadProvider"),
-  ]).then(([{ default: App }, { AuthProvider }, { default: NotificationProvider }, { ChatUnreadProvider }]) => {
+  ]).then(([{ default: App }, { AuthProvider }, { default: NotificationProvider }]) => {
     window.localStorage.removeItem("mi-cuadro-demo-v1");
 
     root.render(
@@ -141,9 +140,7 @@ if (!supabaseUrl || !supabaseKey) {
             <BrowserRouter>
               <AuthProvider>
                 <NotificationProvider>
-                  <ChatUnreadProvider>
-                    <App />
-                  </ChatUnreadProvider>
+                  <App />
                 </NotificationProvider>
               </AuthProvider>
               <Analytics mode={import.meta.env.PROD ? "production" : "development"} />

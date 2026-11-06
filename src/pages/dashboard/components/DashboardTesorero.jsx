@@ -278,7 +278,7 @@ const DashboardTesorero = () => {
 
       <motion.section
         style={{ scale: reduceMotion ? 1 : headerScale, opacity: reduceMotion ? 1 : headerOpacity }}
-        className="overflow-hidden rounded-[2rem] border border-emerald-100 bg-gradient-to-br from-[#064E3B] via-[#0B6651] to-[#16835D] p-5 text-white shadow-[0_18px_45px_rgba(6,78,59,0.18)] sm:p-6 md:p-8"
+        className="overflow-hidden rounded-[2rem] border border-emerald-100 bg-gradient-to-br from-flash-forest via-flash-deep to-flash-emerald p-5 text-white shadow-[0_18px_45px_rgba(2,58,45,0.18)] sm:p-6 md:p-8"
       >
         <div className="flex min-w-0 flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex min-w-0 items-start gap-4">
@@ -455,7 +455,7 @@ const DashboardTesorero = () => {
               label="Porcentaje de recaudación del periodo"
               className="mt-3 h-3"
               trackClassName="bg-slate-100"
-              barClassName="bg-[#16835D]"
+              barClassName="bg-flash-emerald"
             />
 
           </div>

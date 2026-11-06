@@ -380,7 +380,7 @@ const AtencionSocios = () => {
                   const fromStaff = message.remitente_rol === "administrador" || message.remitente_rol === "moki";
                   return (
                     <div key={message.id} className={`flex ${fromStaff ? "justify-end" : "justify-start"}`}>
-                      <div className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${fromStaff ? "rounded-br-sm bg-[#DDF3E8] text-slate-800" : "rounded-bl-sm bg-white text-slate-700"}`}>
+                      <div className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm ${fromStaff ? "rounded-br-sm bg-flash-mist text-slate-800" : "rounded-bl-sm bg-white text-slate-700"}`}>
                         <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{message.contenido}</p>
                         <p className="mt-1 text-right text-[10px] text-slate-400">{formatTime(message.creado_en)}</p>
                       </div>
@@ -405,7 +405,7 @@ const AtencionSocios = () => {
                     className="min-w-0 flex-1 rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/10"
                     disabled={sending}
                   />
-                  <button type="submit" aria-label="Enviar respuesta" disabled={!draft.trim() || sending} className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#16835D] text-white transition hover:bg-[#064E3B] disabled:cursor-not-allowed disabled:opacity-50">
+                  <button type="submit" aria-label="Enviar respuesta" disabled={!draft.trim() || sending} className="flex size-11 shrink-0 items-center justify-center rounded-full bg-flash-emerald text-white transition hover:bg-flash-forest disabled:cursor-not-allowed disabled:opacity-50">
                     <Send size={18} />
                   </button>
                 </form>

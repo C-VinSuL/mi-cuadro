@@ -18,7 +18,6 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
-import { useChatUnread } from "../../context/chatUnreadStore";
 import { usePermissions } from "../../hooks/usePermissions";
 import { createUniqueId } from "../../utils/uniqueId";
 import DesktopAdminOverview from "./DesktopAdminOverview";
@@ -83,7 +82,6 @@ const CHAT_EMOJIS = ["😀", "😊", "👍", "🙏", "🎉", "❤️", "📎", "
 const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { chatNotifications } = useChatUnread();
   const { can, rol } = usePermissions();
   const items = getVisibleMenu(can, rol);
   const isMember = rol === "socio";
@@ -384,7 +382,7 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
         ? "flex h-full min-h-0 flex-col bg-[#F7F8F7]"
         : "fixed inset-x-0 top-0 bottom-[calc(68px+env(safe-area-inset-bottom))] z-50 flex flex-col bg-[#F7F8F7] md:hidden"}
     >
-      <header className="flex items-center gap-3 bg-[#064E3B] px-4 py-3 text-white shadow-sm">
+      <header className="flex items-center gap-3 bg-flash-forest px-4 py-3 text-white shadow-sm">
         {!desktop && (
           <button
             type="button"
@@ -611,30 +609,6 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
             aria-live="polite"
             className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-5"
           >
-            {adminView === "chat" && chatNotifications.length > 0 && (
-              <section aria-label="Mensajes nuevos del chat" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-                <div className="flex items-start gap-3">
-                  <Inbox size={20} className="mt-0.5 shrink-0 text-emerald-800" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-emerald-950">Mensajes nuevos</p>
-                    <ul className="mt-2 space-y-2">
-                      {chatNotifications.slice(0, 4).map((notification) => (
-                        <li key={notification.id}>
-                          <button
-                            type="button"
-                            onClick={() => goTo(notification.actionPath)}
-                            className="block w-full rounded-xl bg-white/80 px-3 py-2 text-left hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700"
-                          >
-                            <span className="block truncate text-xs font-semibold text-emerald-950">{notification.title}</span>
-                            <span className="mt-0.5 block truncate text-xs text-emerald-900">{notification.message}</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </section>
-            )}
             {!adminInbox && (
               <div className="flex items-end gap-2">
                 <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-white">
@@ -664,7 +638,7 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
                       <img src="/flashmonkey-mascot.png" alt="" className="h-full w-full object-contain" />
                     </div>
                   )}
-                  <div className={`max-w-[84%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${fromStaff ? "rounded-bl-sm bg-white text-slate-700" : "rounded-br-sm bg-[#DDF3E8] text-slate-800"}`}>
+                  <div className={`max-w-[84%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${fromStaff ? "rounded-bl-sm bg-white text-slate-700" : "rounded-br-sm bg-emerald-100 text-slate-800"}`}>
                     {message.contenido && <p className="whitespace-pre-wrap break-words">{message.contenido}</p>}
                     {message.archivo_path && (
                       <button
@@ -763,7 +737,7 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
                 type="submit"
                 aria-label="Enviar mensaje"
                 disabled={(!draft.trim() && !pendingAttachment) || sending}
-                className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#16835D] text-white transition hover:bg-[#064E3B] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex size-11 shrink-0 items-center justify-center rounded-full bg-flash-emerald text-white transition hover:bg-flash-forest disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Send size={18} />
               </button>

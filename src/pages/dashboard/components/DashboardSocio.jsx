@@ -320,7 +320,7 @@ const DashboardSocio = () => {
     <StaggerList className="space-y-8">
       <motion.section
         style={{ scale: reduceMotion ? 1 : headerScale, opacity: reduceMotion ? 1 : headerOpacity }}
-        className="overflow-hidden rounded-[2rem] border border-emerald-100 bg-gradient-to-br from-[#064E3B] via-[#0B6651] to-[#16835D] p-5 text-white shadow-[0_18px_45px_rgba(6,78,59,0.18)] md:p-8"
+        className="overflow-hidden rounded-[2rem] border border-emerald-100 bg-gradient-to-br from-flash-forest via-flash-deep to-flash-emerald p-5 text-white shadow-[0_18px_45px_rgba(2,58,45,0.18)] md:p-8"
       >
         <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center gap-4">
@@ -408,13 +408,13 @@ const DashboardSocio = () => {
       <BentoCard className="p-5 md:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-sm font-semibold text-[#064E3B]">Avance del grupo</p>
+            <p className="text-sm font-semibold text-flash-forest">Avance del grupo</p>
             <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-900">
               {grupoActivo ? `${semanaActual} de ${capacidad}` : "Grupo aún sin iniciar"}
             </h2>
           </div>
 
-          <div className="rounded-full bg-[#E8F2ED] px-3 py-1.5 text-xs font-semibold text-[#0B6651]">
+          <div className="rounded-full bg-flash-mist px-3 py-1.5 text-xs font-semibold text-flash-deep">
             {grupoActivo ? `${Math.round(weeklyProgress)}%` : "Pendiente"}
           </div>
         </div>
@@ -434,7 +434,7 @@ const DashboardSocio = () => {
             <span>Progreso del grupo</span>
             <span>{grupoActivo ? `${Math.round(weeklyProgress)}%` : "0%"}</span>
           </div>
-          <ProgressBar value={weeklyProgress} max={100} label="Progreso del grupo" className="h-2.5" barClassName="bg-[#16835D]" trackClassName="bg-slate-200" />
+          <ProgressBar value={weeklyProgress} max={100} label="Progreso del grupo" className="h-2.5" barClassName="bg-flash-emerald" trackClassName="bg-slate-200" />
         </div>
       </BentoCard>
 
@@ -442,12 +442,12 @@ const DashboardSocio = () => {
         <BentoCard className="p-5 md:p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-[#064E3B]">Aporte del periodo actual</p>
+              <p className="text-sm font-semibold text-flash-forest">Aporte del periodo actual</p>
               <h3 className="mt-2 text-3xl font-black tracking-tight text-slate-900">
                 {grupoActivo ? currency.format(totalPagar) : "No disponible"}
               </h3>
             </div>
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#E8F2ED] text-[#0B6651]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-flash-mist text-flash-deep">
               <Trophy size={22} />
             </div>
           </div>
@@ -478,7 +478,7 @@ const DashboardSocio = () => {
           </div>
 
           <div className="mt-5 flex items-center gap-3">
-            <MiniBars values={chartBars} className="h-16 w-40" barClassName="bg-[#16835D]" />
+            <MiniBars values={chartBars} className="h-16 w-40" barClassName="bg-flash-emerald" />
             <div className="text-sm text-slate-500">
               <p className="font-medium text-slate-700">Últimas semanas</p>
               <p className="mt-1">Evolución constante</p>
@@ -489,7 +489,7 @@ const DashboardSocio = () => {
         <BentoCard className="p-5 md:p-6">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#E8F2ED] text-[#0B6651]">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-flash-mist text-flash-deep">
                 <Bell size={18} />
               </div>
               <div>
@@ -497,7 +497,7 @@ const DashboardSocio = () => {
                 <p className="text-xs text-slate-500">{unreadCount} sin leer</p>
               </div>
             </div>
-            <Link to="/" className="inline-flex items-center gap-1 text-xs font-semibold text-[#0B6651]">
+            <Link to="/" className="inline-flex items-center gap-1 text-xs font-semibold text-flash-deep">
               Ver todo <ChevronRight size={14} />
             </Link>
           </div>
@@ -509,8 +509,8 @@ const DashboardSocio = () => {
                 type="button"
                 aria-pressed={activeTab === tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`min-h-9 flex-1 rounded-full px-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#16835D] focus-visible:ring-offset-2 ${
-                  activeTab === tab.id ? "bg-[#064E3B] text-white" : "text-slate-600"
+                className={`min-h-9 flex-1 rounded-full px-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-flash-emerald focus-visible:ring-offset-2 ${
+                  activeTab === tab.id ? "bg-flash-forest text-white" : "text-slate-600"
                 }`}
               >
                 {tab.label}
@@ -532,7 +532,7 @@ const DashboardSocio = () => {
                       <p className="mt-1 text-xs text-slate-500">{notification.message}</p>
                     </div>
                     {!notification.read && (
-                      <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#16835D]" aria-label="Notificación sin leer" />
+                      <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-flash-emerald" aria-label="Notificación sin leer" />
                     )}
                   </div>
                   <p className="mt-2 text-[11px] uppercase tracking-[0.12em] text-slate-400">
@@ -551,12 +551,12 @@ const DashboardSocio = () => {
       <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         <Link to="/aportes" className="group block">
           <BentoCard className="h-full p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#E8F2ED] text-[#0B6651]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-flash-mist text-flash-deep">
               <Wallet size={22} />
             </div>
             <p className="mt-4 text-xl font-bold text-slate-900">Mis aportes</p>
             <p className="mt-2 text-sm text-slate-500">Consulta y registra tus pagos del grupo.</p>
-            <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#0B6651]">
+            <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-flash-deep">
               Ver detalle <ChevronRight size={16} className="transition group-hover:translate-x-0.5" />
             </div>
           </BentoCard>
@@ -564,12 +564,12 @@ const DashboardSocio = () => {
 
         <Link to="/cuadro" className="group block">
           <BentoCard className="h-full p-5 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#E8F2ED] text-[#0B6651]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-flash-mist text-flash-deep">
               <Armchair size={22} />
             </div>
             <p className="mt-4 text-xl font-bold text-slate-900">Cuadro rotativo</p>
             <p className="mt-2 text-sm text-slate-500">Revisa tu posición y el avance del sorteo.</p>
-            <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#0B6651]">
+            <div className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-flash-deep">
               Abrir cuadro <ChevronRight size={16} className="transition group-hover:translate-x-0.5" />
             </div>
           </BentoCard>

@@ -126,17 +126,22 @@ const Sidebar = ({
   };
 
   return (
-    <aside
+    <motion.aside
       className={`text-white ${
         mobile
-          ? `flex w-full flex-col bg-[#064E3B] ${sheet ? "max-h-[75dvh] overflow-y-auto overscroll-contain rounded-t-[2rem] pb-[calc(4.25rem+env(safe-area-inset-bottom))]" : "h-full min-h-0 overflow-hidden"}`
-          : "pointer-events-none fixed bottom-4 left-4 top-[7.5rem] z-40 w-[240px] overflow-visible"
+          ? `flex w-full flex-col bg-flash-forest ${sheet ? "max-h-[75dvh] overflow-y-auto overscroll-contain rounded-t-[2rem] pb-[calc(4.25rem+env(safe-area-inset-bottom))]" : "h-full min-h-0 overflow-hidden"}`
+          : "fixed bottom-4 left-4 top-[8.5rem] z-40 overflow-visible"
       }`}
+      initial={false}
+      animate={!mobile ? { width: expanded ? 240 : 80 } : undefined}
+      transition={!mobile
+        ? { width: { duration: reduceMotion ? 0 : 0.2, ease: "easeOut" } }
+        : undefined}
       id={mobile ? "mobile-navigation" : "desktop-navigation"}
       ref={mobile ? navigationRef : undefined}
       role={mobile ? "dialog" : undefined}
       aria-modal={mobile ? true : undefined}
-      aria-label={mobile ? "Más opciones de navegación" : "Menú lateral"}
+      aria-label={mobile ? "Menú de navegación" : "Menú lateral"}
       onMouseEnter={() => {
         if (!mobile) setHovered(true);
       }}
@@ -153,12 +158,9 @@ const Sidebar = ({
       }}
     >
       {!mobile && (
-        <motion.span
+        <span
           aria-hidden="true"
-          initial={false}
-          animate={{ scaleX: expanded ? 1 : 1 / 3 }}
-          transition={{ duration: reduceMotion ? 0 : 0.2, ease: "easeOut" }}
-          className="absolute inset-y-0 left-0 w-full origin-left rounded-[2.25rem] bg-[#064E3B] shadow-xl shadow-emerald-950/25"
+          className="absolute inset-0 rounded-[2.25rem] bg-flash-forest shadow-xl shadow-emerald-950/25"
         />
       )}
       <div
@@ -175,7 +177,7 @@ const Sidebar = ({
 
       {mobile ? (
         <div
-          className={`flex shrink-0 items-center bg-[#064E3B] px-3 sm:px-4 ${
+          className={`flex shrink-0 items-center bg-flash-forest px-3 sm:px-4 ${
             sheet ? "min-h-14 justify-between py-1" : "justify-between py-3 sm:py-4"
           }`}
           style={!sheet ? { paddingTop: "max(1rem, env(safe-area-inset-top))" } : undefined}
@@ -184,7 +186,7 @@ const Sidebar = ({
             <button
               type="button"
               onClick={onClose}
-              aria-label="Cerrar menú Más"
+              aria-label="Cerrar menú de navegación"
               className="mr-2 flex size-11 shrink-0 items-center justify-center rounded-xl text-white outline-none hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white"
             >
               <ArrowLeft size={22} />
@@ -486,7 +488,7 @@ const Sidebar = ({
               onNavigate?.();
             }
           }}
-          className={`mx-3 mb-2 flex min-h-11 items-center rounded-2xl border border-white/10 bg-[#0B6651] transition hover:bg-emerald-800 ${
+          className={`mx-3 mb-2 flex min-h-11 items-center rounded-2xl border border-white/10 bg-flash-deep transition hover:bg-emerald-800 ${
             sheet ? "p-3" : "p-4"
           }`}
         >
@@ -505,12 +507,12 @@ const Sidebar = ({
 
       {/* FONDO */}
 
-      {mobile && can("verFondoComunitario") && rol !== "administrador" && (
+      {mobile && rol !== "auditor" && can("verFondoComunitario") && rol !== "administrador" && (
       <div className={sheet ? "px-3 pb-3 pt-1" : "p-4"}>
 
         <div
           className="
-            bg-[#0B6651]
+            bg-flash-deep
 
             border
             border-white/10
@@ -647,7 +649,7 @@ const Sidebar = ({
         </div>
       )}
       </div>
-    </aside>
+    </motion.aside>
   );
 };
 

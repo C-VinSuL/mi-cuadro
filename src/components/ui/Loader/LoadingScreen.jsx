@@ -8,7 +8,7 @@ const LoadingScreen = ({ message = "Preparando tu espacio..." }) => (
       <div className="session-loading-emblem relative mx-auto grid size-24 place-items-center rounded-full bg-emerald-50">
         <span className="session-loading-orbit absolute inset-0 rounded-full border-2 border-emerald-100 border-t-emerald-700" aria-hidden="true" />
         <span className="grid size-[4.25rem] place-items-center rounded-full bg-white shadow-sm">
-          <img src="/flashmonkey.svg" alt="" className="size-12 object-contain" />
+          <img src="/flashmonkey-mascot.png" alt="" className="size-12 object-contain" />
         </span>
       </div>
       <div className="mt-7 flex items-center justify-center gap-2">

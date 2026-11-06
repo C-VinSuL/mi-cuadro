@@ -6,16 +6,14 @@ import Navbar from "./Navbar/Navbar";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 import MobileAssistant from "./MobileAssistant";
 import { useNotifications } from "../../hooks/useNotifications";
-import { useChatUnread } from "../../context/chatUnreadStore";
 import { useAuth } from "../../context/AuthContext";
 import { normalizeRole } from "../../config/permissions";
 
 const MainLayout = ({ children }) => {
   const { unreadCount } = useNotifications();
-  const { unreadCount: chatUnreadCount } = useChatUnread();
   const { profile } = useAuth();
   const role = normalizeRole(profile?.rol);
-  const assistantNotificationCount = unreadCount + chatUnreadCount;
+  const assistantNotificationCount = unreadCount;
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [mobileAssistantOpen, setMobileAssistantOpen] = useState(false);
   const [desktopAssistantOpen, setDesktopAssistantOpen] = useState(false);
@@ -70,7 +68,6 @@ const MainLayout = ({ children }) => {
         assistantOpen={mobileAssistantOpen}
         moreOpen={mobileMoreOpen}
         notificationCount={assistantNotificationCount}
-        chatUnreadCount={chatUnreadCount}
         onNavigate={() => {
           setMobileAssistantOpen(false);
           setMobileMoreOpen(false);
@@ -78,10 +75,6 @@ const MainLayout = ({ children }) => {
         onOpenAssistant={() => {
           setMobileMoreOpen(false);
           setMobileAssistantOpen((open) => !open);
-        }}
-        onOpenMore={() => {
-          setMobileAssistantOpen(false);
-          setMobileMoreOpen((open) => !open);
         }}
         onCloseMore={() => setMobileMoreOpen(false)}
       />
@@ -108,12 +101,12 @@ const MainLayout = ({ children }) => {
           onClick={() => setDesktopAssistantOpen((open) => !open)}
           aria-label={`${desktopAssistantOpen ? "Cerrar chat de Moki" : "Abrir chat de Moki"}${assistantNotificationCount ? `, ${assistantNotificationCount} avisos sin leer` : ""}`}
           aria-expanded={desktopAssistantOpen}
-          className="relative flex size-14 items-center justify-center rounded-full bg-[#064E3B] text-white shadow-lg shadow-emerald-950/25 transition hover:scale-105 hover:bg-[#0B6651] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300"
+          className="relative flex size-14 items-center justify-center rounded-full bg-flash-forest text-white shadow-lg shadow-emerald-950/25 transition hover:scale-105 hover:bg-flash-deep focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300"
         >
           {desktopAssistantOpen ? <X size={23} /> : (
             <span className="relative flex size-11 items-center justify-center overflow-hidden rounded-full bg-white">
               <img src="/flashmonkey-mascot.png" alt="" className="h-full w-full object-contain" />
-              <MessageCircle className="absolute bottom-0 right-0 rounded-full bg-[#16835D] p-0.5 text-white" size={17} />
+              <MessageCircle className="absolute bottom-0 right-0 rounded-full bg-flash-emerald p-0.5 text-white" size={17} />
             </span>
           )}
           {assistantNotificationCount > 0 && (

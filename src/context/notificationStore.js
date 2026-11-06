@@ -1,7 +1,6 @@
 import { createContext } from "react";
 
 export const NOTIFICATION_TYPES = Object.freeze({
-  CHAT_MESSAGE: "chat_message",
   GROUP_ACCESS_REQUEST: "group_access_request",
   CONTRIBUTION_RECEIPT: "contribution_receipt",
   WALLET_REQUEST: "wallet_request",
@@ -18,7 +17,6 @@ export const getNotificationType = (notification) => {
       ? notification.fuente
       : "";
 
-  if (source.startsWith("chat-mensaje:")) return NOTIFICATION_TYPES.CHAT_MESSAGE;
   if (
     (source.startsWith("solicitud-grupo:") && source.includes(":pendiente:"))
     || source.startsWith("invitacion-grupo:")
@@ -40,6 +38,11 @@ export const getNotificationType = (notification) => {
 
 export const isAllowedNotification = (notification) => (
   ALLOWED_NOTIFICATION_TYPES.includes(getNotificationType(notification))
+);
+
+export const isIncomingSocioMessage = (message, role) => (
+  role?.toLowerCase() === "administrador"
+  && message?.remitente_rol?.toLowerCase() === "socio"
 );
 
 export const NotificationContext = createContext(null);

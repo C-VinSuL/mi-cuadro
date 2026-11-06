@@ -7,7 +7,7 @@ const styles = {
   info: { icon: Info, accent: "text-blue-700", bar: "bg-blue-600" }
 };
 
-const NotificationToast = ({ notification, visible, onDismiss }) => {
+const NotificationToast = ({ notification, visible, onDismiss, onAction }) => {
   const touchStart = useRef(null);
   const style = styles[notification.type] || styles.info;
   const Icon = style.icon;
@@ -68,6 +68,15 @@ const NotificationToast = ({ notification, visible, onDismiss }) => {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-slate-900">{notification.title}</p>
           <p className="mt-1 text-sm text-slate-600">{notification.message}</p>
+          {onAction && (
+            <button
+              type="button"
+              onClick={onAction}
+              className="mt-2 text-xs font-semibold text-emerald-800 hover:text-emerald-950"
+            >
+              {notification.actionLabel || "Abrir"}
+            </button>
+          )}
         </div>
         <button onClick={onDismiss} aria-label="Cerrar aviso" className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
           <X size={16} />

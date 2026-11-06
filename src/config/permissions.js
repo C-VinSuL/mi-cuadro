@@ -1,7 +1,6 @@
 export const PERMISSIONS = {
   administrador: {
     verDashboard: true,
-    verChat: true,
     verGrupo: true,
     gestionarGrupo: true,
     iniciarCuadro: true,
@@ -33,7 +32,6 @@ export const PERMISSIONS = {
 
   tesorero: {
     verDashboard: true,
-    verChat: true,
     verGrupo: true,
     gestionarGrupo: false,
     iniciarCuadro: true,
@@ -65,7 +63,6 @@ export const PERMISSIONS = {
 
   auditor: {
     verDashboard: true,
-    verChat: false,
     verGrupo: false,
     gestionarGrupo: false,
     iniciarCuadro: false,
@@ -94,7 +91,6 @@ export const PERMISSIONS = {
 
   socio: {
     verDashboard: true,
-    verChat: true,
     verGrupo: true,
     gestionarGrupo: false,
     iniciarCuadro: false,
