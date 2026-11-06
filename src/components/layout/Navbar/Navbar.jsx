@@ -753,13 +753,13 @@ const Navbar = ({ onOpenMobileMenu }) => {
               <button type="button" onClick={() => setProfileEditorOpen(false)} aria-label="Cerrar edición de perfil" className="rounded-md p-2 text-slate-500 hover:bg-slate-100"><X size={18} /></button>
             </div>
             <form onSubmit={guardarPerfil} className="mt-5 space-y-4">
-              <div className="flex items-center gap-4">
-                <span className="flex size-16 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xl font-bold text-emerald-800">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                <span className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xl font-bold text-emerald-800">
                   {profileForm.avatarUrl ? <img src={profileForm.avatarUrl} alt="Vista previa del avatar" className="size-full object-cover" /> : inicial}
                 </span>
-                <label className="text-sm font-semibold text-emerald-800">
+                <label className="block min-w-0 flex-1 text-sm font-semibold text-emerald-800">
                   {uploadingAvatar ? "Cargando imagen..." : "Subir foto o avatar"}
-                  <input type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" onChange={cargarAvatar} disabled={uploadingAvatar || savingProfile} className="mt-1 block min-h-11 max-w-full text-xs font-normal text-slate-600 file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:font-semibold file:text-emerald-800" />
+                  <input type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" onChange={cargarAvatar} disabled={uploadingAvatar || savingProfile} className="mt-1 block min-h-11 w-full min-w-0 max-w-full text-xs font-normal text-slate-600 file:mr-3 file:min-h-11 file:rounded-md file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:font-semibold file:text-emerald-800" />
                   <span className="mt-1 block text-xs font-normal text-slate-500">JPG, PNG o WebP; máximo 2 MB.</span>
                 </label>
               </div>
@@ -797,9 +797,15 @@ const Navbar = ({ onOpenMobileMenu }) => {
               <div className="rounded-xl border border-slate-200 p-4">
                 <p className="text-sm font-semibold text-slate-800">Documento de identidad</p>
                 <p className="mt-1 text-xs text-slate-500">Carga una imagen JPG/PNG o un PDF, máximo 5 MB. Solo tú y el personal que verifica documentos podrán acceder al archivo.</p>
-                <label className="relative mt-3 inline-flex min-h-11 cursor-pointer items-center overflow-hidden rounded-lg border border-emerald-700 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50">
-                  {uploadingIdentityDocument ? "Cargando documento..." : identityDocumentPath ? "Reemplazar documento" : "Cargar documento"}
-                  <input type="file" accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf" onChange={cargarDocumentoIdentidad} disabled={uploadingIdentityDocument || savingProfile} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
+                <label className="mt-3 block text-sm font-medium text-slate-700">
+                  {uploadingIdentityDocument ? "Cargando documento..." : identityDocumentPath ? "Reemplazar documento" : "Selecciona un documento"}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf"
+                    onChange={cargarDocumentoIdentidad}
+                    disabled={uploadingIdentityDocument || savingProfile}
+                    className="mt-1.5 block min-h-11 w-full max-w-full cursor-pointer rounded-lg border border-slate-300 p-1.5 text-xs text-slate-600 file:mr-3 file:min-h-9 file:rounded-md file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:font-semibold file:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
                 </label>
                 <p className={`mt-2 text-xs ${identityDocumentVerified ? "font-semibold text-emerald-700" : identityDocumentPath ? "text-blue-700" : "text-amber-700"}`}>
                   {identityDocumentVerified ? "Documento verificado" : identityDocumentPath ? "Documento cargado; pendiente de revisión" : "Aún no has cargado tu documento"}

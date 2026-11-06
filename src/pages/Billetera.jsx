@@ -353,40 +353,37 @@ const Billetera = () => {
             Monto (USD)
             <input type="text" inputMode="decimal" autoComplete="off" maxLength={13} pattern="[0-9]+([.,][0-9]{1,2})?" placeholder="0.00" required value={depositForm.amount} onChange={(event) => setDepositForm((current) => ({ ...current, amount: normalizeAmountInput(event.target.value) }))} className="mt-1.5 w-full rounded-lg border border-slate-300 px-3 py-2.5" />
           </label>
-          <div className="block text-sm font-medium text-slate-700">
-            <p>Comprobante (JPG, PNG o PDF; máximo 5 MB)</p>
-            <label className="relative mt-1.5 inline-flex min-h-11 cursor-pointer items-center overflow-hidden rounded-lg border border-emerald-700 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50">
-              {depositForm.receipt ? "Cambiar archivo" : "Elegir archivo"}
-              <input
-                type="file"
-                accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf"
-                required
-                aria-label="Elegir comprobante JPG, PNG o PDF"
-                onChange={(event) => {
-                  const receipt = event.target.files?.[0] || null;
-                  const receiptType = getSupportedDocumentMimeType(
-                    receipt,
-                    new Set(["image/jpeg", "image/png", "application/pdf"])
-                  );
-                  if (receipt && (!receiptType || receipt.size > 5 * 1024 * 1024)) {
-                    setDepositForm((current) => ({ ...current, receipt: null }));
-                    setError("Adjunta un comprobante JPG, PNG o PDF de hasta 5 MB.");
-                    event.target.value = "";
-                    return;
-                  }
-                  setDepositForm((current) => ({ ...current, receipt }));
-                  if (receipt) setError("");
-                  else setError("No se recibió ningún archivo. Vuelve a elegirlo desde el teléfono.");
-                }}
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-              />
-            </label>
+          <label className="block text-sm font-medium text-slate-700">
+            Comprobante (JPG, PNG o PDF; máximo 5 MB)
+            <input
+              type="file"
+              accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf"
+              required
+              aria-label="Elegir comprobante JPG, PNG o PDF"
+              onChange={(event) => {
+                const receipt = event.target.files?.[0] || null;
+                const receiptType = getSupportedDocumentMimeType(
+                  receipt,
+                  new Set(["image/jpeg", "image/png", "application/pdf"])
+                );
+                if (receipt && (!receiptType || receipt.size > 5 * 1024 * 1024)) {
+                  setDepositForm((current) => ({ ...current, receipt: null }));
+                  setError("Adjunta un comprobante JPG, PNG o PDF de hasta 5 MB.");
+                  event.target.value = "";
+                  return;
+                }
+                setDepositForm((current) => ({ ...current, receipt }));
+                if (receipt) setError("");
+                else setError("No se recibió ningún archivo. Vuelve a elegirlo desde el teléfono.");
+              }}
+              className="mt-1.5 block min-h-11 w-full max-w-full cursor-pointer rounded-lg border border-slate-300 p-1.5 text-xs text-slate-600 file:mr-3 file:min-h-9 file:rounded-md file:border-0 file:bg-emerald-50 file:px-3 file:py-2 file:font-semibold file:text-emerald-800"
+            />
             <span role="status" className="mt-1 block break-all text-xs font-normal text-slate-500">
               {depositForm.receipt
                 ? `Seleccionado: ${depositForm.receipt.name} (${(depositForm.receipt.size / (1024 * 1024)).toFixed(2)} MB)`
                 : "Ningún archivo seleccionado"}
             </span>
-          </div>
+          </label>
           <button type="submit" disabled={saving || loading} className="rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-50">{saving ? "Enviando..." : "Enviar a revisión"}</button>
         </form>
 

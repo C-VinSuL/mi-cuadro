@@ -412,6 +412,7 @@ const AportesSocio = () => {
               >
                 ${aporteSemanal.toFixed(2)}
               </p>
+              <p className="mt-1 text-xs text-emerald-200">Valor definido para este grupo</p>
             </div>
 
 
@@ -535,32 +536,31 @@ const AportesSocio = () => {
             {(!aporteSemanaActual || aporteSemanaActual.estado_revision === "rechazado") && (
               <>
                 <div className="block text-sm font-semibold text-white">
-                  <p>Comprobante (JPG, PNG o PDF; máximo 5 MB)</p>
-                  <label className="relative mt-1.5 inline-flex min-h-11 cursor-pointer items-center overflow-hidden rounded-lg border border-white/60 bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/20">
-                    {comprobante ? "Cambiar archivo" : "Elegir archivo"}
-                  <input
-                    key={comprobanteInputKey}
-                    id="aporte-comprobante"
-                    type="file"
-                    accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf"
-                    aria-label="Elegir comprobante JPG, PNG o PDF"
-                    onChange={(event) => {
-                      const file = event.target.files?.[0] || null;
-                      const fileType = getSupportedDocumentMimeType(
-                        file,
-                        new Set(["image/jpeg", "image/png", "application/pdf"])
-                      );
-                      if (file && (!fileType || file.size > 5 * 1024 * 1024)) {
-                        setComprobante(null);
-                        setMensaje("Adjunta un comprobante JPG, PNG o PDF de hasta 5 MB.");
-                        event.target.value = "";
-                        return;
-                      }
-                      setComprobante(file);
-                      setMensaje(file ? "" : "No se recibió ningún archivo. Vuelve a elegirlo desde el teléfono.");
-                    }}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                  />
+                  <label className="block">
+                    <span>Comprobante (JPG, PNG o PDF; máximo 5 MB)</span>
+                    <input
+                      key={comprobanteInputKey}
+                      id="aporte-comprobante"
+                      type="file"
+                      accept="image/jpeg,image/png,application/pdf,.jpg,.jpeg,.png,.pdf"
+                      aria-label="Elegir comprobante JPG, PNG o PDF"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0] || null;
+                        const fileType = getSupportedDocumentMimeType(
+                          file,
+                          new Set(["image/jpeg", "image/png", "application/pdf"])
+                        );
+                        if (file && (!fileType || file.size > 5 * 1024 * 1024)) {
+                          setComprobante(null);
+                          setMensaje("Adjunta un comprobante JPG, PNG o PDF de hasta 5 MB.");
+                          event.target.value = "";
+                          return;
+                        }
+                        setComprobante(file);
+                        setMensaje(file ? "" : "No se recibió ningún archivo. Vuelve a elegirlo desde el teléfono.");
+                      }}
+                      className="mt-1.5 block min-h-11 w-full max-w-full cursor-pointer rounded-lg border border-white/60 bg-white/10 p-1.5 text-xs font-normal text-white file:mr-3 file:min-h-9 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:font-semibold file:text-emerald-800"
+                    />
                   </label>
                   <span role="status" className="mt-1 block break-all text-xs font-normal text-white/80">
                     {comprobante

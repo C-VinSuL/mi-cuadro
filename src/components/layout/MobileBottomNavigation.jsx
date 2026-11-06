@@ -142,11 +142,10 @@ const MobileBottomNavigation = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 24 }}
               transition={transition}
-              className="fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] mx-auto max-w-xl md:hidden"
+              className="fixed inset-0 h-[100dvh] md:hidden"
             >
               <Sidebar
                 mobile
-                sheet
                 onClose={onCloseMore}
                 onNavigate={onNavigate}
               />

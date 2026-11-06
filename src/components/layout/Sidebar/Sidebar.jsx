@@ -480,28 +480,23 @@ const Sidebar = ({
       )}
 
       {mobile && rol === "socio" && (
-        <NavLink
-          to="/billetera"
-          onClick={() => {
-            if (mobile && onClose) {
-              onClose();
-              onNavigate?.();
-            }
-          }}
-          className={`mx-3 mb-2 flex min-h-11 items-center rounded-2xl border border-white/10 bg-flash-deep transition hover:bg-emerald-800 ${
+        <div
+          className={`mx-3 mt-auto mb-2 flex min-h-14 shrink-0 items-center rounded-2xl border border-white/15 bg-flash-deep shadow-lg shadow-black/10 ${
             sheet ? "p-3" : "p-4"
           }`}
         >
-          <span className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-white/10"><Wallet size={19} /></span>
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-emerald-100">
+              <Wallet size={20} aria-hidden="true" />
+            </span>
             <span className="min-w-0">
-              <span className="block text-xs text-emerald-100">Dinero disponible</span>
+              <span className="block text-xs font-medium text-emerald-100">Dinero disponible</span>
               <span className="mt-0.5 block truncate text-lg font-bold text-white">
                 {walletLoadError ? "Saldo no disponible" : walletSummary ? `$${Number(walletSummary.saldo).toFixed(2)}` : "Cargando..."}
               </span>
             </span>
           </span>
-        </NavLink>
+        </div>
       )}
 
 
