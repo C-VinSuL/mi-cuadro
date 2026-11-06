@@ -21,6 +21,7 @@ import { useAuth } from "../../context/AuthContext";
 import { usePermissions } from "../../hooks/usePermissions";
 import { createUniqueId } from "../../utils/uniqueId";
 import DesktopAdminOverview from "./DesktopAdminOverview";
+import InternalTeamChat from "./InternalTeamChat";
 import { supabase } from "../../services/supabase";
 import {
   cambiarEstadoConversacionMoki,
@@ -85,13 +86,14 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
   const { can, rol } = usePermissions();
   const items = getVisibleMenu(can, rol);
   const isMember = rol === "socio";
+  const isAdministrator = rol === "administrador";
+  const isStaff = ["administrador", "tesorero", "auditor"].includes(rol);
   const allowedQuickHelp = useMemo(
     () => (QUICK_HELP[rol] || QUICK_HELP.socio)
       .filter((entry) => items.some((item) => item.path === entry.path)),
     [items, rol]
   );
-  const isAdministrator = rol === "administrador";
-  const [adminView, setAdminView] = useState("chat");
+  const [adminView, setAdminView] = useState(() => isStaff ? "overview" : "chat");
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [memberConversation, setMemberConversation] = useState(null);
@@ -107,13 +109,16 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
   const [pendingAttachment, setPendingAttachment] = useState(null);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const [openingAttachmentId, setOpeningAttachmentId] = useState(null);
+  const [quickHelpCompleted, setQuickHelpCompleted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const adminInbox = isAdministrator && ["inbox", "archived"].includes(adminView);
   const activeConversation = isAdministrator ? selectedConversation : memberConversation;
   const listedConversations = adminView === "archived" ? archivedConversations : conversations;
-  const chatMessages = [...messages, ...localMessages];
+  const chatMessages = [...messages, ...localMessages].sort(
+    (left, right) => new Date(left.creado_en).getTime() - new Date(right.creado_en).getTime()
+  );
   const suggestions = activeConversation?.estado === "resuelta" ? [] : allowedQuickHelp;
 
   const goTo = (path) => {
@@ -211,11 +216,14 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
 
   const handleQuickHelp = (entry) => {
     const now = new Date().toISOString();
+    const id = createUniqueId();
+    setQuickHelpCompleted(true);
+    setErrorMessage("");
     setLocalMessages((current) => [
       ...current,
-      { id: `question-${now}`, remitente_rol: rol, contenido: entry.label, creado_en: now },
+      { id: `question-${id}`, remitente_rol: rol, contenido: entry.label, creado_en: now },
       {
-        id: `answer-${now}`,
+        id: `answer-${id}`,
         remitente_rol: "moki",
         contenido: entry.answer,
         creado_en: now,
@@ -255,6 +263,7 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
           if (pendingAttachment) await enviarArchivoMoki(conversationId, pendingAttachment);
         }
       }
+      if (isMember) setQuickHelpCompleted(true);
       setDraft("");
       setPendingAttachment(null);
       setEmojiPickerOpen(false);
@@ -406,8 +415,8 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
             {adminInbox && selectedConversation ? selectedConversation.socio_nombre : "Moki"}
           </h2>
           <p className="mt-0.5 text-xs text-emerald-100">
-            {desktop && isAdministrator
-              ? "Pendientes y accesos administrativos"
+            {desktop && isStaff
+              ? "Pendientes y comunicación del equipo"
               : adminInbox
               ? selectedConversation
                 ? selectedConversation.grupo_nombre || "Conversación con socio"
@@ -439,12 +448,41 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
         )}
       </header>
 
-      {desktop && isAdministrator ? (
-        <DesktopAdminOverview onClose={onClose} />
+      {desktop && isStaff ? (
+        adminView === "team" ? (
+          <InternalTeamChat onBack={() => setAdminView("overview")} />
+        ) : (
+          <DesktopAdminOverview
+            onClose={onClose}
+            onOpenTeamChat={() => setAdminView("team")}
+          />
+        )
       ) : (
       <>
-      {isAdministrator && !desktop && (
-        <div className="flex border-b border-slate-200 bg-white px-4">
+      {isStaff && !desktop && (
+        <div className="flex shrink-0 overflow-x-auto border-b border-slate-200 bg-white px-2">
+          <button
+            type="button"
+            onClick={() => {
+              setAdminView("overview");
+              setSelectedConversation(null);
+              setMessages([]);
+            }}
+            className={`shrink-0 border-b-2 px-3 py-3 text-xs font-medium ${adminView === "overview" ? "border-emerald-700 text-emerald-800" : "border-transparent text-slate-500"}`}
+          >
+            Resumen
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setAdminView("team");
+              setSelectedConversation(null);
+              setMessages([]);
+            }}
+            className={`shrink-0 border-b-2 px-3 py-3 text-xs font-medium ${adminView === "team" ? "border-emerald-700 text-emerald-800" : "border-transparent text-slate-500"}`}
+          >
+            Equipo
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -452,10 +490,12 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
               setSelectedConversation(null);
               setMessages([]);
             }}
-            className={`border-b-2 px-4 py-3 text-sm font-medium ${adminView === "chat" ? "border-emerald-700 text-emerald-800" : "border-transparent text-slate-500"}`}
+            className={`shrink-0 border-b-2 px-3 py-3 text-xs font-medium ${adminView === "chat" ? "border-emerald-700 text-emerald-800" : "border-transparent text-slate-500"}`}
           >
             Moki
           </button>
+          {isAdministrator && (
+            <>
           <button
             type="button"
             onClick={() => {
@@ -463,7 +503,7 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
               setSelectedConversation(null);
               setMessages([]);
             }}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium ${adminInbox ? "border-emerald-700 text-emerald-800" : "border-transparent text-slate-500"}`}
+            className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-xs font-medium ${adminInbox ? "border-emerald-700 text-emerald-800" : "border-transparent text-slate-500"}`}
           >
             <Inbox size={16} />
             Bandeja
@@ -480,7 +520,7 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
               setSelectedConversation(null);
               setMessages([]);
             }}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium ${adminView === "archived" ? "border-emerald-700 text-emerald-800" : "border-transparent text-slate-500"}`}
+            className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-xs font-medium ${adminView === "archived" ? "border-emerald-700 text-emerald-800" : "border-transparent text-slate-500"}`}
           >
             <Archive size={16} />
             Archivadas
@@ -490,10 +530,19 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
               </span>
             )}
           </button>
+            </>
+          )}
         </div>
       )}
 
-      {adminInbox && !selectedConversation ? (
+      {isStaff && adminView === "overview" ? (
+        <DesktopAdminOverview
+          onClose={onClose}
+          onOpenTeamChat={() => setAdminView("team")}
+        />
+      ) : isStaff && adminView === "team" ? (
+        <InternalTeamChat />
+      ) : adminInbox && !selectedConversation ? (
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5">
           <div className="mb-4">
             <h3 className="font-semibold text-slate-800">{adminView === "archived" ? "Conversaciones archivadas" : "Conversaciones de socios"}</h3>
@@ -582,7 +631,7 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
               <ArrowLeft size={16} /> Volver a la bandeja
             </button>
           )}
-          {!adminInbox && suggestions.length > 0 && (
+          {isAdministrator && !adminInbox && suggestions.length > 0 && (
             <section
               aria-label={isAdministrator ? "Accesos administrativos" : "Preguntas rápidas"}
               className="shrink-0 border-b border-slate-200 bg-white px-4 py-3"
@@ -618,6 +667,23 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
                   ¡Hola! Soy Moki, el asistente de FlashMonkey. Puedo orientarte con las secciones de tu cuenta o enviar tu consulta al equipo administrador.
                 </div>
               </div>
+            )}
+            {isMember && !quickHelpCompleted && suggestions.length > 0 && (
+              <section aria-label="Preguntas rápidas" className="space-y-2 pl-10">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                  Preguntas rápidas
+                </p>
+                {suggestions.map((entry) => (
+                  <button
+                    key={entry.label}
+                    type="button"
+                    onClick={() => handleQuickHelp(entry)}
+                    className="block w-full rounded-xl border border-emerald-200 bg-white px-4 py-3 text-left text-sm font-medium text-emerald-900 shadow-sm transition hover:border-emerald-500 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700"
+                  >
+                    {entry.label}
+                  </button>
+                ))}
+              </section>
             )}
             {isAdministrator && adminView === "chat" && (
               <div className="flex items-end gap-2">

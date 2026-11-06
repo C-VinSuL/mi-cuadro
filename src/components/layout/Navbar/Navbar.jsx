@@ -692,6 +692,17 @@ const Navbar = ({ onOpenMobileMenu }) => {
             </button>
             <button
               type="button"
+              onClick={() => {
+                setUserMenuOpen(false);
+                navigate("/privacidad");
+              }}
+              className="w-full border-t border-slate-200 px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-700"
+            >
+              Política de privacidad
+              <span className="mt-0.5 block text-xs font-normal text-slate-500">Datos y uso de la plataforma</span>
+            </button>
+            <button
+              type="button"
               onClick={handleLogout}
               className="flex w-full items-center gap-2 border-t border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-500"
             >

@@ -32,6 +32,7 @@ import AuditoriaRevision from "../pages/reportes/AuditoriaRevision";
 import Billetera from "../pages/Billetera";
 import Egresos from "../pages/egresos/Egresos";
 import AtencionSocios from "../pages/admin/AtencionSocios";
+import PrivacyPolicy from "../pages/PrivacyPolicy";
 import PageTransition from "../components/motion/PageTransition";
 import SplashScreen from "../components/ui/SplashScreen";
 import { useAuth } from "../context/AuthContext";
@@ -105,6 +106,7 @@ const AppRoutes = () => {
       />
 
       <Route path="/seguridad/mfa" element={<MfaSetup />} />
+      <Route path="/privacidad" element={<PrivacyPolicy />} />
 
       {/* =========================
           DASHBOARD

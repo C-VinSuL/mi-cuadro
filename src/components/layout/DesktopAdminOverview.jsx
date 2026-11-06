@@ -16,15 +16,17 @@ import { useNotifications } from "../../hooks/useNotifications";
 import { usePermissions } from "../../hooks/usePermissions";
 import { listarDocumentosPendientes } from "../../services/adminService";
 import { listarBandejaMoki } from "../../services/mokiService";
+import { listarCanalEquipo } from "../../services/teamChatService";
 import { supabase } from "../../services/supabase";
 import { listarSolicitudesBilleteraAdmin } from "../../services/walletService";
 import { createUniqueId } from "../../utils/uniqueId";
 
-const DesktopAdminOverview = ({ onClose }) => {
+const DesktopAdminOverview = ({ onClose, onOpenTeamChat }) => {
   const navigate = useNavigate();
   const { grupos } = useAuth();
   const { notifications, markRead } = useNotifications();
-  const { can } = usePermissions();
+  const { can, rol } = usePermissions();
+  const canUseTeamChat = ["administrador", "tesorero", "auditor"].includes(rol);
   const acceptedGroupInvitations = notifications.filter(
     (notification) => notification.title === "Invitación de grupo aceptada" && !notification.read
   );
@@ -54,13 +56,15 @@ const DesktopAdminOverview = ({ onClose }) => {
         can("gestionarAtencionSocios") ? listarBandejaMoki() : Promise.resolve([]),
         can("gestionarBilletera") ? listarSolicitudesBilleteraAdmin() : Promise.resolve([]),
         can("verificarDocumentos") ? listarDocumentosPendientes() : Promise.resolve([]),
-        loadContributions()
+        loadContributions(),
+        canUseTeamChat ? listarCanalEquipo() : Promise.resolve(null)
       ]);
-      const [inboxResult, walletResult, documentsResult, contributionsResult] = results;
+      const [inboxResult, walletResult, documentsResult, contributionsResult, teamChannelResult] = results;
       const inbox = inboxResult.status === "fulfilled" ? inboxResult.value || [] : null;
       const walletRequests = walletResult.status === "fulfilled" ? walletResult.value || [] : null;
       const documents = documentsResult.status === "fulfilled" ? documentsResult.value || [] : null;
       const contributions = contributionsResult.status === "fulfilled" ? contributionsResult.value : null;
+      const teamChannel = teamChannelResult.status === "fulfilled" ? teamChannelResult.value : null;
       const activeConversations = inbox?.filter((item) => item.estado !== "resuelta") || [];
       setCounts({
         conversations: inbox ? activeConversations.length : null,
@@ -69,7 +73,10 @@ const DesktopAdminOverview = ({ onClose }) => {
           : null,
         walletRequests: walletRequests ? walletRequests.length : null,
         documents: documents ? documents.length : null,
-        contributions
+        contributions,
+        teamUnread: teamChannel
+          ? Number(teamChannel.no_leidos || 0)
+          : teamChannelResult.status === "fulfilled" ? 0 : null
       });
       setErrorMessage(results.some((result) => result.status === "rejected")
         ? "No se pudieron actualizar algunos pendientes. Revisa tu conexión o tus permisos."
@@ -81,7 +88,7 @@ const DesktopAdminOverview = ({ onClose }) => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [can, groupIds]);
+  }, [can, canUseTeamChat, groupIds]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(refresh, 0);
@@ -93,6 +100,10 @@ const DesktopAdminOverview = ({ onClose }) => {
         refreshTimeoutId = window.setTimeout(refresh, 250);
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "moki_mensajes" }, () => {
+        window.clearTimeout(refreshTimeoutId);
+        refreshTimeoutId = window.setTimeout(refresh, 250);
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "chat_mensajes" }, () => {
         window.clearTimeout(refreshTimeoutId);
         refreshTimeoutId = window.setTimeout(refresh, 250);
       })
@@ -176,6 +187,14 @@ const DesktopAdminOverview = ({ onClose }) => {
       icon: FileCheck2,
       path: "/aportes",
       emphasis: counts?.contributions > 0
+    },
+    canUseTeamChat && {
+      title: "Comunicación del equipo",
+      description: "Sala privada de administración, tesorería y auditoría",
+      count: counts?.teamUnread,
+      icon: MessageCircle,
+      onClick: onOpenTeamChat,
+      emphasis: counts?.teamUnread > 0
     }
   ].filter(Boolean);
 
@@ -185,7 +204,7 @@ const DesktopAdminOverview = ({ onClose }) => {
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-800">Centro de control</p>
           <h3 className="mt-1 text-lg font-bold text-slate-900">Resumen operativo</h3>
-          <p className="mt-1 text-xs leading-relaxed text-slate-500">Pendientes administrativos y accesos directos.</p>
+          <p className="mt-1 text-xs leading-relaxed text-slate-500">Pendientes y accesos directos disponibles para tu rol.</p>
           <span className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${realtimeStatus === "active" ? "bg-emerald-100 text-emerald-800" : realtimeStatus === "offline" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-600"}`}>
             <span className={`size-1.5 rounded-full ${realtimeStatus === "active" ? "animate-pulse bg-emerald-600" : realtimeStatus === "offline" ? "bg-amber-500" : "bg-slate-400"}`} />
             {realtimeStatus === "active" ? "Sesión en tiempo real · Activo" : realtimeStatus === "offline" ? "Tiempo real desconectado" : "Conectando en tiempo real…"}
@@ -212,7 +231,7 @@ const DesktopAdminOverview = ({ onClose }) => {
       <div className="space-y-2">
         {tasks.map(({ title, description, count, icon: Icon, path, onClick, emphasis }) => (
           <button
-            key={path}
+            key={title}
             type="button"
             onClick={onClick || (() => goTo(path))}
             className="group flex w-full items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-emerald-700/30 hover:bg-emerald-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700"

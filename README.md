@@ -134,117 +134,38 @@ backend, despliega las funciones que usa tu entorno:
 
 ### Migraciones de Supabase
 
-Aplica las migraciones de `supabase/migrations` en orden. La migración
-`202610070001_persistent_notifications.sql` agrega el historial persistente de
-notificaciones y las notificaciones automáticas para las solicitudes de ingreso
-a grupos. Las notificaciones quedan asociadas a la cuenta, se sincronizan entre
-sesiones y cada usuario solo puede leer, marcar o eliminar las propias.
-La migración `202610280002_group_invitation_acceptance_notifications.sql`
-identifica la aceptación de una invitación en el aviso de solicitud de grupo
-existente, sin crear un aviso duplicado, y la presenta en el resumen de Moki.
-La migración `202610280003_audit_request_metadata.sql` registra en eventos
-nuevos la IP y el agente de usuario recibidos por PostgREST, cuando el proxy de
-Supabase los proporciona. No puede completar retroactivamente eventos previos.
-La migración `202610280004_admin_file_audit.sql` agrega un listado central de
-archivos que solo puede consultar un administrador con MFA desde
-`/admin/archivos`; los archivos privados se abren con URL firmada de 60 segundos.
+Las migraciones de `supabase/migrations` actualizan el backend de forma
+incremental. En conjunto, incorporan:
 
-Los archivos se guardan en **Supabase Storage**, no en Vercel. Los buckets
-`identity-documents`, `wallet-receipts`, `contribution-receipts`,
-`moki-attachments` y `auditoria-evidencias` son privados y sus políticas
-limitan lectura y escritura según propietario, rol y MFA. La evidencia de
-auditoría admite PDF, PNG y JPEG de hasta 10 MB; solo un auditor activo con MFA
-puede cargarla. Administración, tesorería y auditoría pueden leerla con MFA
-mediante enlaces firmados de duración breve. Los comprobantes se revisan desde sus pantallas
-de administración; el documento de identidad se revisa desde Verificación
-documental. `profile-avatars` es público para poder mostrar los avatares; no
-debe usarse para identificaciones ni comprobantes. El panel Storage del
-proyecto Supabase permite a los miembros autorizados del proyecto administrar
-archivos; el rol de administrador de la aplicación no equivale por sí mismo a
-ser miembro del proyecto Supabase.
+- Roles, permisos, perfiles, grupos e invitaciones.
+- Aportes, billetera, comprobantes, garantías y control de egresos.
+- Verificación multifactor para operaciones sensibles y protección de archivos
+  privados.
+- Notificaciones, actualizaciones en tiempo real y registros de auditoría con
+  herramientas para planificar revisiones, guardar evidencias y generar informes.
 
-La migración `202610070002_groups_invitations_profiles_audit.sql` agrega el
-directorio e invitaciones de grupos, datos privados de perfil, roles, auditoría,
-periodicidad de aportes y controles MFA para las operaciones sensibles.
-La migración `202610080001_fix_available_groups_ambiguity.sql` corrige la
-consulta del directorio de grupos disponibles para los socios. La migración
-`202610080002_fix_admin_rpc_id_ambiguity.sql` corrige referencias ambiguas a
-`id` en los listados administrativos de invitaciones, documentos y auditoría.
-La migración `202610080003_admin_member_directory.sql` agrega el listado
-paginado de cuentas, con correo y fecha de creación, visible solo para
-administradores con MFA.
-La migración `202610080004_admin_document_verification.sql` permite que
-administración y tesorería realicen la verificación documental; solo
-administración conserva la facultad de asignar roles.
-La migración `202610080005_active_group_contributions_admin_members.sql`
-impide registrar aportes antes de iniciar un grupo y agrega la consulta
-administrativa protegida para refrescar sus participantes.
-La migración `202610080006_welcome_wallet_and_identity_documents.sql` agrega
-la bienvenida para socios nuevos, la carga privada del documento de identidad,
-el saldo de garantía configurable, las solicitudes de depósito/retiro con
-aprobación de administración o tesorería y el débito automático de aportes
-vencidos. Los vencimientos se cuentan desde la fecha de inicio de cada grupo:
-7 días, 14 días o un mes. También programa la tarea con `pg_cron`; verifica que
-la extensión esté habilitada en el proyecto Supabase.
-La migración `202610080007_wallet_roles_and_admin_queue.sql` limita la
-consulta de saldos e historial a socios y corrige el listado administrativo de
-solicitudes de billetera. Los socios usan “Mi billetera”; administración y
-tesorería revisan solicitudes desde una pantalla aparte y no tienen billetera
-personal en la aplicación.
-La migración `202610080008_member_group_approved_count.sql` permite a cada
-socio consultar solo el total de integrantes aprobados de los grupos a los que
-pertenece, sin exponer la lista ni los datos de otros socios.
-La migración `202610080009_assign_payment_positions_on_group_start.sql`
-mantiene sin posición a los participantes de grupos en preparación y asigna
-el orden de pago únicamente al sortear e iniciar el grupo.
-La migración `202610120001_wallet_guarantee_reserve.sql` configura inicialmente
-la garantía mínima de billetera en USD 20, editable por administración y
-aplicable a todos los socios. La garantía permanece como saldo del socio,
-queda protegida contra retiros y solo puede utilizarse para cubrir un aporte
-que siga impago después de su vencimiento. Los nuevos aportes no cobran la
-comisión fija anterior de USD 1 ni una comisión del 20%; los registros
-históricos no se modifican.
-La migración `202610220002_register_member_contribution.sql` agrega el registro
-administrativo protegido de aportes para el periodo actual de un grupo activo,
-con validación de rol, MFA, pertenencia del socio y duplicados.
-La migración `202610220004_treasury_expenses.sql` agrega el registro y consulta
-protegidos de egresos para administración y tesorería, con suma acumulada y
-permisos de lectura/escritura validados mediante MFA.
-La migración `202611050001_auditoria_plazos_evidencia_informes.sql` agrega
-responsables, plazos y conclusiones a las revisiones; permite adjuntar evidencia
-PDF/PNG/JPEG en un bucket privado con permisos MFA; y agrega paginación al
-registro de eventos. El informe final se exporta desde una revisión completada.
-El estado de conciliación que ve auditoría es de solo lectura.
-La migración `202610280001_enable_realtime_for_group_participants.sql` publica
-la tabla de participantes en Supabase Realtime para actualizar los conteos y
-la lista del grupo al aprobar una incorporación.
+Los archivos y comprobantes se almacenan en Supabase Storage. Los documentos,
+recibos y evidencias son privados y su acceso depende del rol y los permisos;
+los avatares se almacenan por separado para poder mostrarlos públicamente.
 
-Los proyectos Supabase nuevos no tienen las tablas base de `perfiles`, `grupos`,
-`participantes` y `aportes`: las migraciones del repositorio son incrementales
-y presuponen ese esquema. No ejecutes `db push` en un proyecto vacío hasta
-preparar y revisar una migración base de esquema sin datos reales. Usa un
-proyecto de pruebas y confirma siempre el `project-ref` enlazado antes de
-aplicar migraciones.
+**Importante:** estas migraciones presuponen que ya existe el esquema base de la
+aplicación (`perfiles`, `grupos`, `participantes` y `aportes`). No son una
+instalación inicial y no deben aplicarse directamente a una base vacía. Antes
+de modificar una base, usa un entorno de pruebas, una copia de seguridad y
+confirma el proyecto enlazado y las migraciones pendientes.
 
-Con Supabase CLI, vincula el proyecto y aplica las migraciones:
+Para revisar el historial y aplicar las migraciones pendientes con Supabase CLI:
 
 ```sh
 npx supabase login
 npx supabase link --project-ref TU_PROJECT_REF
+npx supabase migration list
 npx supabase db push
 ```
 
-Si ejecutaste la migración 001 directamente desde el SQL Editor y ahora usarás
-CLI, registra primero ese hecho en el historial remoto para que `db push` no
-intente volver a aplicarla:
-
-```sh
-npx supabase migration repair --status applied 202610070001
-npx supabase db push
-```
-
-También se pueden ejecutar los archivos SQL pendientes en orden desde el SQL
-Editor de Supabase. No vuelvas a ejecutar migraciones que ya estén aplicadas.
+También puedes ejecutar los archivos SQL pendientes en orden desde el SQL
+Editor. No vuelvas a ejecutar migraciones que ya estén aplicadas ni marques una
+migración como aplicada sin verificar primero la base y su historial.
 
 ### Funciones Edge y correo de invitación
 
@@ -298,45 +219,9 @@ npm run build     # Compilación de producción
 npm run preview   # Vista previa de la compilación
 ```
 
-## Despliegue del frontend
+## Producción
 
-Para publicar en Vercel:
-
-1. Sube el repositorio a GitHub sin incluir `.env` ni credenciales.
-2. En Vercel, crea un proyecto e importa el repositorio. Selecciona **Vite**;
-   el comando de compilación es `npm run build` y el directorio de salida es
-   `dist`. `vercel.json` configura el fallback de rutas para que enlaces
-   directos como `/login` funcionen con React Router.
-3. En **Settings → Environment Variables**, configura
-   `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` para Production (y Preview si
-   vas a probar previews). Usa la URL y la clave publicable de Supabase; nunca
-   configures `service_role`, `BREVO_API_KEY` u otros secretos como variables
-   `VITE_*`.
-4. Despliega y asigna un dominio estable, por ejemplo
-   `https://tu-dominio.vercel.app` o un dominio propio. Vercel sirve el sitio
-   por HTTPS.
-5. En Supabase **Authentication → URL Configuration**, establece el dominio
-   principal de Vercel como **Site URL** y añade los dominios usados por
-   Production y Preview a **Redirect URLs**, incluyendo la ruta
-   `/seguridad/mfa` utilizada como callback de Google. Limita la lista a
-   dominios controlados por el proyecto. Por ejemplo:
-   `https://tu-dominio.vercel.app/seguridad/mfa`.
-6. En los secretos de Supabase Edge Functions, configura `APP_URL` con el
-   origen exacto de producción (sin ruta), además de `APP_ALLOWED_ORIGINS` para
-   los orígenes de desarrollo o preview que realmente usarás. Configura allí
-   también `BREVO_API_KEY`, `INVITATION_FROM` y los demás secretos requeridos.
-   Después despliega las Edge Functions para que reciban la nueva configuración.
-7. En Brevo, verifica el dominio/remitente autorizado y revisa sus registros
-   DNS. Los correos de confirmación/invitación deben usar el dominio estable
-   de la app para sus enlaces y redirecciones.
-8. Prueba registro, login, recuperación de contraseña, MFA, invitaciones,
-   correo de bienvenida, Moki, archivos y redirecciones desde el dominio HTTPS
-   publicado. No uses información financiera real para estas pruebas.
-
-Para el desarrollo local, usa `http://localhost:5173` (Vite está fijado a
-`localhost` para que coincida con el origen local documentado/configurado).
-Si cambias el dominio de producción, actualiza `APP_URL`, las URLs de Auth y
-los orígenes permitidos; no uses `*` para CORS.
+La aplicación está publicada en producción en **Vercel**.
 
 No compartas archivos `.env`, copias de bases de datos ni capturas que muestren
 tokens, cookies, datos personales o información financiera real.

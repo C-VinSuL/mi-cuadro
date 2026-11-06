@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { MessageCircle, X } from "lucide-react";
+import { Link } from "react-router-dom";
 import Sidebar from "./Sidebar/Sidebar";
 import Navbar from "./Navbar/Navbar";
 import MobileBottomNavigation from "./MobileBottomNavigation";
@@ -58,8 +59,11 @@ const MainLayout = ({ children }) => {
           </div>
         </main>
         <footer className="hidden border-t border-slate-200/80 bg-white/70 px-8 py-4 text-center text-xs text-slate-500 md:block xl:px-10 2xl:px-12">
-          <div className="mx-auto w-full max-w-[1440px]">
-            © {new Date().getFullYear()} FlashMonkey. Todos los derechos reservados.
+          <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            <span>© {new Date().getFullYear()} FlashMonkey. Todos los derechos reservados.</span>
+            <Link to="/privacidad" className="font-semibold text-emerald-800 hover:underline">
+              Política de privacidad
+            </Link>
           </div>
         </footer>
       </div>

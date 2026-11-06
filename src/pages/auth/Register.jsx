@@ -273,6 +273,13 @@ const Register = () => {
             Inicia sesión <ArrowRight size={15} />
           </Link>
         </p>
+        <p className="mt-4 text-center text-xs leading-5 text-slate-500">
+          Antes de crear tu cuenta, consulta la{" "}
+          <Link to="/privacidad" className="font-semibold text-emerald-700 hover:text-emerald-900 hover:underline">
+            Política de privacidad
+          </Link>
+          {" "}para conocer el uso de tus datos.
+        </p>
           </>
           )}
         </div>

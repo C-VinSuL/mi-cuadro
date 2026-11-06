@@ -217,6 +217,13 @@ const Login = () => {
               Crear cuenta
             </Link>
           </p>
+          <p className="mt-4 text-center text-xs text-slate-500">
+            Consulta nuestra{" "}
+            <Link to="/privacidad" className="font-semibold text-emerald-700 hover:text-emerald-900 hover:underline">
+              Política de privacidad
+            </Link>
+            .
+          </p>
         </div>
       </section>
     </main>
