@@ -149,7 +149,7 @@ const Egresos = () => {
       <header className="rounded-3xl border border-emerald-100 bg-gradient-to-br from-white to-emerald-50 p-6 md:p-8">
         <p className="text-sm font-semibold uppercase tracking-[0.14em] text-emerald-700">FlashMonkey · {canManageExpenses ? "Tesorería" : "Auditoría"}</p>
         <h1 className="mt-3 text-3xl font-bold text-slate-900 md:text-4xl">Egresos y gastos</h1>
-        <p className="mt-2 max-w-2xl text-slate-600">{canManageExpenses ? "Registra y consulta los gastos de tus grupos en un solo lugar." : "Consulta gastos de todos los grupos en modo de solo lectura."}</p>
+        <p className="mt-2 max-w-2xl text-slate-600">{canManageExpenses ? "Registra y consulta los gastos de tus grupos en un solo lugar." : "Consulta los gastos registrados en todos los grupos."}</p>
       </header>
 
       {error && <p className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">{error}</p>}
@@ -207,11 +207,7 @@ const Egresos = () => {
           </form>
         )}
         </section>
-      ) : (
-        <p className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-          Vista de auditoría en modo de solo lectura. Puedes consultar los gastos, pero no registrarlos ni modificarlos.
-        </p>
-      )}
+      ) : null}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">

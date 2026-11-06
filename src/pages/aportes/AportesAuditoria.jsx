@@ -133,9 +133,9 @@ const AportesAuditoria = () => {
     <div className="space-y-6">
       <SectionPageTitle
         icon={FileSearch}
-        eyebrow="Consulta de solo lectura"
+        eyebrow="Aportes · Auditoría"
         title="Aportes de todos los grupos"
-        description="Revisa estados, montos y comprobantes sin aprobar, rechazar ni modificar aportes."
+        description="Consulta estados, montos y comprobantes de aportes en todos los grupos."
       />
       {error && <p role="alert" className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
       <div className="flex flex-wrap items-end gap-3">
