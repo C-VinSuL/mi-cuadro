@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Check, Search, TrendingDown, Wallet } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, ExternalLink, Search, TrendingDown, Wallet } from "lucide-react";
 import StaggerList from "../../components/motion/StaggerList";
 import { useAuth } from "../../context/AuthContext";
 import { useNotifications } from "../../hooks/useNotifications";
@@ -11,6 +11,8 @@ import {
 } from "../../services/egresosService";
 import { logOperationalError } from "../../utils/logOperationalError";
 import { formatCurrencyDecimal, parseAmountToCents } from "../../utils/money";
+import { getStorageUploadErrorMessage } from "../../utils/fileUpload";
+import { supabase } from "../../services/supabase";
 
 const currency = new Intl.NumberFormat("es-EC", { style: "currency", currency: "USD" });
 const categories = ["Suministros", "Eventos", "Servicios", "Transporte", "Otros"];
@@ -36,6 +38,8 @@ const Egresos = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [loadError, setLoadError] = useState("");
+  const [receiptError, setReceiptError] = useState("");
+  const receiptInputRef = useRef(null);
 
   const gruposId = useMemo(() => grupos.map((grupo) => grupo.id), [grupos]);
   const categoriasFiltro = useMemo(() => (
@@ -127,9 +131,11 @@ const Egresos = () => {
         concepto,
         categoria: form.categoria,
         monto: form.monto,
-        fecha: form.fecha
+        fecha: form.fecha,
+        comprobante: form.comprobante || null
       });
-      setForm({ ...emptyForm, grupoId: grupoInicialId });
+      setForm({ ...emptyForm, grupoId: grupoInicialId, comprobante: null });
+      if (receiptInputRef.current) receiptInputRef.current.value = "";
       notify({
         title: "Gasto registrado",
         message: `${formatCurrencyDecimal(form.monto, currency)} se guardó correctamente.`,
@@ -138,9 +144,34 @@ const Egresos = () => {
       await cargarEgresos();
     } catch (submitError) {
       logOperationalError("Error registrando egreso:", submitError);
-      setError("No se pudo guardar el gasto. Verifica los datos e inténtalo nuevamente.");
+      setError(submitError instanceof TypeError
+        ? submitError.message
+        : form.comprobante
+          ? getStorageUploadErrorMessage(submitError)
+          : "No se pudo guardar el gasto. Verifica los datos e inténtalo nuevamente.");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openReceipt = async (path) => {
+    const receiptWindow = window.open("about:blank", "_blank");
+    if (!receiptWindow) {
+      setReceiptError("Permite las ventanas emergentes para abrir el comprobante.");
+      return;
+    }
+    receiptWindow.opener = null;
+    setReceiptError("");
+    try {
+      const { data, error: signedUrlError } = await supabase.storage
+        .from("expense-receipts")
+        .createSignedUrl(path, 120);
+      if (signedUrlError) throw signedUrlError;
+      receiptWindow.location.href = data.signedUrl;
+    } catch (openError) {
+      receiptWindow.close();
+      logOperationalError("Error abriendo comprobante del egreso:", openError);
+      setReceiptError("No se pudo abrir el comprobante. Verifica tu sesión y vuelve a intentarlo.");
     }
   };
 
@@ -197,6 +228,19 @@ const Egresos = () => {
               Fecha
               <input name="fecha" type="date" value={form.fecha} onChange={cambiarCampo} required className="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 font-normal shadow-sm outline-none transition hover:border-emerald-300 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 motion-reduce:transition-none" />
             </label>
+            <label className="text-sm font-medium text-slate-700 sm:col-span-2">
+              Comprobante de respaldo (opcional)
+              <input
+                id="expense-receipt"
+                name="comprobante"
+                type="file"
+                ref={receiptInputRef}
+                accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"
+                onChange={(event) => setForm((current) => ({ ...current, comprobante: event.target.files?.[0] || null }))}
+                className="mt-1.5 block min-h-11 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              />
+              <span className="mt-1 block text-xs font-normal text-slate-500">PDF, JPG o PNG; máximo 5 MB. Puedes registrar el gasto sin adjunto.</span>
+            </label>
             <div className="sm:col-span-2">
               <button type="submit" disabled={saving} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-700 to-teal-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/15 transition hover:-translate-y-0.5 hover:from-emerald-800 hover:to-teal-700 hover:shadow-xl disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-400 disabled:shadow-none motion-reduce:transform-none motion-reduce:transition-none">
                 {!saving && <Check size={17} />}
@@ -247,7 +291,7 @@ const Egresos = () => {
           <p className="px-5 py-8 text-sm text-slate-500">No hay gastos para mostrar con este filtro.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px] text-left text-sm">
+            <table className="w-full min-w-[850px] text-left text-sm">
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
                   <th className="px-5 py-3 font-semibold">Fecha</th>
@@ -255,6 +299,7 @@ const Egresos = () => {
                   <th className="px-5 py-3 font-semibold">Concepto</th>
                   <th className="px-5 py-3 font-semibold">Categoría</th>
                   <th className="px-5 py-3 text-right font-semibold">Monto</th>
+                  <th className="px-5 py-3 font-semibold">Respaldo</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -265,6 +310,13 @@ const Egresos = () => {
                     <td className="max-w-xs px-5 py-3 text-slate-700">{egreso.concepto}</td>
                     <td className="px-5 py-3 text-slate-700">{egreso.categoria}</td>
                     <td className="whitespace-nowrap px-5 py-3 text-right font-semibold text-slate-900">{formatCurrencyDecimal(egreso.monto, currency)}</td>
+                    <td className="px-5 py-3">
+                      {egreso.comprobante_path ? (
+                        <button type="button" onClick={() => openReceipt(egreso.comprobante_path)} className="inline-flex items-center gap-1 font-semibold text-emerald-800 hover:underline">
+                          Abrir <ExternalLink size={14} />
+                        </button>
+                      ) : <span className="text-slate-400">Sin adjunto</span>}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -272,6 +324,7 @@ const Egresos = () => {
           </div>
         )}
       </section>
+      {receiptError && <p role="alert" className="border-l-4 border-red-600 bg-red-50 px-4 py-3 text-sm text-red-800">{receiptError}</p>}
     </div>
   );
 };

@@ -1,7 +1,9 @@
 import { supabase } from "./supabase.js";
 import { amountCentsToDecimal, parseAmountToCents } from "../utils/money.js";
+import { createUniqueId } from "../utils/uniqueId.js";
+import { getSupportedDocumentMimeType } from "../utils/fileUpload.js";
 
-export const registrarEgreso = async ({ grupoId, concepto, categoria, monto, fecha }) => {
+export const registrarEgreso = async ({ grupoId, concepto, categoria, monto, fecha, comprobante = null }) => {
   const normalizedConcept = typeof concepto === "string" ? concepto.trim() : "";
   const normalizedCategory = typeof categoria === "string" ? categoria.trim() : "";
   const amountInCents = parseAmountToCents(monto);
@@ -26,20 +28,56 @@ export const registrarEgreso = async ({ grupoId, concepto, categoria, monto, fec
     throw new TypeError("La fecha debe ser una fecha válida en formato AAAA-MM-DD.");
   }
 
-  const { data, error } = await supabase
-    .from("egresos")
-    .insert({
-      grupo_id: grupoId,
-      concepto: normalizedConcept,
-      categoria: normalizedCategory,
-      monto: amountCentsToDecimal(amountInCents),
-      fecha
-    })
-    .select("id")
-    .single();
+  let comprobantePath = null;
+  if (comprobante) {
+    const mimeType = getSupportedDocumentMimeType(comprobante, new Set([
+      "application/pdf",
+      "image/jpeg",
+      "image/png"
+    ]));
+    if (!mimeType || comprobante.size > 5 * 1024 * 1024) {
+      throw new TypeError("Adjunta un comprobante PDF, JPG o PNG de hasta 5 MB.");
+    }
 
-  if (error) throw error;
-  return data;
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!userData.user?.id) throw new Error("No hay una sesión activa para adjuntar el comprobante.");
+
+    const extension = mimeType === "application/pdf" ? "pdf" : mimeType.split("/")[1];
+    comprobantePath = `${userData.user.id}/${grupoId}/${createUniqueId()}.${extension}`;
+    const { error: uploadError } = await supabase.storage
+      .from("expense-receipts")
+      .upload(comprobantePath, comprobante, { contentType: mimeType, upsert: false });
+    if (uploadError) throw uploadError;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("egresos")
+      .insert({
+        grupo_id: grupoId,
+        concepto: normalizedConcept,
+        categoria: normalizedCategory,
+        monto: amountCentsToDecimal(amountInCents),
+        fecha,
+        comprobante_path: comprobantePath
+      })
+      .select("id")
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (insertError) {
+    if (comprobantePath) {
+      const { error: cleanupError } = await supabase.storage
+        .from("expense-receipts")
+        .remove([comprobantePath]);
+      if (cleanupError) {
+        console.error("No se pudo limpiar el comprobante huérfano del egreso:", cleanupError);
+      }
+    }
+    throw insertError;
+  }
 };
 
 export const listarEgresosRecientes = async (grupoIds) => {
@@ -50,7 +88,7 @@ export const listarEgresosRecientes = async (grupoIds) => {
   for (let offset = 0; ; offset += pageSize) {
     const { data: page, error } = await supabase
       .from("egresos")
-      .select("id, grupo_id, concepto, categoria, monto, fecha, created_at")
+      .select("id, grupo_id, concepto, categoria, monto, fecha, created_at, comprobante_path")
       .in("grupo_id", grupoIds)
       .order("fecha", { ascending: false })
       .order("created_at", { ascending: false })
