@@ -75,6 +75,33 @@
 - Se corrigió el texto que describía el fondo comunitario como disponible para
   préstamos, ya que las operaciones de préstamo no están habilitadas.
 
+### Controles financieros de Auditoría
+
+- En **Revisión de grupos**, Auditoría incorpora cruces financieros por grupo y
+  período entre aportes, egresos, movimientos del fondo y billeteras. Las
+  diferencias se muestran como señales para investigar, no como una conclusión
+  automática de error.
+- Tesorería puede adjuntar un comprobante PDF, JPG o PNG de hasta 5 MB al
+  registrar un egreso, sin alterar el flujo existente ni hacer obligatorio el
+  archivo. Auditoría puede consultar los egresos y abrir sus comprobantes
+  privados.
+- La revisión de entregas del cuadro rotativo muestra beneficiario, ronda,
+  monto, fecha, evidencia, total y número de socios con aportes pagados en la
+  ronda, y la diferencia entre esos aportes y el monto entregado. Auditoría
+  puede adjuntar evidencia PDF, JPG o PNG de hasta 10 MB.
+- El registro de eventos incluye egresos, entregas, cambios de préstamos y
+  cuotas. La consulta de préstamos presenta montos, estados, aprobaciones,
+  cuotas, vencimientos y movimientos de fondo asociados, en modo de solo
+  lectura.
+- Las operaciones de préstamos continúan deshabilitadas. Auditoría no registra
+  egresos, no concilia transacciones y no modifica saldos.
+- Las migraciones `202611070001_auditoria_respaldo_egresos.sql` a
+  `202611070005_auditoria_control_prestamos.sql` agregan los cambios de base de
+  datos y Storage necesarios. Deben validarse primero en un proyecto Supabase
+  de pruebas; no se han aplicado al entorno real.
+- La compilación de producción, ESLint y las 22 pruebas automatizadas pasaron.
+  Vite conserva una advertencia sobre el tamaño de algunos bloques JavaScript.
+
 ### Diseño adaptable
 
 - La pantalla **Socios y roles** presenta fichas legibles en pantallas pequeñas
