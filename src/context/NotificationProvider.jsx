@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
-import { NotificationContext } from "./notificationStore";
+import {
+  getNotificationType,
+  isAllowedNotification,
+  NotificationContext
+} from "./notificationStore";
 import NotificationToast from "../components/common/NotificationToast";
 import { createUniqueId } from "../utils/uniqueId";
 import { useAuth } from "./AuthContext";
@@ -18,7 +22,9 @@ const toNotification = (row) => ({
   actionPath: row.ruta_accion,
   actionLabel: row.etiqueta_accion,
   createdAt: row.creada_en,
-  read: row.leida
+  read: row.leida,
+  source: row.fuente,
+  category: getNotificationType({ source: row.fuente })
 });
 
 const NotificationProvider = ({ children }) => {
@@ -26,7 +32,6 @@ const NotificationProvider = ({ children }) => {
   const [notificationState, setNotificationState] = useState({ userId: null, items: [] });
   const [groupRequests, setGroupRequests] = useState([]);
   const [groupRequestsError, setGroupRequestsError] = useState("");
-  const localNotificationSignaturesRef = useRef(new Map());
   const realtimeNotificationIdsRef = useRef(new Map());
   const notifications = useMemo(
     () => notificationState.userId === user?.id ? notificationState.items : [],
@@ -47,7 +52,7 @@ const NotificationProvider = ({ children }) => {
     const loadNotifications = async () => {
       const { data, error } = await supabase
         .from("notificaciones")
-        .select("id, titulo, mensaje, tipo, ruta_accion, etiqueta_accion, creada_en, leida")
+        .select("id, titulo, mensaje, tipo, ruta_accion, etiqueta_accion, creada_en, leida, fuente")
         .eq("usuario_id", user.id)
         .order("creada_en", { ascending: false });
 
@@ -58,7 +63,7 @@ const NotificationProvider = ({ children }) => {
         return;
       }
 
-      const loadedNotifications = (data || []).map(toNotification);
+      const loadedNotifications = (data || []).map(toNotification).filter(isAllowedNotification);
       updateNotifications(user.id, (current) => {
         const loadedIds = new Set(loadedNotifications.map((item) => item.id));
         return [
@@ -84,6 +89,7 @@ const NotificationProvider = ({ children }) => {
           if (!active) return;
           if (payload.eventType === "INSERT") {
             const notification = toNotification(payload.new);
+            if (!isAllowedNotification(notification)) return;
             const now = Date.now();
             for (const [id, seenAt] of realtimeNotificationIdsRef.current) {
               if (now - seenAt > TOAST_DURATION) realtimeNotificationIdsRef.current.delete(id);
@@ -95,28 +101,6 @@ const NotificationProvider = ({ children }) => {
               ? current
               : [notification, ...current]);
 
-            const signature = JSON.stringify([
-              user.id,
-              notification.title,
-              notification.message,
-              notification.type,
-              notification.actionPath,
-              notification.actionLabel
-            ]);
-            const localNotification = localNotificationSignaturesRef.current.get(signature);
-            if (localNotification && localNotification.expiresAt > now && localNotification.count > 0) {
-              if (localNotification.count === 1) {
-                localNotificationSignaturesRef.current.delete(signature);
-              } else {
-                localNotificationSignaturesRef.current.set(signature, {
-                  ...localNotification,
-                  count: localNotification.count - 1
-                });
-              }
-              return;
-            }
-            if (localNotification) localNotificationSignaturesRef.current.delete(signature);
-
             toast.custom((toastItem) => (
               <NotificationToast
                 notification={notification}
@@ -126,9 +110,9 @@ const NotificationProvider = ({ children }) => {
             ), { duration: TOAST_DURATION, id: `notification-${notification.id}` });
           } else if (payload.eventType === "UPDATE") {
             const notification = toNotification(payload.new);
-            updateNotifications(user.id, (current) => current.map((item) => (
-              item.id === notification.id ? notification : item
-            )));
+            updateNotifications(user.id, (current) => isAllowedNotification(notification)
+              ? current.map((item) => item.id === notification.id ? notification : item)
+              : current.filter((item) => item.id !== notification.id));
           }
         }
       )
@@ -145,11 +129,9 @@ const NotificationProvider = ({ children }) => {
     message,
     type = "info",
     actionPath,
-    actionLabel,
-    recipientId
+    actionLabel
   }) => {
     const toastId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const notificationUserId = recipientId || user?.id;
     const notification = {
       title,
       message,
@@ -160,26 +142,6 @@ const NotificationProvider = ({ children }) => {
       read: false
     };
 
-    const signature = JSON.stringify([
-      notificationUserId,
-      title,
-      message,
-      type,
-      actionPath,
-      actionLabel
-    ]);
-    const now = Date.now();
-    for (const [key, pending] of localNotificationSignaturesRef.current) {
-      if (pending.expiresAt <= now) localNotificationSignaturesRef.current.delete(key);
-    }
-    if (notificationUserId === user?.id) {
-      const pending = localNotificationSignaturesRef.current.get(signature);
-      localNotificationSignaturesRef.current.set(signature, {
-        count: (pending?.count || 0) + 1,
-        expiresAt: now + TOAST_DURATION
-      });
-    }
-
     toast.custom((toastItem) => (
       <NotificationToast
         notification={notification}
@@ -188,44 +150,7 @@ const NotificationProvider = ({ children }) => {
       />
     ), { duration: TOAST_DURATION, id: toastId });
 
-    if (!notificationUserId) return null;
-
-    const { data, error } = await supabase
-      .from("notificaciones")
-      .insert({
-        usuario_id: notificationUserId,
-        titulo: title,
-        mensaje: message,
-        tipo: type,
-        ruta_accion: actionPath || null,
-        etiqueta_accion: actionLabel || null
-      })
-      .select("id, titulo, mensaje, tipo, ruta_accion, etiqueta_accion, creada_en, leida")
-      .single();
-
-    if (error) {
-      const pending = localNotificationSignaturesRef.current.get(signature);
-      if (pending) {
-        if (pending.count === 1) {
-          localNotificationSignaturesRef.current.delete(signature);
-        } else {
-          localNotificationSignaturesRef.current.set(signature, {
-            ...pending,
-            count: pending.count - 1
-          });
-        }
-      }
-      console.error("Error guardando notificación:", error);
-      toast.error("La notificación se mostró, pero no se pudo guardar en el historial.");
-      return null;
-    }
-
-    const savedNotification = toNotification(data);
-    updateNotifications(notificationUserId, (current) => current.some((item) => item.id === savedNotification.id)
-      ? current
-      : [savedNotification, ...current]);
-    return savedNotification.id;
-  }, [user?.id, updateNotifications]);
+  }, []);
 
   const markRead = useCallback(async (notificationId) => {
     if (!user?.id) return;
@@ -248,11 +173,14 @@ const NotificationProvider = ({ children }) => {
 
   const markAllRead = useCallback(async () => {
     if (!user?.id) return;
+    const unreadIds = notifications.filter((item) => !item.read).map((item) => item.id);
+    if (unreadIds.length === 0) return;
+
     const { error } = await supabase
       .from("notificaciones")
       .update({ leida: true })
       .eq("usuario_id", user.id)
-      .eq("leida", false);
+      .in("id", unreadIds);
 
     if (error) {
       console.error("Error marcando notificaciones como leídas:", error);
@@ -260,8 +188,10 @@ const NotificationProvider = ({ children }) => {
       return;
     }
 
-    updateNotifications(user.id, (current) => current.map((item) => ({ ...item, read: true })));
-  }, [user, updateNotifications]);
+    updateNotifications(user.id, (current) => current.map((item) => (
+      unreadIds.includes(item.id) ? { ...item, read: true } : item
+    )));
+  }, [notifications, user, updateNotifications]);
 
   const deleteNotification = useCallback(async (notificationId) => {
     if (!user?.id) return;
@@ -282,10 +212,14 @@ const NotificationProvider = ({ children }) => {
 
   const clearNotifications = useCallback(async () => {
     if (!user?.id) return;
+    const visibleIds = notifications.map((item) => item.id);
+    if (visibleIds.length === 0) return;
+
     const { error } = await supabase
       .from("notificaciones")
       .delete()
-      .eq("usuario_id", user.id);
+      .eq("usuario_id", user.id)
+      .in("id", visibleIds);
 
     if (error) {
       console.error("Error limpiando notificaciones:", error);
@@ -295,7 +229,7 @@ const NotificationProvider = ({ children }) => {
 
     updateNotifications(user.id, () => []);
     toast.dismiss();
-  }, [user, updateNotifications]);
+  }, [notifications, user, updateNotifications]);
 
   const refreshGroupRequests = useCallback(async () => {
     const role = profile?.rol?.toLowerCase();

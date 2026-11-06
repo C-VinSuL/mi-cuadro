@@ -6,9 +6,16 @@ import Navbar from "./Navbar/Navbar";
 import MobileBottomNavigation from "./MobileBottomNavigation";
 import MobileAssistant from "./MobileAssistant";
 import { useNotifications } from "../../hooks/useNotifications";
+import { useChatUnread } from "../../context/chatUnreadStore";
+import { useAuth } from "../../context/AuthContext";
+import { normalizeRole } from "../../config/permissions";
 
 const MainLayout = ({ children }) => {
   const { unreadCount } = useNotifications();
+  const { unreadCount: chatUnreadCount } = useChatUnread();
+  const { profile } = useAuth();
+  const role = normalizeRole(profile?.rol);
+  const assistantNotificationCount = unreadCount + chatUnreadCount;
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [mobileAssistantOpen, setMobileAssistantOpen] = useState(false);
   const [desktopAssistantOpen, setDesktopAssistantOpen] = useState(false);
@@ -33,7 +40,11 @@ const MainLayout = ({ children }) => {
   }, [mobileMoreOpen, mobileAssistantOpen]);
 
   return (
-    <div className="min-h-dvh min-w-0 bg-[#F4F7F5]">
+    <div
+      data-role={role}
+      data-density={role === "socio" ? "comfortable" : "compact"}
+      className="min-h-dvh min-w-0 bg-[#F4F7F5]"
+    >
       <div className="hidden md:block">
         <Sidebar />
       </div>
@@ -58,7 +69,8 @@ const MainLayout = ({ children }) => {
       <MobileBottomNavigation
         assistantOpen={mobileAssistantOpen}
         moreOpen={mobileMoreOpen}
-        notificationCount={unreadCount}
+        notificationCount={assistantNotificationCount}
+        chatUnreadCount={chatUnreadCount}
         onNavigate={() => {
           setMobileAssistantOpen(false);
           setMobileMoreOpen(false);
@@ -94,7 +106,7 @@ const MainLayout = ({ children }) => {
         <button
           type="button"
           onClick={() => setDesktopAssistantOpen((open) => !open)}
-          aria-label={`${desktopAssistantOpen ? "Cerrar chat de Moki" : "Abrir chat de Moki"}${unreadCount ? `, ${unreadCount} notificaciones sin leer` : ""}`}
+          aria-label={`${desktopAssistantOpen ? "Cerrar chat de Moki" : "Abrir chat de Moki"}${assistantNotificationCount ? `, ${assistantNotificationCount} avisos sin leer` : ""}`}
           aria-expanded={desktopAssistantOpen}
           className="relative flex size-14 items-center justify-center rounded-full bg-[#064E3B] text-white shadow-lg shadow-emerald-950/25 transition hover:scale-105 hover:bg-[#0B6651] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300"
         >
@@ -104,12 +116,12 @@ const MainLayout = ({ children }) => {
               <MessageCircle className="absolute bottom-0 right-0 rounded-full bg-[#16835D] p-0.5 text-white" size={17} />
             </span>
           )}
-          {unreadCount > 0 && (
+          {assistantNotificationCount > 0 && (
             <span
               aria-hidden="true"
               className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full border-2 border-white bg-red-600 px-1 text-[10px] font-bold leading-none text-white"
             >
-              {unreadCount > 9 ? "9+" : unreadCount}
+              {assistantNotificationCount > 9 ? "9+" : assistantNotificationCount}
             </span>
           )}
         </button>

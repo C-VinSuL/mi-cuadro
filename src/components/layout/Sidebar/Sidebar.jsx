@@ -18,6 +18,7 @@ import { supabase } from "../../../services/supabase";
 import { obtenerResumenBilletera } from "../../../services/walletService";
 import { useNotifications } from "../../../hooks/useNotifications";
 import { getVisibleMenu } from "./navigationItems";
+import { getRoleLabel } from "../../../utils/rolePresentation";
 
 const Sidebar = ({
   mobile = false,
@@ -218,6 +219,12 @@ const Sidebar = ({
           </motion.span>
         </div>
       )}
+
+      <div className={`${mobile ? "px-5 pb-2" : expanded ? "px-4 pb-2" : "hidden"}`}>
+        <span className={`role-badge role-badge-${rol} inline-flex`}>
+          {getRoleLabel(rol)}
+        </span>
+      </div>
 
 
       {/* GRUPO */}

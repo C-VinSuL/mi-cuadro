@@ -31,6 +31,7 @@ import ArchivosAuditoria from "../pages/admin/ArchivosAuditoria";
 import Billetera from "../pages/Billetera";
 import Egresos from "../pages/egresos/Egresos";
 import AtencionSocios from "../pages/admin/AtencionSocios";
+import Chat from "../pages/chat/Chat";
 import PageTransition from "../components/motion/PageTransition";
 import SplashScreen from "../components/ui/SplashScreen";
 import { useAuth } from "../context/AuthContext";
@@ -339,6 +340,28 @@ const AppRoutes = () => {
           <ProtectedRoute>
             <RoleRoute permission="gestionarBilletera">
               <MainLayout><Billetera /></MainLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/chat"
+        element={
+          <ProtectedRoute>
+            <RoleRoute permission="verChat">
+              <MainLayout><Chat /></MainLayout>
+            </RoleRoute>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/chat/:canalId"
+        element={
+          <ProtectedRoute>
+            <RoleRoute permission="verChat">
+              <MainLayout><Chat /></MainLayout>
             </RoleRoute>
           </ProtectedRoute>
         }

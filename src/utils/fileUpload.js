@@ -23,12 +23,12 @@ export const getSupportedDocumentMimeType = (file, allowedTypes = SUPPORTED_FILE
   return allowedTypes.has(mimeType) ? mimeType : null;
 };
 
-export const getStorageUploadErrorMessage = (error, formats = "JPG, PNG o PDF") => {
+export const getStorageUploadErrorMessage = (error, formats = "JPG, PNG o PDF", maxSizeMb = 5) => {
   const statusCode = Number(error?.statusCode || error?.status);
   const message = error?.message || "";
 
   if (statusCode === 413 || /file size|too large|exceeds.*size/i.test(message)) {
-    return "El archivo supera el límite permitido de 5 MB.";
+    return `El archivo supera el límite permitido de ${maxSizeMb} MB.`;
   }
   if (
     statusCode === 401
@@ -38,7 +38,7 @@ export const getStorageUploadErrorMessage = (error, formats = "JPG, PNG o PDF") 
     return "Storage rechazó la carga por permisos. Verifica que tu sesión siga activa, que el MFA esté completado y que la cuenta tenga acceso al archivo.";
   }
   if (statusCode === 415 || /mime type|content type|unsupported media/i.test(message)) {
-    return `El formato no está permitido. Usa ${formats} de hasta 5 MB.`;
+    return `El formato no está permitido. Usa ${formats} de hasta ${maxSizeMb} MB.`;
   }
-  return `No se pudo guardar el archivo. Revisa tu conexión y que sea ${formats} de hasta 5 MB.`;
+  return `No se pudo guardar el archivo. Revisa tu conexión y que sea ${formats} de hasta ${maxSizeMb} MB.`;
 };

@@ -22,6 +22,12 @@ export const menu = [
     permission: "verDashboard"
   },
   {
+    title: "Chat",
+    icon: MessageCircle,
+    path: "/chat",
+    permission: "verChat"
+  },
+  {
     title: "Mi Grupo",
     icon: Users,
     path: "/grupo",

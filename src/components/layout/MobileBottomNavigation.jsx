@@ -12,6 +12,7 @@ const MobileBottomNavigation = ({
   assistantOpen = false,
   moreOpen = false,
   notificationCount = 0,
+  chatUnreadCount = 0,
   onOpenMore,
   onCloseMore
 }) => {
@@ -19,12 +20,12 @@ const MobileBottomNavigation = ({
   const reduceMotion = useReducedMotion();
   const items = getVisibleMenu(can, rol);
   const preferredPaths = rol === "socio"
-    ? ["/", "/aportes", "/billetera"]
+    ? ["/", "/chat", "/aportes", "/billetera"]
     : rol === "auditor"
       ? ["/", "/auditoria", "/historial"]
       : rol === "tesorero"
-        ? ["/", "/aportes", "/cuadro"]
-        : ["/", "/grupo", "/aportes", "/cuadro"];
+        ? ["/", "/chat", "/aportes", "/cuadro"]
+        : ["/", "/chat", "/grupo", "/aportes"];
   const primaryItems = preferredPaths
     .map((path) => items.find((item) => item.path === path))
     .filter(Boolean)
@@ -37,6 +38,7 @@ const MobileBottomNavigation = ({
 
   const mobileTitles = {
     "/": "Inicio",
+    "/chat": "Chat",
     "/grupo": "Grupo",
     "/aportes": "Aportes",
     "/billetera": "Billetera",
@@ -55,7 +57,7 @@ const MobileBottomNavigation = ({
     <>
       <nav
         aria-label="Navegación principal"
-        className="fixed inset-x-2 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[55] mx-auto max-w-xl rounded-[1.75rem] bg-[#064E3B] p-1 text-white shadow-xl shadow-emerald-950/25 md:hidden"
+        className="mobile-bottom-navigation fixed inset-x-2 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[55] mx-auto max-w-xl rounded-[1.75rem] bg-[#064E3B] p-1 text-white shadow-xl shadow-emerald-950/25 md:hidden"
       >
         <div className="flex min-h-[60px] items-stretch justify-around">
           {primaryItems.map((item) => {
@@ -85,6 +87,11 @@ const MobileBottomNavigation = ({
                       <span className="relative z-10 max-w-full whitespace-nowrap">
                         {mobileTitles[item.path] || item.title}
                       </span>
+                      {item.path === "/chat" && chatUnreadCount > 0 && (
+                        <span className="absolute right-1 top-1 z-20 flex min-h-4 min-w-4 items-center justify-center rounded-full border border-[#064E3B] bg-red-500 px-1 text-[9px] font-bold leading-none text-white">
+                          {chatUnreadCount > 9 ? "9+" : chatUnreadCount}
+                        </span>
+                      )}
                     </>
                   );
                 }}

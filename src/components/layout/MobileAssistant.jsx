@@ -18,7 +18,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
-import { useNotifications } from "../../hooks/useNotifications";
+import { useChatUnread } from "../../context/chatUnreadStore";
 import { usePermissions } from "../../hooks/usePermissions";
 import { createUniqueId } from "../../utils/uniqueId";
 import DesktopAdminOverview from "./DesktopAdminOverview";
@@ -83,7 +83,7 @@ const CHAT_EMOJIS = ["😀", "😊", "👍", "🙏", "🎉", "❤️", "📎", "
 const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { notifications, markRead } = useNotifications();
+  const { chatNotifications } = useChatUnread();
   const { can, rol } = usePermissions();
   const items = getVisibleMenu(can, rol);
   const isMember = rol === "socio";
@@ -113,9 +113,6 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
   const [sending, setSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const adminInbox = isAdministrator && ["inbox", "archived"].includes(adminView);
-  const acceptedGroupInvitations = notifications.filter(
-    (notification) => notification.title === "Invitación de grupo aceptada" && !notification.read
-  );
   const activeConversation = isAdministrator ? selectedConversation : memberConversation;
   const listedConversations = adminView === "archived" ? archivedConversations : conversations;
   const chatMessages = [...messages, ...localMessages];
@@ -124,11 +121,6 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
   const goTo = (path) => {
     onClose();
     navigate(path);
-  };
-
-  const goToAcceptedGroupInvitations = async () => {
-    await Promise.all(acceptedGroupInvitations.map((notification) => markRead(notification.id)));
-    goTo("/grupo");
   };
 
   useEffect(() => {
@@ -619,26 +611,26 @@ const MobileAssistant = ({ onClose, onOpenMenu, desktop = false }) => {
             aria-live="polite"
             className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-5"
           >
-            {!desktop && can("gestionarGrupo") && adminView === "chat" && acceptedGroupInvitations.length > 0 && (
-              <section aria-label="Aceptaciones recientes de grupo" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            {adminView === "chat" && chatNotifications.length > 0 && (
+              <section aria-label="Mensajes nuevos del chat" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
                 <div className="flex items-start gap-3">
-                  <Users size={20} className="mt-0.5 shrink-0 text-emerald-800" />
+                  <Inbox size={20} className="mt-0.5 shrink-0 text-emerald-800" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-emerald-950">
-                      {acceptedGroupInvitations.length === 1
-                        ? "Nueva aceptación de grupo"
-                        : `${acceptedGroupInvitations.length} aceptaciones de grupo`}
-                    </p>
-                    <p className="mt-1 text-xs leading-relaxed text-emerald-900">
-                      {acceptedGroupInvitations[0].message}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={goToAcceptedGroupInvitations}
-                      className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-emerald-900 underline underline-offset-2"
-                    >
-                      Revisar en Grupos <ArrowUpRight size={14} />
-                    </button>
+                    <p className="text-sm font-semibold text-emerald-950">Mensajes nuevos</p>
+                    <ul className="mt-2 space-y-2">
+                      {chatNotifications.slice(0, 4).map((notification) => (
+                        <li key={notification.id}>
+                          <button
+                            type="button"
+                            onClick={() => goTo(notification.actionPath)}
+                            className="block w-full rounded-xl bg-white/80 px-3 py-2 text-left hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700"
+                          >
+                            <span className="block truncate text-xs font-semibold text-emerald-950">{notification.title}</span>
+                            <span className="mt-0.5 block truncate text-xs text-emerald-900">{notification.message}</span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
               </section>

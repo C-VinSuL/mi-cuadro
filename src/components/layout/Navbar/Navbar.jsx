@@ -7,7 +7,7 @@ import {
   CheckCheck,
   Trash2
 } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useNavigate } from "react-router-dom";
@@ -15,9 +15,11 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { supabase } from "../../../services/supabase";
 import { useNotifications } from "../../../hooks/useNotifications";
+import { useChatUnread } from "../../../context/chatUnreadStore";
 import { createUniqueId } from "../../../utils/uniqueId";
 import { logOperationalError } from "../../../utils/logOperationalError";
 import { getStorageUploadErrorMessage, getSupportedDocumentMimeType } from "../../../utils/fileUpload";
+import { getRoleLabel } from "../../../utils/rolePresentation";
 
 const Navbar = ({ onOpenMobileMenu }) => {
 
@@ -55,13 +57,31 @@ const Navbar = ({ onOpenMobileMenu }) => {
   const userMenuPanelRef = useRef(null);
   const {
     notifications,
-    unreadCount,
+    unreadCount: notificationUnreadCount,
     markAllRead,
     markRead,
     deleteNotification,
     clearNotifications,
     notify
   } = useNotifications();
+  const {
+    chatNotifications,
+    unreadCount: chatUnreadCount,
+    markRead: markChatRead,
+    markAllRead: markAllChatRead
+  } = useChatUnread();
+  const allNotifications = useMemo(() => [
+    ...notifications,
+    ...chatNotifications.map((item) => ({
+      ...item,
+      type: "info",
+      actionLabel: "Abrir chat"
+    }))
+  ].sort((left, right) => new Date(right.createdAt || 0) - new Date(left.createdAt || 0)), [
+    chatNotifications,
+    notifications
+  ]);
+  const unreadCount = notificationUnreadCount + chatUnreadCount;
 
   const {
     user,
@@ -73,6 +93,51 @@ const Navbar = ({ onOpenMobileMenu }) => {
   const welcomeOpen = profile?.rol?.toLowerCase() === "socio"
     && profile?.bienvenida_completada === false
     && welcomeDismissedFor !== profile.id;
+
+  const handleMarkAllRead = async () => {
+    try {
+      await Promise.all([markAllRead(), markAllChatRead()]);
+    } catch (error) {
+      logOperationalError("No se pudieron marcar todas las notificaciones como leídas:", error);
+      notify({
+        title: "No se pudieron actualizar las notificaciones",
+        message: "Inténtalo nuevamente.",
+        type: "error"
+      });
+    }
+  };
+
+  const handleClearAllNotifications = async () => {
+    try {
+      await Promise.all([clearNotifications(), markAllChatRead()]);
+    } catch (error) {
+      logOperationalError("No se pudieron limpiar las notificaciones:", error);
+      notify({
+        title: "No se pudieron limpiar las notificaciones",
+        message: "Inténtalo nuevamente.",
+        type: "error"
+      });
+    }
+  };
+
+  const handleOpenNotification = async (item) => {
+    if (item.channelId) {
+      try {
+        await markChatRead(item.channelId);
+      } catch (error) {
+        logOperationalError("No se pudo marcar el chat como leído desde notificaciones:", error);
+        notify({
+          title: "No se pudo actualizar el chat",
+          message: "La conversación se abrirá y podrás intentarlo de nuevo.",
+          type: "error"
+        });
+      }
+    } else {
+      void markRead(item.id);
+    }
+    if (item.actionPath) navigate(item.actionPath);
+    setNotificationsOpen(false);
+  };
 
   useEffect(() => {
     const handlePointerDown = (event) => {
@@ -389,7 +454,9 @@ const Navbar = ({ onOpenMobileMenu }) => {
 
   return (
     <header
+      data-role-header
       className="
+        app-navbar
         w-full
         min-w-0
         max-w-full
@@ -466,7 +533,7 @@ const Navbar = ({ onOpenMobileMenu }) => {
           <button
             type="button"
             ref={notificationsButtonRef}
-            aria-label={`Notificaciones${unreadCount ? `, ${unreadCount} sin leer` : ""}`}
+            aria-label={`Notificaciones${unreadCount ? `, ${unreadCount} mensajes o avisos sin leer` : ""}`}
             aria-expanded={notificationsOpen}
             onClick={() => {
               setNotificationsOpen((open) => !open);
@@ -491,13 +558,13 @@ const Navbar = ({ onOpenMobileMenu }) => {
               <div className="flex shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
                 <div>
                   <h2 className="text-sm font-semibold text-slate-900">Notificaciones</h2>
-                  <p className="text-xs text-slate-500">{unreadCount} sin leer · {notifications.length} recientes</p>
+                  <p className="text-xs text-slate-500">{unreadCount} sin leer · {allNotifications.length} recientes</p>
                 </div>
                 <div className="flex items-center gap-1">
-                  <button type="button" onClick={markAllRead} disabled={unreadCount === 0} title={unreadCount ? "Marcar todas como leídas" : "Todas están leídas"} aria-label={unreadCount ? "Marcar todas como leídas" : "Todas están leídas"} className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-emerald-700 disabled:cursor-default disabled:opacity-40">
+                  <button type="button" onClick={handleMarkAllRead} disabled={unreadCount === 0} title={unreadCount ? "Marcar todas como leídas" : "Todas están leídas"} aria-label={unreadCount ? "Marcar todas como leídas" : "Todas están leídas"} className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-emerald-700 disabled:cursor-default disabled:opacity-40">
                     <CheckCheck size={17} />
                   </button>
-                  <button type="button" onClick={clearNotifications} title="Limpiar notificaciones" aria-label="Limpiar notificaciones" className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-red-700">
+                  <button type="button" onClick={handleClearAllNotifications} title="Limpiar notificaciones" aria-label="Limpiar notificaciones" className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-red-700">
                     <Trash2 size={17} />
                   </button>
                   <button type="button" onClick={() => setNotificationsOpen(false)} title="Cerrar" aria-label="Cerrar notificaciones" className="rounded-md p-2 text-slate-500 hover:bg-slate-100">
@@ -506,9 +573,9 @@ const Navbar = ({ onOpenMobileMenu }) => {
                 </div>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto sm:max-h-[min(65vh,28rem)] sm:flex-none">
-                {notifications.length === 0 ? (
+                {allNotifications.length === 0 ? (
                   <p className="px-4 py-10 text-center text-sm text-slate-500">No tienes notificaciones todavía.</p>
-                ) : notifications.map((item) => (
+                ) : allNotifications.map((item) => (
                   <article key={item.id} className={`border-b border-slate-100 px-4 py-3 last:border-b-0 ${item.read ? "bg-white" : "bg-emerald-50"}`}>
                     <div className="flex items-start gap-2">
                       <span className={`mt-1.5 size-2 shrink-0 rounded-full ${item.type === "error" ? "bg-red-500" : item.type === "success" ? "bg-emerald-600" : "bg-blue-500"}`} />
@@ -518,29 +585,29 @@ const Navbar = ({ onOpenMobileMenu }) => {
                         {item.actionPath && (
                           <button
                             type="button"
-                            onClick={() => {
-                              markRead(item.id);
-                              navigate(item.actionPath);
-                              setNotificationsOpen(false);
-                            }}
+                            onClick={() => void handleOpenNotification(item)}
                             className="mt-2 text-xs font-semibold text-emerald-800 hover:text-emerald-950"
                           >
                             {item.actionLabel || "Abrir"}
                           </button>
                         )}
-                        <time className="mt-1 block text-[11px] text-slate-400" dateTime={item.createdAt}>
-                          {new Date(item.createdAt).toLocaleString("es", { dateStyle: "short", timeStyle: "short" })}
-                        </time>
+                        {item.createdAt && (
+                          <time className="mt-1 block text-[11px] text-slate-400" dateTime={item.createdAt}>
+                            {new Date(item.createdAt).toLocaleString("es", { dateStyle: "short", timeStyle: "short" })}
+                          </time>
+                        )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => deleteNotification(item.id)}
-                        title="Eliminar notificación"
-                        aria-label={`Eliminar notificación: ${item.title}`}
-                        className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-700"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {!item.channelId && (
+                        <button
+                          type="button"
+                          onClick={() => deleteNotification(item.id)}
+                          title="Eliminar notificación"
+                          aria-label={`Eliminar notificación: ${item.title}`}
+                          className="shrink-0 rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-700"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                     </div>
                   </article>
                 ))}
@@ -611,8 +678,8 @@ const Navbar = ({ onOpenMobileMenu }) => {
               "
             >
 
-              <span className="capitalize">
-                {profile?.rol || "Socio"}
+              <span className={`role-badge role-badge-${profile?.rol?.toLowerCase() || "socio"}`}>
+                {getRoleLabel(profile?.rol)}
               </span>
 
               {participant && grupo?.estado !== "borrador" && participant.posicion && (
@@ -644,7 +711,9 @@ const Navbar = ({ onOpenMobileMenu }) => {
           >
             <div className="border-b border-slate-200 bg-white px-4 py-3">
               <p className="truncate text-sm font-semibold text-slate-900">{profile?.nombre} {profile?.apellido}</p>
-              <p className="mt-0.5 text-xs capitalize text-slate-500">{profile?.rol || "Socio"}</p>
+              <span className={`role-badge role-badge-${profile?.rol?.toLowerCase() || "socio"} mt-1`}>
+                {getRoleLabel(profile?.rol)}
+              </span>
             </div>
             <button
               type="button"
