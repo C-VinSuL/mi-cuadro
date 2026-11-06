@@ -23,6 +23,10 @@ movimientos financieros desde una interfaz con permisos según el rol.
   historial financiero, conciliación manual y reportes exportables.
 - **Administración:** gestión de grupos, cuentas, roles, documentos, solicitudes,
   configuración financiera y revisión de auditoría.
+- **Auditoría:** planes con responsables y fechas límite, evidencia en archivos
+  privados, seguimiento de hallazgos, informes finales y consulta paginada del
+  registro de eventos. El auditor consulta el estado de conciliación sin poder
+  marcar movimientos; esa acción sigue reservada a tesorería y administración.
 - **Notificaciones:** avisos de actividad y seguimiento de solicitudes dentro
   de la aplicación.
 - **Reportes:** consulta de movimientos, filtros y exportación a Excel o PDF
@@ -144,9 +148,12 @@ archivos que solo puede consultar un administrador con MFA desde
 `/admin/archivos`; los archivos privados se abren con URL firmada de 60 segundos.
 
 Los archivos se guardan en **Supabase Storage**, no en Vercel. Los buckets
-`identity-documents`, `wallet-receipts`, `contribution-receipts` y
-`moki-attachments` son privados y sus políticas limitan lectura y escritura
-según propietario, rol y MFA. Los comprobantes se revisan desde sus pantallas
+`identity-documents`, `wallet-receipts`, `contribution-receipts`,
+`moki-attachments` y `auditoria-evidencias` son privados y sus políticas
+limitan lectura y escritura según propietario, rol y MFA. La evidencia de
+auditoría admite PDF, PNG y JPEG de hasta 10 MB; solo un auditor activo con MFA
+puede cargarla. Administración, tesorería y auditoría pueden leerla con MFA
+mediante enlaces firmados de duración breve. Los comprobantes se revisan desde sus pantallas
 de administración; el documento de identidad se revisa desde Verificación
 documental. `profile-avatars` es público para poder mostrar los avatares; no
 debe usarse para identificaciones ni comprobantes. El panel Storage del
@@ -201,6 +208,11 @@ con validación de rol, MFA, pertenencia del socio y duplicados.
 La migración `202610220004_treasury_expenses.sql` agrega el registro y consulta
 protegidos de egresos para administración y tesorería, con suma acumulada y
 permisos de lectura/escritura validados mediante MFA.
+La migración `202611050001_auditoria_plazos_evidencia_informes.sql` agrega
+responsables, plazos y conclusiones a las revisiones; permite adjuntar evidencia
+PDF/PNG/JPEG en un bucket privado con permisos MFA; y agrega paginación al
+registro de eventos. El informe final se exporta desde una revisión completada.
+El estado de conciliación que ve auditoría es de solo lectura.
 La migración `202610280001_enable_realtime_for_group_participants.sql` publica
 la tabla de participantes en Supabase Realtime para actualizar los conteos y
 la lista del grupo al aprobar una incorporación.

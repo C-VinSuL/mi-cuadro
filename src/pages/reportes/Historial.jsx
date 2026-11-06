@@ -31,6 +31,7 @@ import {
   obtenerMovimientosFondo,
   obtenerSaldoFondo
 } from "../../services/fondoService";
+import { listarConciliacionesFondoAuditoria } from "../../services/adminService";
 import ReportesAdmin from "./ReportesAdmin";
 import { logOperationalError } from "../../utils/logOperationalError";
 
@@ -40,6 +41,8 @@ const HistorialSocio = () => {
     profile
   } = useAuth();
   const esTesorero = profile?.rol?.toLowerCase() === "tesorero";
+  const esAuditor = profile?.rol?.toLowerCase() === "auditor";
+  const esPersonalControl = esTesorero || esAuditor;
 
   const [movimientos, setMovimientos] =
     useState([]);
@@ -84,7 +87,9 @@ const HistorialSocio = () => {
             .from("conciliaciones_fondo")
             .select("movimiento_id, conciliado_por, conciliado_en, observacion")
             .eq("grupo_id", grupoId)
-          : Promise.resolve({ data: [], error: null })
+          : esAuditor
+            ? listarConciliacionesFondoAuditoria(grupoId).then((data) => ({ data, error: null }))
+            : Promise.resolve({ data: [], error: null })
       ]);
       if (conciliacionesResponse.error) throw conciliacionesResponse.error;
 
@@ -99,7 +104,7 @@ const HistorialSocio = () => {
     } finally {
       setLoading(false);
     }
-  }, [esTesorero, grupoId]);
+  }, [esAuditor, esTesorero, grupoId]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => cargarHistorial(), 0);
@@ -398,7 +403,7 @@ const HistorialSocio = () => {
 
       {/* RESUMEN */}
 
-      <section className={`grid grid-cols-1 gap-5 sm:grid-cols-2 ${esTesorero ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
+      <section className={`grid grid-cols-1 gap-5 sm:grid-cols-2 ${esPersonalControl ? "xl:grid-cols-5" : "xl:grid-cols-4"}`}>
 
         {/* SALDO */}
 
@@ -607,14 +612,16 @@ const HistorialSocio = () => {
 
         </div>
 
-        {esTesorero && (
+        {esPersonalControl && (
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
               <Check size={22} />
             </div>
             <p className="mt-5 text-sm text-slate-500">Conciliados / pendientes</p>
             <p className="mt-1 text-2xl font-bold text-slate-900">{movimientosConciliados} / {movimientosPendientesConciliacion}</p>
-            <p className="mt-1 text-xs text-slate-400">Verificación manual registrada</p>
+            <p className="mt-1 text-xs text-slate-400">
+              {esAuditor ? "Consulta de solo lectura" : "Verificación manual registrada"}
+            </p>
           </div>
         )}
 
@@ -648,7 +655,7 @@ const HistorialSocio = () => {
         </section>
       )}
 
-      {esTesorero && (
+      {esPersonalControl && (
         <section className="flex flex-wrap items-end justify-between gap-3 print:hidden">
           <div className="flex flex-wrap items-end gap-3">
             <label className="text-sm font-medium text-slate-700">
@@ -736,7 +743,7 @@ const HistorialSocio = () => {
                   text-slate-500
                 "
               >
-                {esTesorero
+                {esPersonalControl
                   ? `${movimientosFiltrados.length} de ${movimientos.length} movimientos · conciliación manual y trazable.`
                   : "Registro cronológico de ingresos y egresos."}
               </p>
@@ -849,9 +856,9 @@ const HistorialSocio = () => {
                   >
                     Monto
                   </th>
-                  {esTesorero && (
+                  {esPersonalControl && (
                     <th className="p-4 text-left text-sm font-semibold text-slate-600 print:hidden">
-                      Conciliación
+                      Estado de conciliación
                     </th>
                   )}
 
@@ -1012,18 +1019,21 @@ const HistorialSocio = () => {
                             movimiento.monto
                           ).toFixed(2)}
                         </td>
-                        {esTesorero && (
+                        {esPersonalControl && (
                           <td className="p-4 print:hidden">
                             {conciliacion ? (
                               <div>
                                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">
                                   <Check size={13} /> Conciliado
                                 </span>
+                                {esAuditor && conciliacion.conciliado_en && (
+                                  <p className="mt-1 text-xs text-slate-500">{formatearFecha(conciliacion.conciliado_en)}</p>
+                                )}
                                 {conciliacion.observacion && (
                                   <p className="mt-1 max-w-56 text-xs text-slate-500">{conciliacion.observacion}</p>
                                 )}
                               </div>
-                            ) : (
+                            ) : esTesorero ? (
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1034,6 +1044,8 @@ const HistorialSocio = () => {
                               >
                                 Marcar conciliado
                               </button>
+                            ) : (
+                              <span className="text-xs text-amber-800">Pendiente</span>
                             )}
                           </td>
                         )}
